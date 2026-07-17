@@ -1,0 +1,61 @@
+from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
+
+
+class ReparationBase(BaseModel):
+
+    client_id: int
+
+    receptionniste_id: int
+
+    type_materiel: str
+
+    systeme_exploitation: str
+
+    version_office: str
+
+    origine_probleme: str
+
+    intervention: Optional[str] = None
+
+    probleme: str
+
+    pieces_defectueuses: Optional[str] = None
+
+    remarques: Optional[str] = None
+
+    mot_de_passe_windows: Optional[str] = None
+
+    urgent: bool = False
+
+    resolu: bool = False
+
+class ReparationCreate(ReparationBase):
+    pass
+
+class ReparationUpdate(ReparationBase):
+    pass
+
+class ReparationResponse(ReparationBase):
+
+    id: int
+
+    statut: str
+
+    qr_code: Optional[str]
+
+    texte_ocr: Optional[str]
+
+    delai_estime: Optional[int]
+
+    cout_estime: Optional[float]
+
+    cout_reel: Optional[float]
+
+    date_reception: datetime
+
+    date_fin: Optional[datetime]
+
+    class Config:
+        from_attributes = True
