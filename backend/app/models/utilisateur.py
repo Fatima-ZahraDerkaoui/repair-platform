@@ -7,29 +7,17 @@ from app.database.database import Base
 class Utilisateur(Base):
     __tablename__ = "utilisateur"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
-    nom: Mapped[str] = mapped_column(
-        String(100),
-        nullable=False
-    )
+    nom: Mapped[str] = mapped_column(String(100), nullable=False)
 
-    email: Mapped[str] = mapped_column(
-        String(100),
-        unique=True
-    )
+    email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
 
-    mot_de_passe_hash: Mapped[str] = mapped_column(
-        String(255)
-    )
+    password: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    role: Mapped[str] = mapped_column(
-        String(30)
-    )
+    role: Mapped[str] = mapped_column(String(30), nullable=False)
 
-    telephone: Mapped[str | None] = mapped_column(
-        String(20)
-    )
+    telephone: Mapped[str] = mapped_column(String(20), nullable=True)
 
     reparations = relationship(
         "Reparation",

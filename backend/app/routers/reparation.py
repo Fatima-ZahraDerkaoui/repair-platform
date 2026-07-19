@@ -4,22 +4,24 @@ from app.database.database import get_db
 
 from app.schemas.reparation import (
     ReparationCreate,
-    ReparationResponse
+    ReparationResponse,
+    StatutUpdate
 )
 
 from app.crud.reparation import (
     create_reparation,
     get_reparations,
     get_reparation,
+    get_reparation_by_numero,
     update_reparation,
-    delete_reparation
+    delete_reparation,
+    update_statut
 )
 
 router = APIRouter(
     prefix="/reparations",
     tags=["Réparations"]
 )
-
 
 @router.post(
     "/",
@@ -63,4 +65,63 @@ def read_one(
 
     return rep
 
+@router.get(
+    "/numero/{numero_dossier}",
+    response_model=ReparationResponse
+)
+def get_by_numero(
+    numero_dossier: str,
+    db: Session = Depends(get_db)
+):
 
+    reparation = get_reparation_by_numero(
+        db,
+        numero_dossier
+    )
+
+    if not reparation:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Réparation introuvable"
+        )
+
+    return reparation
+
+@router.patch(
+    "/{reparation_id}/statut",
+    response_model=ReparationResponse
+)
+def update_statut_reparation(
+
+    reparation_id: int,
+
+    data: StatutUpdate,
+
+    db: Session = Depends(get_db)
+
+):
+
+    reparation = update_statut(
+
+        db=db,
+
+        reparation_id=reparation_id,
+
+        nouveau_statut=data.statut,
+
+        utilisateur_id=data.utilisateur_id
+
+    )
+
+    if not reparation:
+
+        raise HTTPException(
+
+            status_code=404,
+
+            detail="Réparation introuvable"
+
+        )
+
+    return reparation

@@ -56,7 +56,7 @@ class Reparation(Base):
 
     remarques: Mapped[str | None] = mapped_column(Text)
 
-    mot_de_passe_windows: Mapped[str | None] = mapped_column(String(255))
+    mot_de_passe_pc: Mapped[str | None] = mapped_column(String(255))
 
     urgent: Mapped[bool] = mapped_column(
         Boolean,
@@ -71,6 +71,12 @@ class Reparation(Base):
     statut: Mapped[str] = mapped_column(
         String(30),
         default="En attente"
+    )
+
+    numero_dossier: Mapped[str | None] = mapped_column(
+        String(30),
+        unique=True,
+        nullable=True
     )
 
     qr_code: Mapped[str | None] = mapped_column(String(255))
@@ -99,7 +105,7 @@ class Reparation(Base):
         "ReparationPiece",
         back_populates="reparation"
     )
-
+'''
     historique = relationship(
         "HistoriqueStatut",
         back_populates="reparation"
@@ -114,4 +120,4 @@ class Reparation(Base):
         Enum(StatutReparation),
         default=StatutReparation.EN_ATTENTE
     )
-
+'''

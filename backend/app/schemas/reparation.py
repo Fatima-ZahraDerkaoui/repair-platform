@@ -25,7 +25,7 @@ class ReparationBase(BaseModel):
 
     remarques: Optional[str] = None
 
-    mot_de_passe_windows: Optional[str] = None
+    mot_de_passe_pc: Optional[str] = None
 
     urgent: bool = False
 
@@ -43,6 +43,8 @@ class ReparationResponse(ReparationBase):
 
     statut: str
 
+    numero_dossier: str | None = None
+
     qr_code: Optional[str]
 
     texte_ocr: Optional[str]
@@ -59,3 +61,9 @@ class ReparationResponse(ReparationBase):
 
     class Config:
         from_attributes = True
+
+class StatutUpdate(BaseModel):
+
+    statut: str
+
+    utilisateur_id: int | None = None
