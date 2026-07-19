@@ -11,9 +11,7 @@ texts = ocr_engine.extract_text(
     image_path
 )
 
-
 print("\n===== TEXTE OCR =====\n")
-
 
 for text in texts:
 
