@@ -294,10 +294,7 @@ class RepairParser:
                         intervention
                     )
 
-        # -----------------------------
-        # PROBLEME
-        # -----------------------------
-
+      
         for index, text in enumerate(texts):
 
             if "PROBLÈME CONSTATÉ" in text:
