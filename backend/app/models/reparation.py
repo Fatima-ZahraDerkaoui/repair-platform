@@ -48,7 +48,15 @@ class Reparation(Base):
 
     origine_probleme: Mapped[str] = mapped_column(String(50))
 
-    intervention: Mapped[str | None] = mapped_column(String(100))
+    diagnostic: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
+
+    intervention: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
 
     probleme: Mapped[str] = mapped_column(Text)
 
