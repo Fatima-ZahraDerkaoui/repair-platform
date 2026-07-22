@@ -23,6 +23,15 @@ from app.crud.reparation import (
     update_statut
 )
 
+from app.schemas.reparation_piece import (
+    ReparationPieceCreate,
+    ReparationPieceResponse
+)
+
+from app.services.reparation_piece import (
+    utiliser_piece
+)
+
 router = APIRouter(
     prefix="/reparations",
     tags=["Réparations"]
@@ -153,3 +162,44 @@ def modifier_statut(
         reparation.statut
 
     }
+
+@router.post(
+
+    "/{reparation_id}/pieces",
+
+    response_model=ReparationPieceResponse
+
+)
+def ajouter_piece(
+
+    reparation_id: int,
+
+    data: ReparationPieceCreate,
+
+    db: Session = Depends(get_db)
+
+):
+
+    try:
+
+        return utiliser_piece(
+
+            db=db,
+
+            reparation_id=reparation_id,
+
+            piece_id=data.piece_id,
+
+            quantite=data.quantite
+
+        )
+
+    except ValueError as error:
+
+        raise HTTPException(
+
+            status_code=400,
+
+            detail=str(error)
+
+        )

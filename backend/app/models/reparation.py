@@ -126,7 +126,8 @@ class Reparation(Base):
 
     pieces = relationship(
         "ReparationPiece",
-        back_populates="reparation"
+        back_populates="reparation",
+        cascade="all, delete-orphan"
     )
 
     historique = relationship(

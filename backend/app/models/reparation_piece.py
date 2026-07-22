@@ -17,20 +17,28 @@ class ReparationPiece(Base):
 
     __tablename__ = "reparation_piece"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(
+        primary_key=True
+    )
 
     reparation_id: Mapped[int] = mapped_column(
-        ForeignKey("reparation.id")
+        ForeignKey("reparation.id"),
+        nullable=False
     )
 
     piece_id: Mapped[int] = mapped_column(
-        ForeignKey("stock.id")
+        ForeignKey("stock.id"),
+        nullable=False
     )
 
-    quantite: Mapped[int] = mapped_column(Integer)
+    quantite: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False
+    )
 
     prix_utilise: Mapped[float] = mapped_column(
-        Numeric(10,2)
+        Numeric(10, 2),
+        nullable=False
     )
 
     reparation = relationship(
