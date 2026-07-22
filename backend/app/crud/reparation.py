@@ -65,18 +65,44 @@ def get_reparation(db: Session, id: int):
 
 # Modifier
 def update_reparation(
+
     db: Session,
+
     id: int,
+
     data: ReparationUpdate
+
 ):
 
-    reparation = get_reparation(db, id)
+    reparation = get_reparation(
+
+        db,
+
+        id
+
+    )
 
     if not reparation:
+
         return None
 
-    for key, value in data.model_dump().items():
-        setattr(reparation, key, value)
+
+    for key, value in data.model_dump(
+
+        exclude_unset=True
+
+    ).items():
+
+        setattr(
+
+            reparation,
+
+            key,
+
+            value
+
+        )
+
 
     db.commit()
 

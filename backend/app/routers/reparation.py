@@ -79,29 +79,6 @@ def read_one(
 
     return rep
 
-@router.get(
-    "/numero/{numero_dossier}",
-    response_model=ReparationResponse
-)
-def get_by_numero(
-    numero_dossier: str,
-    db: Session = Depends(get_db)
-):
-
-    reparation = get_reparation_by_numero(
-        db,
-        numero_dossier
-    )
-
-    if not reparation:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Réparation introuvable"
-        )
-
-    return reparation
-
 
 @router.patch(
     "/{reparation_id}/statut"
@@ -203,3 +180,41 @@ def ajouter_piece(
             detail=str(error)
 
         )
+    
+@router.get(
+
+    "/numero/{numero_dossier}",
+
+    response_model=ReparationResponse
+
+)
+
+def get_by_numero(
+
+    numero_dossier: str,
+
+    db: Session = Depends(get_db)
+
+):
+
+    reparation = get_reparation_by_numero(
+
+        db,
+
+        numero_dossier
+
+    )
+
+
+    if not reparation:
+
+        raise HTTPException(
+
+            status_code=404,
+
+            detail="Dossier de réparation introuvable"
+
+        )
+
+
+    return reparation
