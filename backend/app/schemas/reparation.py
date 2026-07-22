@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -35,7 +37,18 @@ class ReparationCreate(ReparationBase):
     pass
 
 class ReparationUpdate(ReparationBase):
-    pass
+    
+    diagnostic: str | None = None
+
+    intervention: str | None = None
+
+    pieces_defectueuses: str | None = None
+
+    remarques: str | None = None
+
+    cout_reel: Decimal | None = None
+
+    date_fin: datetime | None = None
 
 class ReparationResponse(ReparationBase):
 

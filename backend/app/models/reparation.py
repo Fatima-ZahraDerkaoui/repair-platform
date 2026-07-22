@@ -40,13 +40,30 @@ class Reparation(Base):
         default=datetime.utcnow
     )
 
-    type_materiel: Mapped[str] = mapped_column(String(50))
+    type_materiel: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True
+    )
 
-    systeme_exploitation: Mapped[str] = mapped_column(String(50))
+    systeme_exploitation: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True
+    )
 
-    version_office: Mapped[str] = mapped_column(String(50))
+    version_office: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True
+    )
 
-    origine_probleme: Mapped[str] = mapped_column(String(50))
+    origine_probleme: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True
+    )
+
+    probleme: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
 
     diagnostic: Mapped[str | None] = mapped_column(
         Text,
@@ -58,13 +75,11 @@ class Reparation(Base):
         nullable=True
     )
 
-    probleme: Mapped[str] = mapped_column(Text)
+    pieces_defectueuses: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    pieces_defectueuses: Mapped[str | None] = mapped_column(Text)
+    remarques: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    remarques: Mapped[str | None] = mapped_column(Text)
-
-    mot_de_passe_pc: Mapped[str | None] = mapped_column(String(255))
+    mot_de_passe_pc: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     urgent: Mapped[bool] = mapped_column(
         Boolean,
@@ -113,12 +128,13 @@ class Reparation(Base):
         "ReparationPiece",
         back_populates="reparation"
     )
-'''
+
     historique = relationship(
         "HistoriqueStatut",
-        back_populates="reparation"
+        back_populates="reparation",
+        cascade="all, delete-orphan"
     )
-
+'''
     notifications = relationship(
         "Notification",
         back_populates="reparation"

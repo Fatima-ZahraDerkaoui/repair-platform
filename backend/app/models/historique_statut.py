@@ -8,7 +8,9 @@ from sqlalchemy import (
 
 from sqlalchemy.sql import func
 
-from app.database import Base
+from app.database.database import Base
+
+from sqlalchemy.orm import relationship
 
 
 class HistoriqueStatut(Base):
@@ -46,4 +48,13 @@ class HistoriqueStatut(Base):
     date_modification = Column(
         DateTime,
         server_default=func.now()
+    )
+
+    reparation = relationship(
+        "Reparation",
+        back_populates="historique"
+    )
+
+    utilisateur = relationship(
+        "Utilisateur"
     )

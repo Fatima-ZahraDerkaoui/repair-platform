@@ -23,3 +23,7 @@ class Utilisateur(Base):
         "Reparation",
         back_populates="receptionniste"
     )
+
+    historiques = relationship(
+        "HistoriqueStatut"
+    )

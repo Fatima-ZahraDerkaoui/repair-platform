@@ -3,6 +3,13 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class ChangerStatutRequest(BaseModel):
+
+    nouveau_statut: str
+
+    utilisateur_id: int
+
+
 class HistoriqueStatutResponse(BaseModel):
 
     id: int
@@ -18,5 +25,4 @@ class HistoriqueStatutResponse(BaseModel):
     date_modification: datetime
 
     class Config:
-
         from_attributes = True

@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database.database import get_db
-
+from app.schemas.historique_statut import (
+    ChangerStatutRequest
+)
+from app.services.statut import (
+    changer_statut
+)
 from app.schemas.reparation import (
     ReparationCreate,
     ReparationResponse,
@@ -88,11 +93,11 @@ def get_by_numero(
 
     return reparation
 
+
 @router.patch(
-    "/{reparation_id}/statut",
-    response_model=ReparationResponse
+    "/{reparation_id}/statut"
 )
-def update_statut_reparation(
+def modifier_statut(
 
     reparation_id: int,
 
@@ -102,17 +107,28 @@ def update_statut_reparation(
 
 ):
 
-    reparation = update_statut(
+    try:
 
-        db=db,
+        reparation = changer_statut(
 
-        reparation_id=reparation_id,
+            db=db,
 
-        nouveau_statut=data.statut,
+            reparation_id=reparation_id,
 
-        utilisateur_id=data.utilisateur_id
+            nouveau_statut=data.nouveau_statut
 
-    )
+        )
+
+    except ValueError as error:
+
+        raise HTTPException(
+
+            status_code=400,
+
+            detail=str(error)
+
+        )
+
 
     if not reparation:
 
@@ -124,4 +140,16 @@ def update_statut_reparation(
 
         )
 
-    return reparation
+
+    return {
+
+        "message":
+        "Statut modifié avec succès",
+
+        "reparation_id":
+        reparation.id,
+
+        "nouveau_statut":
+        reparation.statut
+
+    }
