@@ -5,14 +5,8 @@ class StatutReparation(str, Enum):
 
     EN_ATTENTE = "En attente"
 
-    DIAGNOSTIC = "Diagnostic"
+    EN_DIAGNOSTIC = "En diagnostic"
 
     EN_REPARATION = "En réparation"
 
-    EN_TEST = "En test"
-
     TERMINE = "Terminé"
-
-    LIVRE = "Livré"
-
-    ANNULE = "Annulé"

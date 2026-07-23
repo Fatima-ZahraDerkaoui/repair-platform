@@ -1,13 +1,21 @@
 import os
+
 import qrcode
 
 
 DOSSIER_QR = "uploads/qrcodes"
 
 IP_PC = "192.168.1.16"
+#IP_PC= "192.168.11.118"
+
+PORT_FRONTEND = 3000
 
 
-def generer_qr_code(numero_dossier: str):
+def generer_qr_code(
+
+    numero_dossier: str
+
+):
 
     os.makedirs(
 
@@ -20,11 +28,11 @@ def generer_qr_code(numero_dossier: str):
 
     url = (
 
-        f"http://{IP_PC}:8000"
+        f"http://{IP_PC}:{PORT_FRONTEND}"
 
-        f"/reparations/numero/"
+        f"/reparation.html"
 
-        f"{numero_dossier}"
+        f"?numero={numero_dossier}"
 
     )
 

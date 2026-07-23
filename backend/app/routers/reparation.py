@@ -1,12 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import joinedload
 from app.database.database import get_db
-from app.schemas.historique_statut import (
-    ChangerStatutRequest
-)
-from app.services.statut import (
-    changer_statut
-)
+from app.models.reparation import Reparation
 from app.schemas.reparation import (
     ReparationCreate,
     ReparationResponse,
@@ -17,10 +13,7 @@ from app.crud.reparation import (
     create_reparation,
     get_reparations,
     get_reparation,
-    get_reparation_by_numero,
-    update_reparation,
-    delete_reparation,
-    update_statut
+    get_reparation_by_numero
 )
 
 from app.schemas.reparation_piece import (
@@ -32,10 +25,20 @@ from app.services.reparation_piece import (
     utiliser_piece
 )
 
+from app.services.statut import (
+    changer_statut
+)
+
+
 router = APIRouter(
     prefix="/reparations",
     tags=["Réparations"]
 )
+
+
+# ==========================================
+# CRÉER UNE RÉPARATION
+# ==========================================
 
 @router.post(
     "/",
@@ -46,8 +49,15 @@ def create(
     db: Session = Depends(get_db)
 ):
 
-    return create_reparation(db, reparation)
+    return create_reparation(
+        db,
+        reparation
+    )
 
+
+# ==========================================
+# LIRE TOUTES LES RÉPARATIONS
+# ==========================================
 
 @router.get(
     "/",
@@ -60,25 +70,131 @@ def read_all(
     return get_reparations(db)
 
 
+# ==========================================
+# CHERCHER PAR NUMÉRO DE DOSSIER
+# IMPORTANT : AVANT /{id}
+# ==========================================
+@router.get(
+    "/numero/{numero_dossier}",
+    response_model=ReparationResponse
+)
+def get_reparation_by_numero(
+
+    numero_dossier: str,
+
+    db: Session = Depends(get_db)
+
+):
+
+    reparation = (
+
+        db.query(Reparation)
+
+        .filter(
+
+            Reparation.numero_dossier
+
+            == numero_dossier
+
+        )
+
+        .first()
+
+    )
+
+
+    if not reparation:
+
+        raise HTTPException(
+
+            status_code=404,
+
+            detail="Dossier introuvable"
+
+        )
+
+
+    return reparation
+
+#===========================================
+
+@router.get(
+    "/numero/{numero_dossier}",
+    response_model=ReparationResponse
+)
+def get_by_numero(
+
+    numero_dossier: str,
+
+    db: Session = Depends(get_db)
+
+):
+
+    reparation = get_reparation_by_numero(
+
+        db,
+
+        numero_dossier
+
+    )
+
+
+    if not reparation:
+
+        raise HTTPException(
+
+            status_code=404,
+
+            detail="Dossier de réparation introuvable"
+
+        )
+
+
+    return reparation
+
+
+# ==========================================
+# LIRE UNE RÉPARATION PAR ID
+# ==========================================
+
 @router.get(
     "/{id}",
     response_model=ReparationResponse
 )
 def read_one(
+
     id: int,
+
     db: Session = Depends(get_db)
+
 ):
 
-    rep = get_reparation(db, id)
+    reparation = get_reparation(
 
-    if not rep:
+        db,
+
+        id
+
+    )
+
+
+    if not reparation:
+
         raise HTTPException(
+
             status_code=404,
+
             detail="Réparation introuvable"
+
         )
 
-    return rep
 
+    return reparation
+
+
+# ==========================================
+# MODIFIER LE STATUT
+# ==========================================
 
 @router.patch(
     "/{reparation_id}/statut"
@@ -101,9 +217,12 @@ def modifier_statut(
 
             reparation_id=reparation_id,
 
-            nouveau_statut=data.nouveau_statut
+            nouveau_statut=data.nouveau_statut,
+
+            utilisateur_id=data.utilisateur_id
 
         )
+
 
     except ValueError as error:
 
@@ -130,15 +249,27 @@ def modifier_statut(
     return {
 
         "message":
+
         "Statut modifié avec succès",
 
         "reparation_id":
+
         reparation.id,
 
+        "ancien_statut":
+
+        reparation.statut,
+
         "nouveau_statut":
+
         reparation.statut
 
     }
+
+
+# ==========================================
+# AJOUTER UNE PIÈCE À UNE RÉPARATION
+# ==========================================
 
 @router.post(
 
@@ -171,6 +302,7 @@ def ajouter_piece(
 
         )
 
+
     except ValueError as error:
 
         raise HTTPException(
@@ -180,16 +312,13 @@ def ajouter_piece(
             detail=str(error)
 
         )
-    
+
+
 @router.get(
-
     "/numero/{numero_dossier}",
-
     response_model=ReparationResponse
-
 )
-
-def get_by_numero(
+def get_reparation_by_numero(
 
     numero_dossier: str,
 
@@ -197,11 +326,29 @@ def get_by_numero(
 
 ):
 
-    reparation = get_reparation_by_numero(
+    reparation = (
 
-        db,
+        db.query(Reparation)
 
-        numero_dossier
+        .options(
+
+            joinedload(
+
+                Reparation.client
+
+            )
+
+        )
+
+        .filter(
+
+            Reparation.numero_dossier
+
+            == numero_dossier
+
+        )
+
+        .first()
 
     )
 
@@ -212,7 +359,7 @@ def get_by_numero(
 
             status_code=404,
 
-            detail="Dossier de réparation introuvable"
+            detail="Dossier introuvable"
 
         )
 

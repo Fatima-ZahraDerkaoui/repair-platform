@@ -56,5 +56,6 @@ class HistoriqueStatut(Base):
     )
 
     utilisateur = relationship(
-        "Utilisateur"
+        "Utilisateur",
+        back_populates="historiques"
     )

@@ -1,22 +1,24 @@
 from sqlalchemy.orm import Session
 
-from app.models.reparation import Reparation
-from app.models.historique_statut import HistoriqueStatut
+from app.crud.reparation import (
+    get_reparation
+)
+
+from app.crud.historique_statut import (
+    create_historique
+)
 
 
 STATUTS_AUTORISES = [
 
     "En attente",
 
-    "Diagnostic",
+    "En diagnostic",
 
     "En réparation",
 
-    "En test",
+    "Terminé"
 
-    "Terminé",
-
-    "Livré"
 ]
 
 
@@ -35,19 +37,18 @@ def changer_statut(
     if nouveau_statut not in STATUTS_AUTORISES:
 
         raise ValueError(
+
             "Statut invalide"
+
         )
 
 
-    reparation = (
+    reparation = get_reparation(
 
-        db.query(Reparation)
+        db,
 
-        .filter(
-            Reparation.id == reparation_id
-        )
+        reparation_id
 
-        .first()
     )
 
 
@@ -59,16 +60,21 @@ def changer_statut(
     ancien_statut = reparation.statut
 
 
-    # Éviter un historique inutile
     if ancien_statut == nouveau_statut:
 
-        return reparation
+        raise ValueError(
+
+            "Le nouveau statut est identique à l'ancien"
+
+        )
 
 
     reparation.statut = nouveau_statut
 
 
-    historique = HistoriqueStatut(
+    create_historique(
+
+        db=db,
 
         reparation_id=reparation.id,
 
@@ -80,8 +86,6 @@ def changer_statut(
 
     )
 
-
-    db.add(historique)
 
     db.commit()
 

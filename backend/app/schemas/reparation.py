@@ -77,6 +77,72 @@ class ReparationResponse(ReparationBase):
 
 class StatutUpdate(BaseModel):
 
-    statut: str
+    nouveau_statut: str
 
     utilisateur_id: int | None = None
+
+from pydantic import BaseModel
+from datetime import datetime
+from decimal import Decimal
+
+
+class ClientInfo(BaseModel):
+
+    nom: str
+
+    telephone: str
+
+
+class ReparationResponse(BaseModel):
+
+    id: int
+
+    client_id: int
+
+    client: ClientInfo
+
+    receptionniste_id: int
+
+    type_materiel: str
+
+    systeme_exploitation: str
+
+    version_office: str
+
+    origine_probleme: str
+
+    intervention: str | None
+
+    probleme: str
+
+    pieces_defectueuses: str | None
+
+    remarques: str | None
+
+    mot_de_passe_pc: str | None
+
+    urgent: bool
+
+    resolu: bool
+
+    statut: str
+
+    numero_dossier: str | None
+
+    qr_code: str | None
+
+    texte_ocr: str | None
+
+    delai_estime: int | None
+
+    cout_estime: float | None
+
+    cout_reel: float | None
+
+    date_reception: datetime
+
+    date_fin: datetime | None
+
+    class Config:
+
+        from_attributes = True
