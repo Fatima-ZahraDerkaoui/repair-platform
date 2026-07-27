@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 
 from app.models.client import Client
 from app.schemas.client import ClientCreate
+from sqlalchemy.orm import Session
+from app.models.client import Client
 
 def create_client(db: Session, client: ClientCreate):
 
@@ -70,3 +72,65 @@ def delete_client(
 
     return client
 
+
+from sqlalchemy.orm import Session
+
+from app.models.client import Client
+
+
+def get_or_create_client(
+    db: Session,
+    nom: str,
+    telephone: str
+):
+
+    client = (
+
+        db.query(Client)
+
+        .filter(
+
+            Client.nom.ilike(nom)
+
+        )
+
+        .first()
+
+    )
+
+
+    if client:
+
+        # Le client existe déjà.
+        # On met à jour son numéro si nécessaire.
+
+        if client.telephone != telephone:
+
+            client.telephone = telephone
+
+            db.commit()
+
+            db.refresh(client)
+
+
+        return client
+
+
+    # Nouveau client
+
+    nouveau_client = Client(
+
+        nom=nom,
+
+        telephone=telephone
+
+    )
+
+    db.add(nouveau_client)
+
+    db.commit()
+
+    db.refresh(nouveau_client)
+
+
+    return nouveau_client

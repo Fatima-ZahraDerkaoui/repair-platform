@@ -33,8 +33,31 @@ class ReparationBase(BaseModel):
 
     resolu: bool = False
 
-class ReparationCreate(ReparationBase):
-    pass
+class ReparationCreate(BaseModel):
+
+    client_id: int
+
+    receptionniste_id: int
+
+    type_materiel: str
+
+    systeme_exploitation: Optional[str] = None
+
+    version_office: Optional[str] = None
+
+    origine_probleme: Optional[str] = None
+
+    intervention: Optional[str] = None
+
+    probleme: Optional[str] = None
+
+    pieces_defectueuses: Optional[str] = None
+
+    remarques: Optional[str] = None
+
+    mot_de_passe_pc: Optional[str] = None
+
+    urgent: bool = False
 
 class ReparationUpdate(ReparationBase):
     
@@ -50,29 +73,59 @@ class ReparationUpdate(ReparationBase):
 
     date_fin: datetime | None = None
 
-class ReparationResponse(ReparationBase):
+class ReparationResponse(BaseModel):
 
     id: int
 
-    statut: str
+    client_id: int
 
-    numero_dossier: str | None = None
-
-    qr_code: Optional[str]
-
-    texte_ocr: Optional[str]
-
-    delai_estime: Optional[int]
-
-    cout_estime: Optional[float]
-
-    cout_reel: Optional[float]
+    receptionniste_id: int
 
     date_reception: datetime
 
-    date_fin: Optional[datetime]
+    type_materiel: str
+
+    systeme_exploitation: Optional[str] = None
+
+    version_office: Optional[str] = None
+
+    origine_probleme: Optional[str] = None
+
+    probleme: Optional[str] = None
+
+    diagnostic: Optional[str] = None
+
+    intervention: Optional[str] = None
+
+    pieces_defectueuses: Optional[str] = None
+
+    remarques: Optional[str] = None
+
+    mot_de_passe_pc: Optional[str] = None
+
+    urgent: bool
+
+    resolu: bool
+
+    statut: str
+
+    numero_dossier: Optional[str] = None
+
+    qr_code: Optional[str] = None
+
+    texte_ocr: Optional[str] = None
+
+    delai_estime: Optional[int] = None
+
+    cout_estime: Optional[Decimal] = None
+
+    cout_reel: Optional[Decimal] = None
+
+    date_fin: Optional[datetime] = None
+
 
     class Config:
+
         from_attributes = True
 
 class StatutUpdate(BaseModel):
@@ -81,17 +134,11 @@ class StatutUpdate(BaseModel):
 
     utilisateur_id: int | None = None
 
-from pydantic import BaseModel
-from datetime import datetime
-from decimal import Decimal
-
-
 class ClientInfo(BaseModel):
 
     nom: str
 
     telephone: str
-
 
 class ReparationResponse(BaseModel):
 
@@ -99,27 +146,29 @@ class ReparationResponse(BaseModel):
 
     client_id: int
 
-    client: ClientInfo
-
     receptionniste_id: int
+
+    date_reception: datetime
 
     type_materiel: str
 
-    systeme_exploitation: str
+    systeme_exploitation: Optional[str] = None
 
-    version_office: str
+    version_office: Optional[str] = None
 
-    origine_probleme: str
+    origine_probleme: Optional[str] = None
 
-    intervention: str | None
+    probleme: Optional[str] = None
 
-    probleme: str
+    diagnostic: Optional[str] = None
 
-    pieces_defectueuses: str | None
+    intervention: Optional[str] = None
 
-    remarques: str | None
+    pieces_defectueuses: Optional[str] = None
 
-    mot_de_passe_pc: str | None
+    remarques: Optional[str] = None
+
+    mot_de_passe_pc: Optional[str] = None
 
     urgent: bool
 
@@ -127,21 +176,21 @@ class ReparationResponse(BaseModel):
 
     statut: str
 
-    numero_dossier: str | None
+    numero_dossier: Optional[str] = None
 
-    qr_code: str | None
+    qr_code: Optional[str] = None
 
-    texte_ocr: str | None
+    texte_ocr: Optional[str] = None
 
-    delai_estime: int | None
+    delai_estime: Optional[int] = None
 
-    cout_estime: float | None
+    cout_estime: Optional[Decimal] = None
 
-    cout_reel: float | None
+    cout_reel: Optional[Decimal] = None
 
-    date_reception: datetime
-
-    date_fin: datetime | None
+    date_fin: Optional[datetime] = None
+    
+    fiche_pdf: str | None = None
 
     class Config:
 

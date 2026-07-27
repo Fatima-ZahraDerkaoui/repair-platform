@@ -6,6 +6,7 @@ from app.routers.utilisateur import router as utilisateur_router
 from app.routers import ocr
 from app.routers import stock
 from app.routers import alerte_stock
+from app.routers import client
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -47,5 +48,11 @@ app.include_router(
 app.include_router(
 
     alerte_stock.router
+
+)
+
+app.include_router(
+
+    client.router
 
 )

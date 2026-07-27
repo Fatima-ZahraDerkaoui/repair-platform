@@ -1,11 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-
+from app.models.client import Client
+from sqlalchemy.orm import Session
+from app.models.client import Client
 from app.database.database import get_db
-
+from app.schemas.client import ClientGetOrCreate
 from app.schemas.client import (
     ClientCreate,
     ClientResponse
+)
+
+router = APIRouter(
+    prefix="/clients",
+    tags=["Clients"]
 )
 
 from app.crud.client import (
@@ -20,6 +27,31 @@ router = APIRouter(
     prefix="/clients",
     tags=["Clients"]
 )
+
+@router.get("/search")
+def rechercher_client(
+    nom: str = Query(...),
+    db: Session = Depends(get_db)
+):
+
+    client = (
+        db.query(Client)
+        .filter(
+            Client.nom.ilike(f"%{nom}%")
+        )
+        .first()
+    )
+
+    if client is None:
+        return None
+
+    return {
+        "id": client.id,
+        "nom": client.nom,
+        "telephone": client.telephone,
+        "email": client.email,
+        "adresse": client.adresse
+    }
 
 @router.post(
     "/",
@@ -41,6 +73,7 @@ def read_all(
 ):
 
     return get_clients(db)
+
 
 @router.get(
     "/{client_id}",
@@ -106,4 +139,54 @@ def delete(
         "message": "Client supprimé avec succès"
     }
 
+@router.post(
+    "/get-or-create",
+    response_model=ClientResponse
+)
+def get_or_create_client(
 
+    data: ClientGetOrCreate,
+
+    db: Session = Depends(get_db)
+
+):
+
+    client = (
+
+        db.query(Client)
+
+        .filter(
+
+            Client.nom == data.nom,
+
+            Client.telephone == data.telephone
+
+        )
+
+        .first()
+
+    )
+
+
+    if client:
+
+        return client
+
+
+    nouveau_client = Client(
+
+        nom=data.nom,
+
+        telephone=data.telephone
+
+    )
+
+
+    db.add(nouveau_client)
+
+    db.commit()
+
+    db.refresh(nouveau_client)
+
+
+    return nouveau_client

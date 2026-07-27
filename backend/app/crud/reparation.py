@@ -1,69 +1,187 @@
 from sqlalchemy.orm import Session
 
 from app.models.reparation import Reparation
-from app.schemas.reparation import ReparationCreate, ReparationUpdate
-from app.services.dossier import generer_numero_dossier
-from app.services.qr_code import generer_qr_code
+
+from app.schemas.reparation import (
+    ReparationCreate,
+    ReparationUpdate
+)
+
+from app.services.dossier import (
+    generer_numero_dossier
+)
+
+from app.services.qr_code import (
+    generer_qr_code
+)
+
+from app.services.fiche_pdf import (
+    generer_fiche_pdf
+)
+
 from app.crud.historique_statut import (
     create_historique
 )
 
+import os
+
+
 def create_reparation(
+
     db: Session,
+
     reparation: ReparationCreate
+
 ):
 
-    nouvelle = Reparation(**reparation.model_dump())
+    nouvelle = Reparation(
+
+        **reparation.model_dump()
+
+    )
 
     db.add(nouvelle)
 
-    # Premier commit : génère l'id
     db.commit()
 
     db.refresh(nouvelle)
 
-    # Génération du numéro de dossier
-    nouvelle.numero_dossier = generer_numero_dossier(nouvelle.id)
-    
-    nouvelle.qr_code = generer_qr_code(
-        nouvelle.numero_dossier
+
+    # NUMÉRO DOSSIER
+
+    nouvelle.numero_dossier = (
+
+        generer_numero_dossier(
+
+            nouvelle.id
+
+        )
+
     )
-    # Sauvegarde du numéro
+
+
+    # QR CODE
+
+    nouvelle.qr_code = (
+
+        generer_qr_code(
+
+            nouvelle.numero_dossier
+
+        )
+
+    )
+
+
     db.commit()
 
     db.refresh(nouvelle)
+
+
+    # CLIENT
+
+    client = nouvelle.client
+
+
+    # PDF
+
+    dossier_fiches = "uploads/fiches"
+
+    os.makedirs(
+
+        dossier_fiches,
+
+        exist_ok=True
+
+    )
+
+
+    chemin_fiche = os.path.join(
+
+        dossier_fiches,
+
+        f"{nouvelle.numero_dossier}.pdf"
+
+    )
+
+
+    generer_fiche_pdf(
+
+        reparation=nouvelle,
+
+        client=client,
+
+        chemin_fichier=chemin_fiche
+
+    )
+
 
     return nouvelle
 
 
-# Lire toutes les réparations
-def get_reparations(db: Session):
-    return db.query(Reparation).all()
+def get_reparations(
 
-def get_reparation_by_numero(
-    db: Session,
-    numero_dossier: str
+    db: Session
+
 ):
 
     return (
+
         db.query(Reparation)
-        .filter(
-            Reparation.numero_dossier
-            == numero_dossier
-        )
-        .first()
+
+        .all()
+
     )
 
-# Lire une réparation
-def get_reparation(db: Session, id: int):
+
+def get_reparation(
+
+    db: Session,
+
+    id: int
+
+):
+
     return (
+
         db.query(Reparation)
-        .filter(Reparation.id == id)
+
+        .filter(
+
+            Reparation.id == id
+
+        )
+
         .first()
+
     )
 
 
-# Modifier
+def get_reparation_by_numero(
+
+    db: Session,
+
+    numero_dossier: str
+
+):
+
+    return (
+
+        db.query(Reparation)
+
+        .filter(
+
+            Reparation.numero_dossier
+
+            == numero_dossier
+
+        )
+
+        .first()
+
+    )
+
+
 def update_reparation(
 
     db: Session,
@@ -111,16 +229,26 @@ def update_reparation(
     return reparation
 
 
-# Supprimer
 def delete_reparation(
+
     db: Session,
+
     id: int
+
 ):
 
-    reparation = get_reparation(db, id)
+    reparation = get_reparation(
+
+        db,
+
+        id
+
+    )
 
     if not reparation:
+
         return None
+
 
     db.delete(reparation)
 
@@ -153,9 +281,11 @@ def update_statut(
 
         return None
 
+
     ancien_statut = reparation.statut
 
     reparation.statut = nouveau_statut
+
 
     create_historique(
 
@@ -170,6 +300,7 @@ def update_statut(
         utilisateur_id=utilisateur_id
 
     )
+
 
     db.commit()
 

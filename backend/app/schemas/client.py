@@ -22,3 +22,9 @@ class ClientResponse(ClientBase):
 
     class Config:
         from_attributes = True
+
+class ClientGetOrCreate(BaseModel):
+
+    nom: str
+
+    telephone: str
