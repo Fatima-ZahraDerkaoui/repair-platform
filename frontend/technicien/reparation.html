@@ -609,9 +609,7 @@
         // ======================================
 
 
-        const API_URL =
-
-            "http://192.168.1.16:8000";
+        const API_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
 
 
         // IMPORTANT :
@@ -681,153 +679,94 @@
 
         // ======================================
 
+        function afficherReparation(reparation) {
 
-        function afficherReparation(
-
-            reparation
-
-        ) {
             reparationActuelle = reparation;
 
             document
-
-                .getElementById(
-
-                    "loading"
-
-                )
-
+                .getElementById("loading")
                 .classList
-
-                .add(
-
-                    "hidden"
-
-                );
-
+                .add("hidden");
 
             document
-
-                .getElementById(
-
-                    "content"
-
-                )
-
+                .getElementById("content")
                 .classList
+                .remove("hidden");
 
-                .remove(
 
-                    "hidden"
+            // ================================
+            // INFORMATIONS PRINCIPALES
+            // ================================
 
-                );
+            document
+                .getElementById("numeroDossier")
+                .textContent =
+                reparation.numero_dossier || "Non disponible";
 
 
             document
-
-                .getElementById(
-
-                    "numeroDossier"
-
-                )
-
+                .getElementById("materiel")
                 .textContent =
-
-                reparation.numero_dossier;
+                reparation.type_materiel || "Non spécifié";
 
 
             document
-
-                .getElementById(
-
-                    "materiel"
-
-                )
-
+                .getElementById("systeme")
                 .textContent =
-
-                reparation.type_materiel;
+                reparation.systeme_exploitation || "Non spécifié";
 
 
             document
-
-                .getElementById(
-
-                    "systeme"
-
-                )
-
+                .getElementById("office")
                 .textContent =
-
-                reparation.systeme_exploitation;
+                reparation.version_office || "Non spécifié";
 
 
             document
-
-                .getElementById(
-
-                    "office"
-
-                )
-
+                .getElementById("probleme")
                 .textContent =
-
-                reparation.version_office;
+                reparation.probleme || "Non spécifié";
 
 
             document
-
-                .getElementById(
-
-                    "probleme"
-
-                )
-
+                .getElementById("statut")
                 .textContent =
-
-                reparation.probleme;
-
-
-            document
-
-                .getElementById(
-
-                    "statut"
-
-                )
-
-                .textContent =
-
-                reparation.statut;
+                reparation.statut || "Non spécifié";
 
 
-            document
+            // ================================
+            // CLIENT
+            // ================================
 
-                .getElementById(
+            if (reparation.client) {
 
-                    "clientNom"
-
-                )
-
-                .textContent =
-
-                reparation.client.nom;
+                document
+                    .getElementById("clientNom")
+                    .textContent =
+                    reparation.client.nom || "Non disponible";
 
 
-            document
+                document
+                    .getElementById("clientTelephone")
+                    .textContent =
+                    reparation.client.telephone || "Non disponible";
 
-                .getElementById(
+            } else {
 
-                    "clientTelephone"
+                document
+                    .getElementById("clientNom")
+                    .textContent =
+                    "Client non disponible";
 
-                )
 
-                .textContent =
+                document
+                    .getElementById("clientTelephone")
+                    .textContent =
+                    "Non disponible";
 
-                reparation.client.telephone;
+            }
 
         }
-
         //===================================
         //===================================
         

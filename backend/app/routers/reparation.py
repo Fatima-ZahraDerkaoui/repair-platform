@@ -164,15 +164,10 @@ def read_all(
 # =====================================================
 # CHERCHER PAR NUMÉRO
 # =====================================================
-
 @router.get(
-
     "/numero/{numero_dossier}",
-
     response_model=ReparationResponse
-
 )
-
 def get_by_numero(
 
     numero_dossier: str,
@@ -220,7 +215,6 @@ def get_by_numero(
 
 
     return reparation
-
 
 # =====================================================
 # LIRE PAR ID

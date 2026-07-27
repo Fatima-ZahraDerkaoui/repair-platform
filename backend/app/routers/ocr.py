@@ -1,71 +1,87 @@
-from fastapi import APIRouter, UploadFile, File
-import tempfile
-import os
+from fastapi import APIRouter, UploadFile, File, HTTPException
+from pathlib import Path
+import uuid
 
-from app.ocr.engine import OCREngine
-from app.ocr.parser import RepairParser
-
+from app.services.ocr_service import traiter_document
 
 router = APIRouter(
     prefix="/ocr",
     tags=["OCR"]
 )
 
+DOSSIER_DOCUMENTS = Path("uploads/documents")
 
-ocr_engine = OCREngine()
+DOSSIER_DOCUMENTS.mkdir(
+    parents=True,
+    exist_ok=True
+)
 
 
-@router.post("/repair")
-async def process_repair_form(
-    file: UploadFile = File(...)
+@router.post("/analyser")
+async def analyser_document(
+    fichier: UploadFile = File(...)
 ):
 
-    # 1. Lire l'image envoyée
-    content = await file.read()
+    extensions_autorisees = [
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".pdf"
+    ]
 
-    print("Nom fichier :", file.filename)
-    print("Taille image :", len(content), "bytes")
+    extension = Path(
+        fichier.filename
+    ).suffix.lower()
 
-    # 2. Créer un fichier temporaire
-    with tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix=".png"
-    ) as temp_file:
+    if extension not in extensions_autorisees:
 
-        temp_file.write(content)
+        raise HTTPException(
+            status_code=400,
+            detail="Format non supporté"
+        )
 
-        image_path = temp_file.name
+    nom_fichier = (
+        f"{uuid.uuid4()}"
+        f"{extension}"
+    )
+
+    chemin = (
+        DOSSIER_DOCUMENTS
+        /
+        nom_fichier
+    )
+
+    contenu = await fichier.read()
+
+    with open(chemin, "wb") as f:
+
+        f.write(contenu)
 
     try:
 
-        # 3. OCR
-        texts = ocr_engine.extract_text(
-            image_path
+        resultat = traiter_document(
+            str(chemin)
         )
 
-        print("\n===== TEXTES OCR DANS API =====")
-
-        for text in texts:
-
-            print(text)
-
-        # 4. Parser
-        parser = RepairParser()
-
-        data = parser.parse(texts)
-
-        print("\n===== DONNEES STRUCTUREES =====")
-
-        print(data)
-
         return {
-            "success": True,
-            "data": data
+
+            "message":
+            "Document analysé avec succès",
+
+            "fichier":
+            nom_fichier,
+
+            "resultat":
+            resultat
+
         }
 
-    finally:
+    except Exception as e:
 
-        # Supprimer le fichier temporaire
-        if os.path.exists(image_path):
+        raise HTTPException(
 
-            os.remove(image_path)
+            status_code=500,
+
+            detail=str(e)
+
+        )

@@ -9,6 +9,7 @@ from app.routers import alerte_stock
 from app.routers import client
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.routers.ocr import router as ocr_router
 
 app = FastAPI(
     title="Repair Platform API"
@@ -52,7 +53,9 @@ app.include_router(
 )
 
 app.include_router(
-
     client.router
+)
 
+app.include_router(
+    ocr_router
 )

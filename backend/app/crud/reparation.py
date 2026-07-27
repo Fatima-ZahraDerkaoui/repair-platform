@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.reparation import Reparation
 
@@ -26,6 +26,10 @@ from app.crud.historique_statut import (
 import os
 
 
+# =====================================================
+# CRÉER UNE RÉPARATION
+# =====================================================
+
 def create_reparation(
 
     db: Session,
@@ -47,7 +51,7 @@ def create_reparation(
     db.refresh(nouvelle)
 
 
-    # NUMÉRO DOSSIER
+    # Numéro du dossier
 
     nouvelle.numero_dossier = (
 
@@ -60,7 +64,7 @@ def create_reparation(
     )
 
 
-    # QR CODE
+    # QR Code
 
     nouvelle.qr_code = (
 
@@ -78,12 +82,12 @@ def create_reparation(
     db.refresh(nouvelle)
 
 
-    # CLIENT
+    # Client
 
     client = nouvelle.client
 
 
-    # PDF
+    # Génération du PDF
 
     dossier_fiches = "uploads/fiches"
 
@@ -119,6 +123,10 @@ def create_reparation(
     return nouvelle
 
 
+# =====================================================
+# LIRE TOUTES LES RÉPARATIONS
+# =====================================================
+
 def get_reparations(
 
     db: Session
@@ -129,10 +137,24 @@ def get_reparations(
 
         db.query(Reparation)
 
+        .options(
+
+            joinedload(
+
+                Reparation.client
+
+            )
+
+        )
+
         .all()
 
     )
 
+
+# =====================================================
+# LIRE UNE RÉPARATION PAR ID
+# =====================================================
 
 def get_reparation(
 
@@ -146,6 +168,16 @@ def get_reparation(
 
         db.query(Reparation)
 
+        .options(
+
+            joinedload(
+
+                Reparation.client
+
+            )
+
+        )
+
         .filter(
 
             Reparation.id == id
@@ -156,6 +188,10 @@ def get_reparation(
 
     )
 
+
+# =====================================================
+# LIRE UNE RÉPARATION PAR NUMÉRO
+# =====================================================
 
 def get_reparation_by_numero(
 
@@ -169,6 +205,16 @@ def get_reparation_by_numero(
 
         db.query(Reparation)
 
+        .options(
+
+            joinedload(
+
+                Reparation.client
+
+            )
+
+        )
+
         .filter(
 
             Reparation.numero_dossier
@@ -181,6 +227,10 @@ def get_reparation_by_numero(
 
     )
 
+
+# =====================================================
+# MODIFIER UNE RÉPARATION
+# =====================================================
 
 def update_reparation(
 
@@ -199,6 +249,7 @@ def update_reparation(
         id
 
     )
+
 
     if not reparation:
 
@@ -229,6 +280,10 @@ def update_reparation(
     return reparation
 
 
+# =====================================================
+# SUPPRIMER UNE RÉPARATION
+# =====================================================
+
 def delete_reparation(
 
     db: Session,
@@ -245,6 +300,7 @@ def delete_reparation(
 
     )
 
+
     if not reparation:
 
         return None
@@ -256,6 +312,10 @@ def delete_reparation(
 
     return reparation
 
+
+# =====================================================
+# MODIFIER LE STATUT
+# =====================================================
 
 def update_statut(
 
@@ -277,12 +337,14 @@ def update_statut(
 
     )
 
+
     if not reparation:
 
         return None
 
 
     ancien_statut = reparation.statut
+
 
     reparation.statut = nouveau_statut
 
