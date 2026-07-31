@@ -1,7 +1,10 @@
+from pathlib import Path
+
 import cv2
-import tempfile
 from paddleocr import PaddleOCR
+
 from app.services.ocr.image_preprocessor import ImagePreprocessor
+
 
 class OCREngine:
 
@@ -10,50 +13,149 @@ class OCREngine:
         self.preprocessor = ImagePreprocessor()
 
         self.ocr = PaddleOCR(
+
             lang="fr",
+
             use_doc_orientation_classify=False,
+
             use_doc_unwarping=False,
+
             use_textline_orientation=False,
+
             enable_mkldnn=False
+
         )
 
-    def extraire_texte(self, chemin_image):
+    # --------------------------------------------------
+
+    def save_temp_image(self, image):
+
+        temp = Path("temp")
+
+        temp.mkdir(exist_ok=True)
+
+        path = temp / "preprocessed.png"
+
+        cv2.imwrite(
+
+            str(path),
+
+            image
+
+        )
+
+        return str(path)
+
+    # --------------------------------------------------
+
+    def normalize_box(self, points):
+
+        xs = [p[0] for p in points]
+
+        ys = [p[1] for p in points]
+
+        return [
+
+            int(min(xs)),
+            int(min(ys)),
+            int(max(xs)),
+            int(max(ys))
+
+        ]
+
+    # --------------------------------------------------
+
+    def extraire_texte(
+
+            self,
+
+            image_path: str
+
+    ):
 
         image = self.preprocessor.preprocess(
-            chemin_image,
-            debug=True
+
+            image_path
+
+        )
+
+        image_path = self.save_temp_image(
+
+            image
+
         )
 
         resultats = self.ocr.predict(
-            image
+
+            image_path
+
         )
 
-        donnees = []
+        elements = []
 
         for resultat in resultats:
 
             data = resultat.json
 
-            if isinstance(data, dict):
+            if not isinstance(data, dict):
 
-                res = data.get("res", data)
+                continue
 
-                textes = res.get("rec_texts", [])
+            res = data.get(
 
-                boxes = res.get("rec_boxes", [])
+                "res",
 
-                for texte, box in zip(textes, boxes):
+                data
 
-                    x1 = int(box[0])
-                    y1 = int(box[1])
-                    x2 = int(box[2])
-                    y2 = int(box[3])
+            )
 
-                    donnees.append(
-                        {
-                            "text": texte,
-                            "box": [x1, y1, x2, y2]
-                        }
-                    )
+            textes = res.get(
 
-        return donnees
+                "rec_texts",
+
+                []
+
+            )
+
+            scores = res.get(
+
+                "rec_scores",
+
+                []
+
+            )
+
+            boxes = res.get(
+
+                "rec_polys",
+
+                []
+
+            )
+
+            for texte, score, box in zip(
+
+                    textes,
+
+                    scores,
+
+                    boxes
+
+            ):
+
+                elements.append(
+
+                    {
+
+                        "text": texte.strip(),
+
+                        "score": float(score),
+
+                        "box": self.normalize_box(box)
+
+                    }
+
+                )
+
+        return elements
+    

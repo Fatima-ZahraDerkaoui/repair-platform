@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner une facture</title>
+
+    <link rel="stylesheet" href="/static/css/mobile_scan.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <h2> Scanner une facture</h2>
+
+    <p>
+        Session :
+        <strong>{{ session_id }}</strong>
+    </p>
+
+    <img id="preview"
+         class="preview"
+         src=""
+         alt="Aperçu">
+
+    <!-- Input caméra -->
+    <input
+        id="cameraInput"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style="position:absolute;left:-9999px;">
+
+    <!-- Input galerie -->
+    <input
+        id="galleryInput"
+        type="file"
+        accept="image/*"
+        style="position:absolute;left:-9999px;">
+
+    <button id="cameraButton">
+        📷 Prendre une photo
+    </button>
+
+    <button id="galleryButton">
+        🖼️ Choisir depuis la galerie
+    </button>
+
+    <button
+        id="uploadButton"
+        disabled>
+        ☁ Envoyer
+    </button>
+
+</div>
+
+<script>
+
+let selectedFile = null;
+
+const preview = document.getElementById("preview");
+
+const cameraInput = document.getElementById("cameraInput");
+
+const galleryInput = document.getElementById("galleryInput");
+
+const uploadButton = document.getElementById("uploadButton");
+
+
+document.getElementById("cameraButton").onclick = () => {
+    cameraInput.click();
+};
+
+
+document.getElementById("galleryButton").onclick = () => {
+    galleryInput.click();
+};
+
+
+cameraInput.onchange = function(){
+
+    if(this.files.length===0)
+        return;
+
+    selectedFile=this.files[0];
+
+    preview.src=URL.createObjectURL(selectedFile);
+
+    preview.style.display="block";
+
+    uploadButton.disabled=false;
+
+};
+
+
+galleryInput.onchange = function(){
+
+    if(this.files.length===0)
+        return;
+
+    selectedFile=this.files[0];
+
+    preview.src=URL.createObjectURL(selectedFile);
+
+    preview.style.display="block";
+
+    uploadButton.disabled=false;
+
+};
+
+
+uploadButton.onclick = function(){
+
+    if(selectedFile==null){
+
+        alert("Aucune image sélectionnée.");
+
+        return;
+
+    }
+
+    alert("Prochaine étape : envoyer l'image vers FastAPI.");
+
+};
+
+</script>
+
+</body>
+
+</html>

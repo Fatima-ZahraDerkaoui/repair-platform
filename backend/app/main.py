@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from app.routers.client import router as client_router
 from app.routers.reparation import router as reparation_router
 from app.routers.utilisateur import router as utilisateur_router
+from app.routers.facture_scan import router as facture_scan_router
 from app.routers import ocr
 from app.routers import stock
 from app.routers import alerte_stock
@@ -30,6 +31,7 @@ app.add_middleware(
 app.include_router(client_router)
 app.include_router(reparation_router)
 app.include_router(utilisateur_router)
+app.include_router(facture_scan_router)
 
 @app.get("/")
 def root():

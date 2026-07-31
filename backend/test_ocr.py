@@ -1,5 +1,5 @@
-from app.ocr.engine import OCREngine
-from backend.app.ocr.parser import RepairParser
+from code_passer.ocr.engine import OCREngine
+from code_passer.ocr.parser import RepairParser
 
 
 image_path = "test_data/fiche_reparation.png"

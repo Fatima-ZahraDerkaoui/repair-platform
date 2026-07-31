@@ -4,124 +4,241 @@ import numpy as np
 
 class ImagePreprocessor:
 
-    def preprocess(self, chemin_image, debug=False):
+    def __init__(self):
+        pass
 
-        image = self._charger_image(chemin_image)
+    # ---------------------------------------------------------
 
-        image = self._corriger_rotation_90(image)
+    def load(self, image_path: str):
 
-        image = self._redimensionner(image)
-
-        image = self._ameliorer_contraste(image)
-
-        image = self._supprimer_bruit(image)
-
-        image = self._accentuer(image)
-
-        if debug:
-            cv2.imwrite("debug_preprocess.jpg", image)
-
-        return image
-
-    ####################################################################
-    # Chargement
-    ####################################################################
-
-    def _charger_image(self, chemin):
-
-        image = cv2.imread(chemin)
+        image = cv2.imread(image_path)
 
         if image is None:
-            raise Exception("Impossible de lire l'image.")
+            raise ValueError("Impossible de lire l'image.")
 
         return image
 
-    ####################################################################
-    # Rotation 90°
-    ####################################################################
+    # ---------------------------------------------------------
 
-    def _corriger_rotation_90(self, image):
+    def rotate_if_needed(self, image):
 
         h, w = image.shape[:2]
 
-        if h > w:
+        # Facture scannée en portrait
+        if h < w:
             image = cv2.rotate(
                 image,
-                cv2.ROTATE_90_CLOCKWISE
+                cv2.ROTATE_90_COUNTERCLOCKWISE
             )
 
         return image
 
-    ####################################################################
-    # Resize
-    ####################################################################
+    # ---------------------------------------------------------
 
-    def _redimensionner(self, image):
+    def detect_document(self, image):
 
-        largeur = 1800
-
-        ratio = largeur / image.shape[1]
-
-        hauteur = int(image.shape[0] * ratio)
-
-        return cv2.resize(
+        gray = cv2.cvtColor(
             image,
-            (largeur, hauteur),
-            interpolation=cv2.INTER_CUBIC
+            cv2.COLOR_BGR2GRAY
         )
 
-    ####################################################################
-    # Contraste
-    ####################################################################
-
-    def _ameliorer_contraste(self, image):
-
-        lab = cv2.cvtColor(
-            image,
-            cv2.COLOR_BGR2LAB
+        blur = cv2.GaussianBlur(
+            gray,
+            (5, 5),
+            0
         )
 
-        l, a, b = cv2.split(lab)
+        edges = cv2.Canny(
+            blur,
+            50,
+            150
+        )
+
+        contours, _ = cv2.findContours(
+            edges,
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE
+        )
+
+        if not contours:
+            return image
+
+        contour = max(
+            contours,
+            key=cv2.contourArea
+        )
+
+        peri = cv2.arcLength(
+            contour,
+            True
+        )
+
+        approx = cv2.approxPolyDP(
+            contour,
+            0.02 * peri,
+            True
+        )
+
+        if len(approx) != 4:
+            return image
+
+        pts = approx.reshape(4, 2)
+
+        return self.four_point_transform(
+            image,
+            pts
+        )
+
+    # ---------------------------------------------------------
+
+    def order_points(self, pts):
+
+        rect = np.zeros(
+            (4, 2),
+            dtype="float32"
+        )
+
+        s = pts.sum(axis=1)
+
+        rect[0] = pts[np.argmin(s)]
+
+        rect[2] = pts[np.argmax(s)]
+
+        diff = np.diff(
+            pts,
+            axis=1
+        )
+
+        rect[1] = pts[np.argmin(diff)]
+
+        rect[3] = pts[np.argmax(diff)]
+
+        return rect
+
+    # ---------------------------------------------------------
+
+    def four_point_transform(
+            self,
+            image,
+            pts
+    ):
+
+        rect = self.order_points(
+            pts
+        )
+
+        (tl, tr, br, bl) = rect
+
+        widthA = np.linalg.norm(
+            br - bl
+        )
+
+        widthB = np.linalg.norm(
+            tr - tl
+        )
+
+        maxWidth = max(
+            int(widthA),
+            int(widthB)
+        )
+
+        heightA = np.linalg.norm(
+            tr - br
+        )
+
+        heightB = np.linalg.norm(
+            tl - bl
+        )
+
+        maxHeight = max(
+            int(heightA),
+            int(heightB)
+        )
+
+        dst = np.array([
+            [0, 0],
+            [maxWidth - 1, 0],
+            [maxWidth - 1, maxHeight - 1],
+            [0, maxHeight - 1]
+        ], dtype="float32")
+
+        M = cv2.getPerspectiveTransform(
+            rect,
+            dst
+        )
+
+        warped = cv2.warpPerspective(
+            image,
+            M,
+            (
+                maxWidth,
+                maxHeight
+            )
+        )
+
+        return warped
+
+    # ---------------------------------------------------------
+
+    def resize(self, image):
+
+        h, w = image.shape[:2]
+
+        target = 1800
+
+        if h < target:
+
+            ratio = target / h
+
+            image = cv2.resize(
+                image,
+                (
+                    int(w * ratio),
+                    target
+                ),
+                interpolation=cv2.INTER_CUBIC
+            )
+
+        return image
+
+    # ---------------------------------------------------------
+
+    def clahe(self, image):
+
+        gray = cv2.cvtColor(
+            image,
+            cv2.COLOR_BGR2GRAY
+        )
 
         clahe = cv2.createCLAHE(
-            clipLimit=2.0,
+            clipLimit=2.5,
             tileGridSize=(8, 8)
         )
 
-        l = clahe.apply(l)
+        gray = clahe.apply(gray)
 
-        lab = cv2.merge((l, a, b))
+        return gray
 
-        return cv2.cvtColor(
-            lab,
-            cv2.COLOR_LAB2BGR
-        )
+    # ---------------------------------------------------------
 
-    ####################################################################
-    # Bruit
-    ####################################################################
+    def denoise(self, image):
 
-    def _supprimer_bruit(self, image):
-
-        return cv2.fastNlMeansDenoisingColored(
+        return cv2.fastNlMeansDenoising(
             image,
             None,
-            10,
-            10,
+            12,
             7,
             21
         )
 
-    ####################################################################
-    # Netteté
-    ####################################################################
+    # ---------------------------------------------------------
 
-    def _accentuer(self, image):
+    def sharpen(self, image):
 
         kernel = np.array([
-            [0, -1, 0],
-            [-1, 5, -1],
-            [0, -1, 0]
+            [-1, -1, -1],
+            [-1, 9, -1],
+            [-1, -1, -1]
         ])
 
         return cv2.filter2D(
@@ -130,5 +247,25 @@ class ImagePreprocessor:
             kernel
         )
 
-    def sauvegarder(self, image, chemin_sortie):
-        cv2.imwrite(chemin_sortie, image)
+    # ---------------------------------------------------------
+
+    def preprocess(
+            self,
+            image_path: str
+    ):
+
+        image = self.load(image_path)
+
+        image = self.rotate_if_needed(image)
+
+        image = self.detect_document(image)
+
+        image = self.resize(image)
+
+        image = self.clahe(image)
+
+        image = self.denoise(image)
+
+        image = self.sharpen(image)
+
+        return image
