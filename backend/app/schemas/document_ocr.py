@@ -1,61 +1,24 @@
 from pydantic import BaseModel
-from typing import Optional
 
 
-class ProduitOCR(BaseModel):
+class DocumentOCRCreate(BaseModel):
 
-    reference: Optional[str] = None
+    session_id: str
 
-    designation: Optional[str] = None
+    document_type: str
 
-    quantite: Optional[float] = None
+    numero: str | None = None
 
-    prix_unitaire: Optional[float] = None
+    date_document: str | None = None
 
-    total: Optional[float] = None
+    fournisseur: str | None = None
 
+    total_ht: str | None = None
 
-class FournisseurOCR(BaseModel):
+    tva: str | None = None
 
-    nom: Optional[str] = None
+    total_ttc: str | None = None
 
-    telephone: Optional[str] = None
+    fichier_image: str | None = None
 
-    email: Optional[str] = None
-
-    adresse: Optional[str] = None
-
-
-class ClientOCR(BaseModel):
-
-    nom: Optional[str] = None
-
-    telephone: Optional[str] = None
-
-    adresse: Optional[str] = None
-
-
-class TotauxOCR(BaseModel):
-
-    total_ht: Optional[float] = None
-
-    total_tva: Optional[float] = None
-
-    total_ttc: Optional[float] = None
-
-
-class DocumentOCRResponse(BaseModel):
-
-    type_document: Optional[str] = None
-
-    numero_document: Optional[str] = None
-
-    date_document: Optional[str] = None
-
-    fournisseur: Optional[FournisseurOCR] = None
-
-    client: Optional[ClientOCR] = None
-
-    produits: list[ProduitOCR] = []
-
-    totaux: Optional[TotauxOCR] = None
+    resultat_json: str

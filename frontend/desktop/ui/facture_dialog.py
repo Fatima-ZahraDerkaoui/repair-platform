@@ -1,7 +1,10 @@
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
-
+from PySide6.QtCore import Signal
+from ui.widgets.result_widget import ResultWidget
+from ui.widgets.loading_widget import LoadingWidget
+from ui.widgets.qr_widget import QrWidget
 from PySide6.QtWidgets import (
     QDialog,
     QLabel,
@@ -12,10 +15,11 @@ from PySide6.QtWidgets import (
 )
 
 from services.backend_api import BackendAPI
-from ui.widgets.qr_widget import QrWidget
 
 
 class FactureDialog(QDialog):
+
+    factureImported = Signal(dict)
 
     def __init__(self, parent=None):
 
@@ -32,7 +36,6 @@ class FactureDialog(QDialog):
         self.timer.timeout.connect(self.check_session_status)
 
         self.timer.start(2000)
-
 
     def build_ui(self):
 
@@ -83,11 +86,21 @@ class FactureDialog(QDialog):
 
         self.qrWidget = QrWidget()
 
+        self.loadingWidget = LoadingWidget()
+
+        self.resultWidget = ResultWidget()
+
+        right = QVBoxLayout()
+
+        right.addWidget(self.qrWidget)
+
+        right.addWidget(self.loadingWidget)
+
+        right.addWidget(self.resultWidget)
 
         main_layout.addLayout(left, 2)
 
-        main_layout.addWidget(self.qrWidget, 3)
-
+        main_layout.addLayout(right, 3)
 
     def create_scan_session(self):
 
@@ -105,6 +118,9 @@ class FactureDialog(QDialog):
             qr_path = Path(data["qr_code"])
 
             self.qrWidget.set_qrcode(str(qr_path))
+
+            self.phoneButton.setEnabled(False)
+            self.pcButton.setEnabled(False)
 
 
         except Exception as e:
@@ -130,22 +146,22 @@ class FactureDialog(QDialog):
                 self.session_id
             )
 
-            if not data["exists"]:
-
-                self.qrWidget.set_status("❌ Session inexistante")
-
-                return
-
-            if data["closed"]:
-
-                self.qrWidget.set_status("⚫ Session fermée")
-
-                return
-
-            if data["connected"]:
+            if data["mobile_connected"]:
 
                 self.qrWidget.set_status(
                     "🟢 Téléphone connecté"
+                )
+
+            elif data["ocr_running"]:
+
+                self.qrWidget.set_status(
+                    "🔵 Analyse OCR..."
+                )
+
+            elif data["documents_processed"] > 0:
+
+                self.qrWidget.set_status(
+                    "✅ Analyse terminée"
                 )
 
             else:
@@ -154,11 +170,63 @@ class FactureDialog(QDialog):
                     "🟡 En attente du téléphone"
                 )
 
-        except Exception:
+            # Vérifie automatiquement si le résultat OCR est prêt
+            self.check_ocr_status()
+
+        except Exception as e:
+
+            print(e)
 
             self.qrWidget.set_status(
                 "🔴 Backend indisponible"
             )
+
+    def check_ocr_status(self):
+
+        if not self.session_id:
+            return
+
+        try:
+
+            data = BackendAPI.get_facture_result(
+                self.session_id
+            )
+
+            if data["status"] != "READY":
+                return
+
+            self.timer.stop()
+
+            self.loadingWidget.stop()
+
+            self.resultWidget.set_result(
+                data["result"]
+            )
+
+            BackendAPI.close_session(
+                self.session_id
+            )
+
+        except Exception:
+            pass
+        
+    def load_ocr_result(self, result):
+        self.phoneButton.setEnabled(True)
+        self.pcButton.setEnabled(True)
+
+        self.factureImported.emit(result)
+
+        QMessageBox.information(
+
+            self,
+
+            "OCR",
+
+            "Facture importée avec succès."
+
+        )
+
+        self.accept()
 
     def closeEvent(self, event):
 
@@ -176,3 +244,7 @@ class FactureDialog(QDialog):
                 pass
 
         event.accept()
+
+    def import_facture(self, facture):
+
+        print(facture)

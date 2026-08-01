@@ -3,8 +3,8 @@ import shutil
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
-
-from backend.app.services.facture_scan.manager import manager
+from app.services.ocr.pipeline import pipeline
+from app.facture_scan.manager import manager
 from app.scan.qr_generator import generate_qrcode
 
 router = APIRouter(
@@ -78,7 +78,7 @@ async def upload_image(
 
     filename = f"{session_id}_{len(session.images)+1}{extension}"
 
-    filepath = UPLOAD_DIR / filename
+    filepath = session.folder / filename
 
     with open(filepath, "wb") as buffer:
 
@@ -86,11 +86,19 @@ async def upload_image(
 
     manager.add_image(session_id, str(filepath))
 
-    from app.services.facture_scan.pipeline import pipeline
-
     manager.start_ocr(session_id)
 
     ocr_result = pipeline.process(str(filepath))
+
+    manager.save_result(
+        session_id,
+        ocr_result
+    )
+
+    manager.save_result(
+        session_id,
+        ocr_result
+    )
 
     manager.finish_ocr(session_id)
 
@@ -102,6 +110,25 @@ async def upload_image(
 
     }
 
+@router.get("/result/{session_id}")
+def get_result(session_id: str):
+
+    session = manager.get(session_id)
+
+    if session is None:
+        raise HTTPException(404, "Session introuvable")
+
+    return {
+
+        "success": True,
+
+        "status": session.status,
+
+        "documents_processed": session.documents_processed,
+
+        "result": session.result
+
+    }
 
 @router.delete("/session/{session_id}")
 def close_session(session_id: str):

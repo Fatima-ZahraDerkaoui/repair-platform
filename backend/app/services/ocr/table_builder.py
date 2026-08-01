@@ -3,32 +3,35 @@ from collections import defaultdict
 
 class TableBuilder:
 
-    TOLERANCE_Y = 20
+    def __init__(self, tolerance=15):
+        self.tolerance = tolerance
 
     def build(self, elements):
+        """
+        Regroupe les mots OCR appartenant à une même ligne.
+        """
 
-        groupes = defaultdict(list)
+        rows = defaultdict(list)
 
         for element in elements:
 
-            y = element["box"][1]
+            x1, y1, x2, y2 = element["box"]
 
-            ligne = round(y / self.TOLERANCE_Y)
+            center_y = (y1 + y2) / 2
 
-            groupes[ligne].append(element)
+            key = round(center_y / self.tolerance)
 
-        tableau = []
+            rows[key].append(element)
 
-        for elements_ligne in groupes.values():
+        lignes = []
 
-            elements_ligne.sort(
+        for _, row in sorted(rows.items()):
+
+            row = sorted(
+                row,
                 key=lambda e: e["box"][0]
             )
 
-            tableau.append(elements_ligne)
+            lignes.append(row)
 
-        tableau.sort(
-            key=lambda ligne: ligne[0]["box"][1]
-        )
-
-        return tableau
+        return lignes

@@ -11,6 +11,8 @@ from app.routers import client
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers.ocr import router as ocr_router
+from app.routers.document import router as document_router
+
 
 app = FastAPI(
     title="Repair Platform API"
@@ -32,6 +34,7 @@ app.include_router(client_router)
 app.include_router(reparation_router)
 app.include_router(utilisateur_router)
 app.include_router(facture_scan_router)
+app.include_router(document_router)
 
 @app.get("/")
 def root():

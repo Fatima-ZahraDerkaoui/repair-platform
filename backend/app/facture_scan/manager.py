@@ -1,10 +1,10 @@
 import uuid
 import socket
-
 from datetime import datetime, timedelta
-
+import json
 from .session import ScanSession
-
+from pathlib import Path
+import shutil
 
 class SessionManager:
 
@@ -36,11 +36,20 @@ class SessionManager:
 
         session_id = str(uuid.uuid4())
 
+        folder = Path("uploads/temp") / session_id
+
+        folder.mkdir(
+            parents=True,
+            exist_ok=True
+        )
+
         session = ScanSession(
 
             session_id=session_id,
 
-            client_ip=self.get_local_ip()
+            client_ip=self.get_local_ip(),
+
+            folder=folder
 
         )
 
@@ -144,12 +153,22 @@ class SessionManager:
         if session is None:
             return
 
+        if session.folder.exists():
+
+            shutil.rmtree(
+                session.folder,
+                ignore_errors=True
+            )
+
         session.is_closed = True
 
         session.status = "CLOSED"
 
-        self.sessions.pop(session_id, None)
-
+        self.sessions.pop(
+            session_id,
+            None
+        )
+        
     # --------------------------
 
     def cleanup(self):
@@ -168,5 +187,51 @@ class SessionManager:
 
             self.sessions.pop(sid, None)
 
+
+    def save_result(
+            self,
+            session_id: str,
+            result: dict
+    ):
+
+        session = self.get(session_id)
+
+        if session is None:
+            return
+
+        result_path = session.folder / "result.json"
+
+        with open(
+            result_path,
+            "w",
+            encoding="utf-8"
+        ) as f:
+
+            json.dump(
+                result,
+                f,
+                ensure_ascii=False,
+                indent=4
+            )
+
+        session.result = result
+
+        session.document_type = result.get("document")
+
+        session.status = "READY"
+
+        session.touch()
+
+    def get_result(
+            self,
+            session_id: str
+    ):
+
+        session = self.get(session_id)
+
+        if session is None:
+            return None
+
+        return session.result
 
 manager = SessionManager()

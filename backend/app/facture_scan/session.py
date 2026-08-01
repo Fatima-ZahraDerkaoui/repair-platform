@@ -1,13 +1,12 @@
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import List, Optional
-
 
 @dataclass
 class ScanSession:
 
     session_id: str
-
     client_ip: str
 
     mobile_connected: bool = False
@@ -26,8 +25,9 @@ class ScanSession:
 
     documents_processed: int = 0
 
+    result: dict = field(default_factory=dict)
+
     is_closed: bool = False
 
     def touch(self):
-
         self.last_activity = datetime.now()

@@ -158,4 +158,61 @@ class OCREngine:
                 )
 
         return elements
-    
+
+    def texte_complet(self, image_path: str) -> str:
+        """
+        Retourne tout le texte OCR sous forme d'une seule chaîne.
+        """
+
+        elements = self.extraire_texte(image_path)
+
+        lignes = []
+
+        for e in elements:
+            lignes.append(e["text"])
+
+        return "\n".join(lignes)
+
+    def extraire_blocs(self, image_path):
+
+        image = self.preprocessor.preprocess(image_path)
+
+        image_path = self.save_temp_image(image)
+
+        resultats = self.ocr.predict(image_path)
+
+        blocs = []
+
+        for resultat in resultats:
+
+            data = resultat.json
+
+            if not isinstance(data, dict):
+                continue
+
+            res = data.get("res", data)
+
+            textes = res.get("rec_texts", [])
+
+            scores = res.get("rec_scores", [])
+
+            polys = res.get("rec_polys", [])
+
+            for texte, score, poly in zip(textes, scores, polys):
+
+                box = self.normalize_box(poly)
+
+                blocs.append({
+
+                    "text": texte.strip(),
+
+                    "score": float(score),
+
+                    "x1": box[0],
+                    "y1": box[1],
+                    "x2": box[2],
+                    "y2": box[3]
+
+                })
+
+        return blocs
