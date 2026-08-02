@@ -37,22 +37,15 @@ class ImagePreprocessor:
 
     def detect_document(self, image):
 
-        gray = cv2.cvtColor(
-            image,
-            cv2.COLOR_BGR2GRAY
-        )
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        blur = cv2.GaussianBlur(
-            gray,
-            (5, 5),
-            0
-        )
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
 
-        edges = cv2.Canny(
-            blur,
-            50,
-            150
-        )
+        edges = cv2.Canny(blur, 50, 150)
+
+        kernel = np.ones((5, 5), np.uint8)
+        edges = cv2.dilate(edges, kernel, iterations=2)
+        edges = cv2.erode(edges, kernel, iterations=1)
 
         contours, _ = cv2.findContours(
             edges,
@@ -61,33 +54,39 @@ class ImagePreprocessor:
         )
 
         if not contours:
-            return image
+            return self.crop_content(image)
 
-        contour = max(
+        contours = sorted(
             contours,
-            key=cv2.contourArea
+            key=cv2.contourArea,
+            reverse=True
         )
 
-        peri = cv2.arcLength(
-            contour,
-            True
-        )
+        for contour in contours:
 
-        approx = cv2.approxPolyDP(
-            contour,
-            0.02 * peri,
-            True
-        )
+            area = cv2.contourArea(contour)
 
-        if len(approx) != 4:
-            return image
+            if area < image.shape[0] * image.shape[1] * 0.20:
+                continue
 
-        pts = approx.reshape(4, 2)
+            peri = cv2.arcLength(contour, True)
 
-        return self.four_point_transform(
-            image,
-            pts
-        )
+            approx = cv2.approxPolyDP(
+                contour,
+                0.02 * peri,
+                True
+            )
+
+            if len(approx) == 4:
+
+                pts = approx.reshape(4, 2)
+
+                return self.four_point_transform(
+                    image,
+                    pts
+                )
+
+        return self.crop_content(image)
 
     # ---------------------------------------------------------
 
@@ -249,10 +248,7 @@ class ImagePreprocessor:
 
     # ---------------------------------------------------------
 
-    def preprocess(
-            self,
-            image_path: str
-    ):
+    def preprocess(self, image_path):
 
         image = self.load(image_path)
 
@@ -269,3 +265,44 @@ class ImagePreprocessor:
         image = self.sharpen(image)
 
         return image
+    
+    #---------------------
+    def crop_content(self, image):
+
+        gray = cv2.cvtColor(
+            image,
+            cv2.COLOR_BGR2GRAY
+        )
+
+        _, thresh = cv2.threshold(
+            gray,
+            245,
+            255,
+            cv2.THRESH_BINARY_INV
+        )
+
+        kernel = np.ones((7,7), np.uint8)
+
+        thresh = cv2.morphologyEx(
+            thresh,
+            cv2.MORPH_CLOSE,
+            kernel
+        )
+
+        coords = cv2.findNonZero(thresh)
+
+        if coords is None:
+            return image
+
+        x, y, w, h = cv2.boundingRect(coords)
+
+        marge = 20
+
+        x = max(0, x - marge)
+        y = max(0, y - marge)
+
+        w = min(image.shape[1] - x, w + marge * 2)
+        h = min(image.shape[0] - y, h + marge * 2)
+
+        return image[y:y+h, x:x+w]
+    

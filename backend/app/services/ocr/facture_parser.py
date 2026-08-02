@@ -1,6 +1,5 @@
 import re
-
-
+from app.services.ocr.article_parser import ArticleParser
 class FactureParser:
 
     @staticmethod
@@ -26,176 +25,20 @@ class FactureParser:
 
         articles = []
 
-        started = False
-
         for ligne in lignes:
 
-            textes = [
+            article = ArticleParser.parse_line(ligne)
 
-                c["text"]
-
-                for c in ligne
-
-            ]
-
-            ligne_txt = " ".join(textes)
-
-            upper = ligne_txt.upper()
-
-            if "DÉSIGNATION" in upper or "DESIGNATION" in upper:
-
-                started = True
-
+            if article is None:
                 continue
 
-            if not started:
+            if article["reference"] == "":
                 continue
 
-            if "TOTAL HT" in upper:
-                break
-
-            if len(textes) < 5:
-                continue
-
-            reference = textes[0]
-
-            designation = ""
-
-            tva = ""
-
-            prix = None
-
-            quantite = None
-
-            total = None
-
-            for t in textes[1:]:
-
-                if "%" in t:
-
-                    tva = t
-
-                    continue
-
-                if prix is None:
-
-                    p = cls._to_float(t)
-
-                    if p is not None:
-
-                        prix = p
-
-                        continue
-
-                if quantite is None:
-
-                    if t.isdigit():
-
-                        quantite = int(t)
-
-                        continue
-
-                if total is None:
-
-                    tt = cls._to_float(t)
-
-                    if tt is not None:
-
-                        total = tt
-
-                        continue
-
-                designation += " " + t
-
-            articles.append({
-
-                "reference": reference,
-
-                "designation": designation.strip(),
-
-                "tva": tva,
-
-                "prix_unitaire": prix,
-
-                "quantite": quantite,
-
-                "total": total
-
-            })
+            articles.append(article)
 
         return articles
-    @classmethod
-    def parse_article_line(cls, ligne):
 
-        ligne = re.sub(r"\s+", " ", ligne).strip()
-
-        tokens = ligne.split()
-
-        if len(tokens) < 6:
-            return None
-
-        # ------------------------------------
-        # Les 4 derniers nombres
-        # Prix HT
-        # TVA
-        # Qté
-        # Total
-        # ------------------------------------
-
-        numbers = []
-
-        for token in reversed(tokens):
-
-            if re.match(r"^[0-9]+([,.][0-9]+)?$", token):
-
-                numbers.append(token)
-
-            if len(numbers) == 4:
-                break
-
-        if len(numbers) != 4:
-            return None
-
-        numbers.reverse()
-
-        prix = cls._to_float(numbers[0])
-
-        tva = numbers[1]
-
-        quantite = int(float(numbers[2]))
-
-        total = cls._to_float(numbers[3])
-
-        # ------------------------------------
-        # référence
-        # ------------------------------------
-
-        reference = tokens[0]
-
-        # ------------------------------------
-        # designation
-        # ------------------------------------
-
-        designation_tokens = tokens[1:-4]
-
-        designation = " ".join(designation_tokens)
-
-        return {
-
-            "reference": reference,
-
-            "designation": designation,
-
-            "quantite": quantite,
-
-            "prix_unitaire": prix,
-
-            "tva": tva,
-
-            "total": total
-
-        }
-    
     @classmethod
     def parse(cls, texte, lignes ):
 
@@ -283,9 +126,8 @@ class FactureParser:
         # ==================================================
         # EXTRACTION DES ARTICLES
         # ==================================================
-
         resultat["articles"] = cls.extract_articles(
             lignes
         )
-
+        
         return resultat

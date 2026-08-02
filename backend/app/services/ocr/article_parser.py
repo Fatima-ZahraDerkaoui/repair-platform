@@ -4,116 +4,134 @@ import re
 class ArticleParser:
 
     @staticmethod
-    def parse_line(ligne):
+    def to_float(value):
+
+        value = value.replace(" ", "")
+        value = value.replace(",", ".")
+
+        try:
+            return float(value)
+        except:
+            return None
+
+    @staticmethod
+    def is_number(txt):
+
+        return re.match(
+            r"^[0-9]+([.,][0-9]+)?$",
+            txt
+        ) is not None
+
+    @classmethod
+    def parse_line(cls, ligne):
 
         ligne = sorted(
-
             ligne,
-
             key=lambda c: c["box"][0]
-
         )
 
-        textes = [
-
-            c["text"]
-
-            for c in ligne
-
-        ]
-
-        if len(textes) < 5:
+        if len(ligne) < 4:
             return None
 
-        reference = textes[0]
+        # -----------------------------------------
+        # Référence = premier bloc
+        # -----------------------------------------
 
-        if not re.match(
+        reference = ligne[0]["text"].strip()
 
-                r"^[A-Za-z0-9\-]+$",
-
-                reference
-
-        ):
-
+        if len(reference) < 3:
             return None
 
-        nombres = []
+        textes = [c["text"] for c in ligne[1:]]
 
         designation = []
 
-        started_numbers = False
+        tva = ""
 
-        for token in textes[1:]:
+        prix = None
 
-            if re.match(
+        quantite = None
 
-                    r"^[0-9]+([,.][0-9]+)?$",
+        total = None
 
-                    token
+        nombres = []
 
-            ):
+        # -----------------------------------------
+        # Recherche TVA
+        # -----------------------------------------
 
-                started_numbers = True
+        for t in textes:
 
-                nombres.append(token)
+            if "%" in t:
+
+                tva = t
+
+                continue
+
+            if cls.is_number(t):
+
+                nombres.append(t)
 
             else:
 
-                if not started_numbers:
+                designation.append(t)
 
-                    designation.append(token)
+        # -----------------------------------------
+        # Extraction des nombres
+        # -----------------------------------------
 
-        if len(nombres) < 4:
-            return None
+        valeurs = []
 
-        try:
+        for n in nombres:
 
-            prix = float(
+            v = cls.to_float(n)
 
-                nombres[0].replace(",", ".")
+            if v is not None:
 
-            )
+                valeurs.append(v)
 
-        except:
+        if len(valeurs) >= 3:
 
-            prix = None
+            prix = valeurs[0]
 
-        try:
+            total = valeurs[-1]
 
-            quantite = int(
+            for v in valeurs:
 
-                float(nombres[2])
+                if float(v).is_integer():
 
-            )
+                    q = int(v)
 
-        except:
+                    if 1 <= q <= 999:
 
-            quantite = 1
+                        quantite = q
 
-        try:
+                        break
 
-            total = float(
+        # -----------------------------------------
+        # Nettoyage désignation
+        # -----------------------------------------
 
-                nombres[3].replace(",", ".")
+        designation = " ".join(designation)
 
-            )
-
-        except:
-
-            total = None
+        designation = re.sub(
+            r"\s+",
+            " ",
+            designation
+        ).strip()
 
         return {
 
             "reference": reference,
 
-            "designation": " ".join(designation),
+            "designation": designation,
 
             "prix_unitaire": prix,
 
             "quantite": quantite,
 
-            "tva": nombres[1],
+            "tva": tva,
 
             "total": total
 
-        } 
+        }
