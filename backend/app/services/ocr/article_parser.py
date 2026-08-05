@@ -1,290 +1,147 @@
 import re
 
+
 class ArticleParser:
 
-    REFERENCES = (
-        "HP",
-        "EPST",
-        "CANGI",
-        "CAN",
-        "BRO",
-        "LEX",
-        "OKI",
-        "KYO",
-        "RIC",
-        "XER",
-        "PAN",
-        "SAM",
-        "TOS"
-    )
+    # =====================================================
 
-    # -------------------------------------------------------
+    def to_float(self, text):
 
-    @staticmethod
-    def to_float(value):
+        if not text:
+            return None
 
-        value = value.replace(" ", "")
-        value = value.replace(",", ".")
+        text = text.replace(" ", "")
+        text = text.replace(",", ".")
 
         try:
-            return float(value)
+            return float(text)
         except:
             return None
 
-    # -------------------------------------------------------
+    # =====================================================
 
-    @staticmethod
-    def is_reference(text):
+    def split_reference(self, text):
 
-        text = text.upper().strip()
+        text = text.strip()
 
-        return text.startswith(ArticleParser.REFERENCES)
+        if not text:
+            return "", ""
 
-    # -------------------------------------------------------
+        morceaux = text.split("-")
 
-    @staticmethod
-    def is_price(text):
+        # Cas :
+        # HP-F6V25AE-Cartouche HP 652 Black
 
-        return re.fullmatch(
-            r"\d+[,.]\d{2}",
-            text.replace(" ", "")
-        ) is not None
+        if len(morceaux) >= 3:
 
-    # -------------------------------------------------------
+            reference = "-".join(morceaux[:2])
 
-    @staticmethod
-    def is_quantity(text):
+            designation = "-".join(morceaux[2:])
 
-        return re.fullmatch(r"\d+", text) is not None
+            return reference.strip(), designation.strip()
 
-    # -------------------------------------------------------
+        # Cas :
+        # CANGI490Y-CARTOUCHE CANON
 
-    @staticmethod
-    def is_tva(text):
+        if len(morceaux) == 2:
 
-        return "%" in text
+            gauche = morceaux[0].strip()
+            droite = morceaux[1].strip()
 
-    # -------------------------------------------------------
-    @classmethod
-    def parse_line(cls, ligne):
+            # Si la partie gauche contient des chiffres,
+            # c'est probablement la référence.
 
-        ligne = sorted(
-            ligne,
-            key=lambda c: c["box"][0]
-        )
+            if any(c.isdigit() for c in gauche):
 
-        textes = [c["text"].strip() for c in ligne]
+                return gauche, droite
 
-        reference = None
-        designation = []
+        # Cas :
+        # REF123 Cartouche HP
 
-        tva = ""
-        prix = None
-        quantite = None
-        total = None
+        mots = text.split()
 
-        prix_list = []
-        nombres_entiers = []
+        if mots and any(c.isdigit() for c in mots[0]):
 
-        # ----------------------------------------------------
-        # Recherche des informations
-        # ----------------------------------------------------
+            return mots[0], " ".join(mots[1:])
 
-        for t in textes:
+        return "", text
 
-            if cls.is_tva(t):
-                tva = t
-                continue
+    # =====================================================
 
-            if cls.is_price(t):
-                prix_list.append(t)
-                continue
+    def parse_line(self, ligne):
 
-            if cls.is_quantity(t):
-                nombres_entiers.append(int(t))
-                continue
+        article = {
 
-            # --------------------------------------------
-            # Référence
-            # --------------------------------------------
+            "reference": "",
 
-            if reference is None and cls.is_reference(t):
+            "designation": "",
 
-                # HP-F6V25AE-Cartouche HP 652 Black
-                # EPST103BK - ....
-                # CANGI490M-CARTOUCHE ....
+            "quantite": None,
 
-                m = re.match(
-                    r"^([A-Z0-9\-]+)\s*[-=]\s*(.*)$",
-                    t,
-                    re.IGNORECASE
-                )
+            "prix_unitaire": None,
 
-                if m:
+            "tva": None,
 
-                    reference = m.group(1).strip()
-
-                    reste = m.group(2).strip()
-
-                    if reste:
-                        designation.append(reste)
-
-                else:
-
-                    morceaux = t.split(maxsplit=1)
-
-                    reference = morceaux[0].strip()
-
-                    if len(morceaux) > 1:
-
-                        reste = morceaux[1]
-
-                        # supprimer uniquement le premier tiret éventuel
-                        reste = re.sub(r"^\-\s*", "", reste)
-
-                        designation.append(reste.strip())
-
-                continue
-
-            # --------------------------------------------
-            # Désignation
-            # --------------------------------------------
-
-            designation.append(t)
-
-        # ----------------------------------------------------
-        # Prix
-        # ----------------------------------------------------
-
-        if len(prix_list) >= 2:
-
-            prix = cls.to_float(prix_list[0])
-            total = cls.to_float(prix_list[-1])
-
-        elif len(prix_list) == 1:
-
-            prix = cls.to_float(prix_list[0])
-
-        # ----------------------------------------------------
-        # Quantité
-        # ----------------------------------------------------
-
-        candidats = [
-            n for n in nombres_entiers
-            if 1 <= n <= 100
-        ]
-
-        if candidats:
-            quantite = candidats[-1]
-
-        # ----------------------------------------------------
-        # Nettoyage de la désignation
-        # ----------------------------------------------------
-
-        designation = cls.clean_designation(designation)
-
-        if reference is None:
-            return None
-
-        return {
-
-            "reference": reference,
-
-            "designation": designation,
-
-            "prix_unitaire": prix,
-
-            "quantite": quantite,
-
-            "tva": tva,
-
-            "total": total
+            "total": None
 
         }
 
-    # -------------------------------------------------------
-    @staticmethod
-    def clean_designation(parts):
+        designation = []
 
-        # --------------------------------------------
-        # Si on reçoit une liste -> texte
-        # --------------------------------------------
+        for cellule in ligne:
 
-        if isinstance(parts, list):
-            designation = " ".join(parts)
-        else:
-            designation = parts
+            colonne = cellule["column"]
 
-        designation = re.sub(r"\s+", " ", designation).strip()
+            texte = cellule["text"]
 
-        mots = []
+            # --------------------------
 
-        for p in designation.split():
+            if colonne == "designation":
 
-            # bruit OCR
-            if len(p) == 1 and not p.isalpha():
-                continue
+                designation.append(texte)
 
-            # supprimer les faux nombres isolés
-            if re.fullmatch(r"\d+", p):
-                if len(p) <= 2:
-                    continue
+            elif colonne == "qte":
 
-            mots.append(p)
+                article["quantite"] = int(float(texte))
 
-        designation = " ".join(mots)
+            elif colonne == "pu":
 
-        # -------------------------------------------------
-        # déplacer le modèle imprimante à la fin
-        # -------------------------------------------------
+                article["prix_unitaire"] = self.to_float(texte)
 
-        modele = re.search(
-            r"(L\d+(?:/\w+)+(?:\s+\w+)?)",
-            designation,
-            re.IGNORECASE
-        )
+            elif colonne == "tva":
 
-        if modele:
+                article["tva"] = self.to_float(
 
-            modele_txt = modele.group(1)
+                    texte.replace("%", "")
 
-            designation = designation.replace(
-                modele_txt,
-                ""
-            ).strip()
+                )
 
-            designation = f"{designation} {modele_txt}"
+            elif colonne == "total":
 
-        # -------------------------------------------------
-        # Corriger "103 L3150" -> "103 pour L3150"
-        # -------------------------------------------------
+                article["total"] = self.to_float(texte)
 
-        designation = re.sub(
-            r"(103)\s+(L\d)",
-            r"\1 pour \2",
-            designation
-        )
+        designation = " ".join(designation)
 
-        # -------------------------------------------------
-        # supprimer plusieurs "pour"
-        # -------------------------------------------------
+        ref, des = self.split_reference(designation)
 
-        designation = re.sub(
-            r"(pour\s+)+",
-            "pour ",
-            designation,
-            flags=re.IGNORECASE
-        )
+        article["reference"] = ref
 
-        # -------------------------------------------------
-        # espaces
-        # -------------------------------------------------
+        article["designation"] = des
 
-        designation = re.sub(
-            r"\s+",
-            " ",
-            designation
-        ).strip()
+        return article
 
-        return designation
-    
+    # =====================================================
+
+    def parse(self, lignes):
+
+        articles = []
+
+        for ligne in lignes:
+
+            article = self.parse_line(ligne)
+
+            if article["designation"]:
+
+                articles.append(article)
+
+        return articles

@@ -1,30 +1,55 @@
-from app.services.ocr.ocr_engine import OCREngine
-from app.services.ocr.line_builder import LineBuilder
 from app.services.ocr.article_parser import ArticleParser
 
-ocr = OCREngine()
+parser = ArticleParser()
 
-elements = ocr.extraire_texte(
-    "test_data/BL Facture.jpeg"
-)
+ligne = [
 
-builder = LineBuilder()
+    {
 
-lignes = builder.build(elements)
+        "column": "designation",
 
-print("=" * 80)
-print("ARTICLES")
-print("=" * 80)
+        "text": "HP-F6V25AE-Cartouche HP 652 Black"
 
-for i, ligne in enumerate(lignes, 1):
+    },
 
-    article = ArticleParser.parse_line(ligne)
+    {
 
-    print(f"\nARTICLE {i}")
-    print("-" * 60)
+        "column": "tva",
 
-    if article is None:
-        print("Impossible de parser")
-    else:
-        for k, v in article.items():
-            print(f"{k:15}: {v}")
+        "text": "20%"
+
+    },
+
+    {
+
+        "column": "pu",
+
+        "text": "215.00"
+
+    },
+
+    {
+
+        "column": "qte",
+
+        "text": "2"
+
+    },
+
+    {
+
+        "column": "total",
+
+        "text": "430.00"
+
+    }
+
+]
+
+article = parser.parse_line(ligne)
+
+print()
+
+for k, v in article.items():
+
+    print(f"{k:15}: {v}")

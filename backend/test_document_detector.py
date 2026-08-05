@@ -1,15 +1,17 @@
-import cv2
+from app.services.ocr.ocr_engine import OCREngine
+from app.services.ocr.column_detector import ColumnDetector
 
-from app.services.ocr.document_detector import DocumentDetector
+ocr = OCREngine()
 
-image = cv2.imread("test_data/BL Facture.jpeg")
+elements = ocr.extraire_texte(
+    "test_data/BL Facture.jpeg"
+)
 
-detector = DocumentDetector()
+detector = ColumnDetector()
 
-points = detector.detect(image)
+colonnes = detector.detect(elements)
 
-result = detector.draw(image, points)
-
-cv2.imwrite("document_detected.jpg", result)
-
-print(points)
+print()
+print("="*50)
+print(colonnes)
+print("="*50)

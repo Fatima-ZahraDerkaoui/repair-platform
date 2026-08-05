@@ -5,99 +5,170 @@ import re
 class LineBuilder:
 
     def __init__(self, tolerance_y=15):
+
         self.tolerance_y = tolerance_y
 
-    # ----------------------------------------------------
-    def group_by_y(self, elements):
+        # -----------------------------
+        # Mots à ignorer (entêtes)
+        # -----------------------------
+
+        self.headers = {
+
+            "DESIGNATION",
+            "DÉSIGNATION",
+            "REFERENCE",
+            "RÉFÉRENCE",
+            "REF",
+            "ARTICLE",
+            "TVA",
+            "PU",
+            "P.U",
+            "P.U.",
+            "P.U.TTC",
+            "P.U HT",
+            "PRIX",
+            "PRIX UNITAIRE",
+            "QTE",
+            "QTÉ",
+            "QUANTITE",
+            "QUANTITÉ",
+            "TOTAL",
+            "TOTAL TTC",
+            "REMISE"
+
+        }
+
+        # -----------------------------
+        # Début d'une référence produit
+        # -----------------------------
+
+        self.reference_regex = re.compile(
+            r"^[A-Z0-9][A-Z0-9\-/]{3,}$",
+            re.IGNORECASE
+        )
+
+        # -----------------------------
+        # Fin des articles
+        # -----------------------------
+
+        self.stop_words = [
+
+            "TOTAL HT",
+            "TOTAL TVA",
+            "TOTAL TTC",
+            "NET A PAYER",
+            "MAGASINIER",
+            "N°SENE",
+            "N°SERIE",
+            "N° SENE",
+            "N° SERIE",
+            "ARRETEE",
+            "ARRÊTÉE",
+            "TELEPHONE",
+            "TÉLÉPHONE",
+            "FAX",
+            "ICE",
+            "CNSS",
+            "PATENTE",
+            "R.C",
+            "IF"
+
+        ]
+
+    # --------------------------------------------------------
+
+    def normalize(self, text):
+
+        text = text.upper()
+
+        text = (
+            text.replace("É", "E")
+                .replace("È", "E")
+                .replace("Ê", "E")
+                .replace("À", "A")
+                .replace("Ç", "C")
+        )
+
+        return text.strip()
+
+    # --------------------------------------------------------
+
+    def is_header(self, text):
+
+        return self.normalize(text) in self.headers
+
+    # --------------------------------------------------------
+
+    def is_reference(self, text):
+
+        return self.reference_regex.match(text) is not None
+
+    # --------------------------------------------------------
+
+    def is_stop(self, text):
+
+        text = self.normalize(text)
+
+        for word in self.stop_words:
+
+            if self.normalize(word) in text:
+
+                return True
+
+        return False
+
+    # --------------------------------------------------------
+
+    def build(self, classified):
+
+        # ============================
+        # suppression des entêtes
+        # ============================
+
+        elements = []
+
+        for e in classified:
+
+            if self.is_header(e["text"]):
+                continue
+
+            elements.append(e)
+
+        # ============================
+        # regroupement par Y
+        # ============================
 
         rows = defaultdict(list)
 
         for e in elements:
 
-            x1, y1, x2, y2 = e["box"]
-
-            centre_y = (y1 + y2) / 2
-
-            key = round(centre_y / self.tolerance_y)
+            key = round(e["y"] / self.tolerance_y)
 
             rows[key].append(e)
 
-        lignes = []
+        grouped = []
 
         for _, row in sorted(rows.items()):
 
-            row = sorted(row, key=lambda x: x["box"][0])
+            row.sort(key=lambda x: x["x"])
 
-            lignes.append(row)
+            grouped.append(row)
 
-        return lignes
-
-    # ----------------------------------------------------
-    def is_reference(self, texte):
-
-        texte = texte.upper().strip()
-
-        prefixes = (
-            "HP",
-            "EPST",
-            "CANGI",
-            "CAN",
-            "BRO",
-            "LEX",
-            "OKI",
-            "KYO",
-            "RIC",
-            "XER",
-            "PAN",
-            "SAM",
-            "TOS"
-        )
-
-        return any(texte.startswith(p) for p in prefixes)
-
-    # ----------------------------------------------------
-    def is_total(self, texte):
-
-        return "TOTAL HT" in texte.upper()
-
-    # ----------------------------------------------------
-    def build(self, elements):
-
-        lignes = self.group_by_y(elements)
+        # ============================
+        # Construction intelligente
+        # ============================
 
         resultat = []
 
-        started = False
-
         article = None
 
-        for ligne in lignes:
+        for row in grouped:
 
-            textes = [c["text"] for c in ligne]
+            texte = " ".join(c["text"] for c in row)
 
-            texte = " ".join(textes)
+            if self.is_stop(texte):
 
-            upper = texte.upper()
-
-            # ----------------------------
-            # début du tableau
-            # ----------------------------
-
-            if "DESIGNATION" in upper or "DÉSIGNATION" in upper:
-
-                started = True
-                continue
-
-            if not started:
-                continue
-
-            # ----------------------------
-            # fin du tableau
-            # ----------------------------
-
-            if self.is_total(upper):
-
-                if article:
+                if article is not None:
 
                     resultat.append(article)
 
@@ -105,53 +176,24 @@ class LineBuilder:
 
                 break
 
-            # ----------------------------
-            # nouvelle référence
-            # ----------------------------
+            premier = row[0]["text"]
 
-            if self.is_reference(textes[0]):
+            if self.is_reference(premier):
 
-                if article:
+                if article is not None:
 
                     resultat.append(article)
 
-                article = ligne.copy()
+                article = row.copy()
 
             else:
 
-                if article:
+                if article is not None:
 
-                    texte = " ".join(c["text"] for c in ligne).upper()
+                    article.extend(row)
 
-                    # Fin du tableau
-                    if (
-                        "N°SENE" in texte
-                        or "MAGASINIER" in texte
-                        or "TOTAL HT" in texte
-                        or "TOTAL TVA" in texte
-                        or "TOTAL TTC" in texte
-                    ):
-                        resultat.append(article)
-                        article = None
-                        break
-
-                    article.extend(ligne)
-
-        if article:
+        if article is not None:
 
             resultat.append(article)
 
-        # ----------------------------
-        # tri final
-        # ----------------------------
-
-        for ligne in resultat:
-
-            ligne.sort(
-
-                key=lambda x: x["box"][0]
-
-            )
-
         return resultat
-    

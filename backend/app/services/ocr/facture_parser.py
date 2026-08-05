@@ -1,133 +1,300 @@
 import re
-from app.services.ocr.article_parser import ArticleParser
+
+
 class FactureParser:
 
-    @staticmethod
-    def _clean(text: str) -> str:
-        return re.sub(r"\s+", " ", text).strip()
+    def __init__(self):
 
-    @staticmethod
-    def _to_float(value: str):
+        pass
 
-        if value is None:
-            return None
+    # ==================================================
 
-        value = value.replace(" ", "")
-        value = value.replace(",", ".")
+    def extract_invoice_number(self, texte):
 
-        try:
-            return float(value)
-        except:
-            return None
+        patterns = [
 
-    @classmethod
-    def extract_articles(cls, lignes):
+            r"(?:FACTURE|INVOICE|BL\/FACTURE)\s*(?:N°|Nº|NO|NUMERO|NUMBER)?\s*[:\-]?\s*([A-Z0-9\-\/]+)",
 
-        articles = []
+            r"N°\s*[:\-]?\s*([A-Z0-9\-\/]+)",
 
-        for ligne in lignes:
+            r"NO\s*[:\-]?\s*([A-Z0-9\-\/]+)"
+        ]
 
-            article = ArticleParser.parse_line(ligne)
+        texte = texte.upper()
 
-            if article is None:
+        for pattern in patterns:
+
+            match = re.search(pattern, texte)
+
+            if match:
+                return match.group(1).strip()
+
+        return None
+
+    # ==================================================
+
+    def extract_date(self, texte):
+
+        texte = texte.upper()
+
+        patterns = [
+
+            r"DATE\s+FACTURATION\s*[:\-]?\s*(\d{2}[\/\-\.]\d{2}[\/\-\.]\d{4})",
+
+            r"DATE\s+FACTURE\s*[:\-]?\s*(\d{2}[\/\-\.]\d{2}[\/\-\.]\d{4})",
+
+            r"DATE\s+EMISSION\s*[:\-]?\s*(\d{2}[\/\-\.]\d{2}[\/\-\.]\d{4})",
+
+            r"INVOICE\s+DATE\s*[:\-]?\s*(\d{4}[\/\-\.]\d{2}[\/\-\.]\d{2})",
+
+            r"DATE\s*[:\-]?\s*(\d{2}[\/\-\.]\d{2}[\/\-\.]\d{4})",
+
+            r"(\d{2}[\/\-\.]\d{2}[\/\-\.]\d{4})"
+
+        ]
+
+        for pattern in patterns:
+
+            match = re.search(pattern, texte)
+
+            if match:
+                return match.group(1)
+
+        return None
+
+    # ==================================================
+
+    def extract_client(self, texte):
+
+        lines = [
+            line.strip()
+            for line in texte.splitlines()
+            if line.strip()
+        ]
+
+        keywords = [
+
+            "CLIENT",
+            "DESTINATAIRE",
+            "LIVRER",
+            "LIVRAISON",
+            "ADRESSE CLIENT",
+            "SOCIETE"
+
+        ]
+
+        for i, line in enumerate(lines):
+
+            upper = line.upper()
+
+            if any(k in upper for k in keywords):
+
+                # regarde les 3 lignes suivantes
+                for j in range(i + 1, min(i + 4, len(lines))):
+
+                    candidate = lines[j]
+
+                    if len(candidate) < 3:
+                        continue
+
+                    if any(c.isalpha() for c in candidate):
+
+                        return candidate
+
+        return None
+
+    # ==================================================
+
+    def extract_supplier(self, texte):
+
+        lines = [
+            line.strip()
+            for line in texte.splitlines()
+            if line.strip()
+        ]
+
+        stop_words = [
+
+            "FACTURE",
+            "BL/FACTURE",
+            "DATE",
+            "TEL",
+            "ICE",
+            "IF",
+            "RC",
+            "PATENTE",
+            "CLIENT",
+            "DESTINATAIRE"
+
+        ]
+
+        for line in lines[:12]:
+
+            upper = line.upper()
+
+            if any(word in upper for word in stop_words):
                 continue
 
-            if article["reference"] == "":
+            if len(line) < 3:
                 continue
 
-            articles.append(article)
+            if any(c.isalpha() for c in line):
 
-        return articles
+                return line
 
-    @classmethod
-    def parse(cls, texte, lignes ):
+        return None
 
-        texte_original = texte
-        texte = cls._clean(texte)
+    # ==================================================
+    def extract_totals(self, texte):
 
-        resultat = {
-            "numero": None,
-            "date": None,
-            "fournisseur": None,
+        texte = texte.upper()
+
+        totals = {
             "total_ht": None,
-            "tva": None,
-            "total_ttc": None,
-            "articles": []
+            "total_tva": None,
+            "total_ttc": None
         }
 
-        # ==================================================
-        # FOURNISSEUR
-        # ==================================================
+        patterns = {
 
-        if "CASINFO" in texte.upper():
-            resultat["fournisseur"] = "CASINFO"
+            "total_ht": [
 
-        # ==================================================
-        # NUMERO FACTURE
-        # ==================================================
+                r"TOTAL\s+H\.?T\.?\s*([0-9 ]+[.,][0-9]{2})",
+                r"SOUS[- ]?TOTAL\s*([0-9 ]+[.,][0-9]{2})",
 
-        numero = re.search(
-            r"FV\d{4}-\d+",
-            texte,
-            re.IGNORECASE
+            ],
+
+            "total_tva": [
+
+                r"TOTAL\s+TVA(?:\s+\d+%)?\s*([0-9 ]+[.,][0-9]{2})",
+
+            ],
+
+            "total_ttc": [
+
+                r"TOTAL\s+TTC\s*([0-9 ]+[.,][0-9]{2})",
+                r"NET\s+A\s+PAYER\s*([0-9 ]+[.,][0-9]{2})",
+                r"A\s+PAYER\s*([0-9 ]+[.,][0-9]{2})",
+
+            ]
+
+        }
+
+        for key, plist in patterns.items():
+
+            for pattern in plist:
+
+                m = re.search(pattern, texte)
+
+                if m:
+
+                    value = (
+                        m.group(1)
+                        .replace(" ", "")
+                        .replace(",", ".")
+                    )
+
+                    try:
+                        totals[key] = float(value)
+                    except:
+                        pass
+
+                    break
+
+        return totals
+
+    # ==================================================
+    def extract_tax_information(self, texte):
+
+        texte = texte.upper()
+
+        taxes = {
+            "ice": None,
+            "if": None,
+            "rc": None,
+            "patente": None,
+            "cnss": None
+        }
+
+        patterns = {
+
+            "ice": [
+
+                r"ICE\s*[:.]?\s*([0-9]{10,20})",
+
+                r"I\.?C\.?E\.?\s*[:.]?\s*([0-9]{10,20})"
+
+            ],
+
+            "if": [
+
+                r"\bIF\b\s*[:.]?\s*([0-9]{4,15})",
+
+                r"I\.?F\.?\s*[:.]?\s*([0-9]{4,15})"
+
+            ],
+
+            "rc": [
+
+                r"\bRC\b\s*[:.]?\s*([0-9]{2,15})",
+
+                r"R\.?C\.?\s*[:.]?\s*([0-9]{2,15})"
+
+            ],
+
+            "patente": [
+
+                r"PATENTE\s*[:.]?\s*([0-9]{4,20})"
+
+            ],
+
+            "cnss": [
+
+                r"CNSS\s*[:.]?\s*([0-9]{4,20})"
+
+            ]
+
+        }
+
+        for field, plist in patterns.items():
+
+            for pattern in plist:
+
+                m = re.search(pattern, texte)
+
+                if m:
+
+                    taxes[field] = m.group(1)
+
+                    break
+
+        return taxes
+
+    # ==================================================
+    def parse(self, texte, articles):
+
+        data = {}
+
+        data["numero"] = self.extract_invoice_number(texte)
+
+        data["date"] = self.extract_date(texte)
+
+        data["fournisseur"] = self.extract_supplier(texte)
+
+        data["client"] = self.extract_client(texte)
+
+        data.update(
+
+            self.extract_totals(texte)
+
         )
 
-        if numero:
-            resultat["numero"] = numero.group()
+        data.update(
 
-        # ==================================================
-        # DATE
-        # ==================================================
+            self.extract_tax_information(texte)
 
-        date = re.search(
-            r"\d{2}/\d{2}/\d{4}",
-            texte
         )
 
-        if date:
-            resultat["date"] = date.group()
+        data["articles"] = articles
 
-        # ==================================================
-        # TOTAL HT + TVA + TTC
-        # ==================================================
-        lignes_texte = texte_original.splitlines()
-
-        for i, ligne in enumerate(lignes_texte):
-
-            upper = ligne.upper()
-
-            if "TOTAL HT" in upper:
-
-                nombres = re.findall(r"[0-9\s]+[,.][0-9]{2}", ligne)
-
-                if nombres:
-                    resultat["total_ht"] = cls._to_float(nombres[-1])
-                elif i + 1 < len(lignes_texte):
-                    resultat["total_ht"] = cls._to_float(lignes_texte[i + 1])
-
-            elif "TOTAL TVA" in upper:
-
-                nombres = re.findall(r"[0-9\s]+[,.][0-9]{2}", ligne)
-
-                if nombres:
-                    resultat["tva"] = cls._to_float(nombres[-1])
-                elif i + 1 < len(lignes_texte):
-                    resultat["tva"] = cls._to_float(lignes_texte[i + 1])
-
-            elif "TOTAL TTC" in upper:
-
-                nombres = re.findall(r"[0-9\s]+[,.][0-9]{2}", ligne)
-
-                if nombres:
-                    resultat["total_ttc"] = cls._to_float(nombres[-1])
-                elif i + 1 < len(lignes_texte):
-                    resultat["total_ttc"] = cls._to_float(lignes_texte[i + 1])
-                    
-        # ==================================================
-        # EXTRACTION DES ARTICLES
-        # ==================================================
-        resultat["articles"] = cls.extract_articles(
-            lignes
-        )
-        
-        return resultat
+        return data
