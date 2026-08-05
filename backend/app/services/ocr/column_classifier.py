@@ -7,6 +7,36 @@ class ColumnClassifier:
 
         self.colonnes = colonnes
 
+        self.colors = {
+            "BLACK",
+            "CYAN",
+            "MAGENTA",
+            "YELLOW",
+            "COLOR",
+            "COULEUR"
+        }
+
+        self.designation_words = {
+
+            "POUR",
+            "BLACK",
+            "CYAN",
+            "MAGENTA",
+            "YELLOW",
+            "COULEUR",
+            "COLOR",
+            "LASER",
+            "TONER",
+            "CARTOUCHE",
+            "ENCRE",
+            "BOUTEILLE",
+            "EPSON",
+            "CANON",
+            "HP",
+            "BROTHER",
+            "SAMSUNG"
+
+        }
    
     def normalize(self, text):
 
@@ -53,7 +83,6 @@ class ColumnClassifier:
     def score_tva(self, text):
 
         if self.is_tva(text):
-
             return 100
 
         return 0
@@ -68,17 +97,14 @@ class ColumnClassifier:
 
         value = int(text)
 
-        # Une quantité est généralement un entier positif
-        return 0 <= value <= 10000
+        return 1 <= value <= 100
 
     def score_quantity(self, text):
 
         if self.is_quantity(text):
-
             return 100
 
         return 0
-
 
     def is_price(self, text):
 
@@ -86,17 +112,23 @@ class ColumnClassifier:
 
         text = text.replace(" ", "")
 
-        return re.fullmatch(r"\d+(\.\d+)?", text) is not None
+        if not re.fullmatch(r"\d+(?:\.\d+)?", text):
+            return False
 
+        value = float(text)
+
+        # évite que 2 ou 8 deviennent des prix
+        if value < 10:
+            return False
+
+        return True
 
     def score_price(self, text):
 
         if self.is_price(text):
-
             return 100
 
         return 0
-
  
     def score_position(self, x, column):
 
@@ -170,3 +202,86 @@ class ColumnClassifier:
             score += 10
 
         return min(score, 100)
+
+        # =====================================================
+    # Classification finale
+    # =====================================================
+
+    def classify(self, elements):
+
+        resultat = []
+
+        for element in elements:
+
+            x1, y1, x2, y2 = element["box"]
+
+            centre_x = (x1 + x2) / 2
+            centre_y = (y1 + y2) / 2
+
+            texte = element["text"]
+
+            scores = {}
+
+            for colonne in self.colonnes:
+
+                score = self.score_position(centre_x, colonne)
+
+                if colonne == "designation":
+                    score += self.score_designation(texte)
+
+                elif colonne == "tva":
+                    score += self.score_tva(texte)
+
+                elif colonne == "qte":
+                    score += self.score_quantity(texte)
+
+                elif colonne in ("pu", "total"):
+                    score += self.score_price(texte)
+
+                scores[colonne] = score
+
+            meilleure_colonne = max(scores, key=scores.get)
+
+            resultat.append({
+
+                "text": texte,
+
+                "box": element["box"],
+
+                "x": centre_x,
+
+                "y": centre_y,
+
+                "column": meilleure_colonne
+
+            })
+
+        return resultat
+
+    def is_designation(self, text):
+
+        text = self.normalize(text)
+
+        if text in self.designation_words:
+            return True
+
+        if "/" in text:
+            return True
+
+        if "-" in text:
+            return True
+
+        if len(text) > 15:
+            return True
+
+        if re.search(r"[A-Z]", text):
+            return True
+
+        return False
+
+    def score_designation(self, text):
+
+        if self.is_designation(text):
+            return 100
+
+        return 0

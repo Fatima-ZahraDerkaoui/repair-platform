@@ -43,7 +43,7 @@ class LineBuilder:
         # -----------------------------
 
         self.reference_regex = re.compile(
-            r"^[A-Z0-9][A-Z0-9\-/]{3,}$",
+            r"^(HP|EPST|CAN|CANGI|BRO|LEX|OKI|KYO|RIC|XER|PAN|SAM|TOS)[A-Z0-9\-]*",
             re.IGNORECASE
         )
 

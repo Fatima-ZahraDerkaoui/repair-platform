@@ -5,47 +5,77 @@ from app.services.ocr.column_classifier import ColumnClassifier
 from app.services.ocr.line_builder import LineBuilder
 
 
+# ==========================================================
+# OCR
+# ==========================================================
+
 ocr = OCREngine()
 
 elements = ocr.extraire_texte(
     "test_data/BL Facture.jpeg"
 )
 
+# ==========================================================
+# Détection du tableau
+# ==========================================================
+
 invoice = InvoiceDetector()
 
 table = invoice.extract_table_elements(elements)
 
-print("=" * 80)
-print("TABLE ELEMENTS :", len(table))
-print("=" * 80)
+print()
+print("=" * 60)
+print("TABLE")
+print("=" * 60)
 
-for e in table:
-    print(e["text"])
+print(f"Nombre d'éléments : {len(table)}")
+
+# ==========================================================
+# Colonnes
+# ==========================================================
 
 detector = ColumnDetector()
 
 colonnes = detector.detect(table)
 
+print()
+print("=" * 60)
+print("COLONNES")
+print("=" * 60)
+
+for k, v in colonnes.items():
+    print(f"{k:12} : {v}")
+
+# ==========================================================
+# Classification
+# ==========================================================
+
 classifier = ColumnClassifier(colonnes)
 
 classified = classifier.classify(table)
+
+# ==========================================================
+# Construction des lignes
+# ==========================================================
 
 builder = LineBuilder()
 
 lignes = builder.build(classified)
 
+# ==========================================================
+# Résultat
+# ==========================================================
+
 print()
 print("=" * 80)
-print("LIGNES")
+print("ARTICLES RECONSTRUITS")
 print("=" * 80)
 
-for i, ligne in enumerate(lignes, 1):
+for i, ligne in enumerate(lignes, start=1):
 
     print()
-
-    print(f"LIGNE {i}")
-
-    print("-" * 50)
+    print(f"ARTICLE {i}")
+    print("-" * 80)
 
     for cellule in ligne:
 
