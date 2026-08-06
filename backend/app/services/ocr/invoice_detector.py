@@ -6,7 +6,10 @@ class InvoiceDetector:
         "DÉSIGNATION",
         "DESCRIPTION",
         "LIBELLE",
-        "LIBELLÉ"
+        "LIBELLÉ",
+        "ARTICLE",
+        "REFERENCE",
+        "RÉFÉRENCE"
 
     ]
 
@@ -21,108 +24,111 @@ class InvoiceDetector:
         "A PAYER",
         "À PAYER",
         "SOUS TOTAL",
-        "SOUS-TOTAL"
+        "SOUS-TOTAL",
+        "MONTANT HT",
+        "TOTAL GENERAL"
 
     ]
 
-    # ------------------------------------------------------------
+    HEADER_MARGIN = 8
+    FOOTER_MARGIN = 8
+    MIN_DISTANCE = 120
+
+    # =====================================================
 
     @staticmethod
     def normalize(text):
 
         text = text.upper()
 
-        text = (
-            text.replace("É", "E")
-                .replace("È", "E")
-                .replace("Ê", "E")
-                .replace("À", "A")
-                .replace("Ç", "C")
-        )
+        replacements = {
+
+            "É": "E",
+            "È": "E",
+            "Ê": "E",
+            "Ë": "E",
+            "À": "A",
+            "Â": "A",
+            "Ù": "U",
+            "Û": "U",
+            "Ô": "O",
+            "Ö": "O",
+            "Î": "I",
+            "Ï": "I",
+            "Ç": "C"
+
+        }
+
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+
+        text = " ".join(text.split())
 
         return text.strip()
 
-    # ------------------------------------------------------------
+    # =====================================================
 
     def detect(self, elements):
 
         header_y = None
         footer_y = None
 
-        # ============================
-        # Détection du header
-        # ============================
+        # -------------------------
+        # HEADER
+        # -------------------------
 
-        for e in elements:
+        for e in sorted(elements, key=lambda x: x["box"][1]):
 
             text = self.normalize(e["text"])
 
             x1, y1, x2, y2 = e["box"]
 
-            center_y = (y1 + y2) / 2
+            center = (y1 + y2) / 2
 
-            for keyword in self.HEADER_KEYWORDS:
+            if any(k == text for k in map(self.normalize, self.HEADER_KEYWORDS)):
 
-                if self.normalize(keyword) == text:
+                header_y = center
 
-                    header_y = center_y
-
-                    break
-
-            if header_y is not None:
                 break
-
-        # ============================
-        # Header introuvable
-        # ============================
 
         if header_y is None:
 
             return None
 
-        # ============================
-        # Détection du footer
-        # ============================
+        # -------------------------
+        # FOOTER
+        # -------------------------
 
-        MIN_DISTANCE = 120
-
-        for e in elements:
+        for e in sorted(elements, key=lambda x: x["box"][1]):
 
             x1, y1, x2, y2 = e["box"]
 
-            center_y = (y1 + y2) / 2
+            center = (y1 + y2) / 2
 
-            if center_y < header_y + MIN_DISTANCE:
+            if center < header_y + self.MIN_DISTANCE:
 
                 continue
 
             text = self.normalize(e["text"])
 
-            for keyword in self.FOOTER_KEYWORDS:
+            if any(self.normalize(k) in text for k in self.FOOTER_KEYWORDS):
 
-                if self.normalize(keyword) in text:
-
-                    footer_y = center_y
-
-                    break
-
-            if footer_y is not None:
+                footer_y = center
 
                 break
 
         if footer_y is None:
 
-            footer_y = 999999
+            footer_y = float("inf")
 
         return {
 
             "header_y": header_y,
-
             "footer_y": footer_y
 
         }
 
-    # ------------------------------------------------------------
+    # =====================================================
 
     def extract_table_elements(self, elements):
 
@@ -132,9 +138,9 @@ class InvoiceDetector:
 
             return []
 
-        header_y = bounds["header_y"]
+        top = bounds["header_y"] - self.HEADER_MARGIN
 
-        footer_y = bounds["footer_y"]
+        bottom = bounds["footer_y"] + self.FOOTER_MARGIN
 
         resultat = []
 
@@ -142,9 +148,9 @@ class InvoiceDetector:
 
             x1, y1, x2, y2 = e["box"]
 
-            center_y = (y1 + y2) / 2
+            center = (y1 + y2) / 2
 
-            if header_y <= center_y <= footer_y:
+            if top <= center <= bottom:
 
                 resultat.append(e)
 

@@ -1,11 +1,11 @@
 import re
-
+from app.services.ocr.supplier_extractor import SupplierExtractor
 
 class FactureParser:
 
     def __init__(self):
 
-        pass
+        self.supplier = SupplierExtractor()
 
     # ==================================================
 
@@ -104,7 +104,7 @@ class FactureParser:
         return None
 
     # ==================================================
-
+    """ 
     def extract_supplier(self, texte):
 
         lines = [
@@ -143,7 +143,7 @@ class FactureParser:
                 return line
 
         return None
-
+    """
     # ==================================================
     def extract_totals(self, texte):
 
@@ -204,6 +204,7 @@ class FactureParser:
         return totals
 
     # ==================================================
+    """
     def extract_tax_information(self, texte):
 
         texte = texte.upper()
@@ -269,7 +270,7 @@ class FactureParser:
                     break
 
         return taxes
-
+    """
     # ==================================================
     def parse(self, texte, articles):
 
@@ -279,21 +280,13 @@ class FactureParser:
 
         data["date"] = self.extract_date(texte)
 
-        data["fournisseur"] = self.extract_supplier(texte)
-
         data["client"] = self.extract_client(texte)
 
         data.update(
-
             self.extract_totals(texte)
-
         )
 
-        data.update(
-
-            self.extract_tax_information(texte)
-
-        )
+        data["fournisseur"] = self.supplier.extract(texte)
 
         data["articles"] = articles
 

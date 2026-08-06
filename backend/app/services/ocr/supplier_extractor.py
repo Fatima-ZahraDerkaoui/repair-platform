@@ -6,9 +6,6 @@ class SupplierExtractor:
     def __init__(self):
         pass
 
-    # ==========================================================
-    # Normalisation
-    # ==========================================================
 
     @staticmethod
     def normalize(text):
@@ -44,10 +41,6 @@ class SupplierExtractor:
         text = re.sub(r"\s+", " ", text)
 
         return text.strip()
-
-    # ==========================================================
-    # Nom fournisseur
-    # ==========================================================
 
     def extract_name(self, texte):
 
@@ -98,9 +91,6 @@ class SupplierExtractor:
 
         return None
 
-    # ==========================================================
-    # Téléphone
-    # ==========================================================
     def extract_phone(self, texte):
 
         texte = texte.replace("\n", " ")
@@ -115,98 +105,33 @@ class SupplierExtractor:
 
             numero = re.sub(r"[^\d+]", "", numero)
 
+            if len(numero) > 10:
+                continue
+
             if numero not in resultat:
                 resultat.append(numero)
 
         return resultat
 
-    # ==========================================================
-    # Email
-    # ==========================================================
-
     def extract_email(self, texte):
+
+        texte = texte.replace("\n", " ")
+
+        # supprimer un éventuel RIB collé devant l'email
+        texte = re.sub(
+            r"\d{15,30}-(?=[A-Za-z0-9._%+-]+@)",
+            "",
+            texte
+        )
+
+        pattern = r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+
+        m = re.search(pattern, texte)
+
+        if m:
+            return m.group()
+
         return None
-
-    # ==========================================================
-    # Fax
-    # ==========================================================
-
-    def extract_fax(self, texte):
-        return None
-
-    # ==========================================================
-    # Adresse
-    # ==========================================================
-
-    def extract_address(self, texte):
-        return None
-
-    # ==========================================================
-    # Ville
-    # ==========================================================
-
-    def extract_city(self, texte):
-        return None
-
-    # ==========================================================
-    # Pays
-    # ==========================================================
-
-    def extract_country(self, texte):
-        return None
-
-    # ==========================================================
-    # ICE
-    # ==========================================================
-
-    def extract_ice(self, texte):
-        return None
-
-    # ==========================================================
-    # IF
-    # ==========================================================
-
-    def extract_if(self, texte):
-        return None
-
-    # ==========================================================
-    # RC
-    # ==========================================================
-
-    def extract_rc(self, texte):
-        return None
-
-    # ==========================================================
-    # Patente
-    # ==========================================================
-
-    def extract_patente(self, texte):
-        return None
-
-    # ==========================================================
-    # CNSS
-    # ==========================================================
-
-    def extract_cnss(self, texte):
-        return None
-
-    # ==========================================================
-    # RIB
-    # ==========================================================
-
-    def extract_rib(self, texte):
-        return None
-
-    # ==========================================================
-    # Site Web
-    # ==========================================================
-
-    def extract_website(self, texte):
-        return None
-
-    # ==========================================================
-    # Extraction complète
-    # ==========================================================
 
     def extract(self, texte):
         
@@ -243,4 +168,327 @@ class SupplierExtractor:
 
         }      
 
+    def extract_website(self, texte):
+
+        texte = texte.replace("\n", " ")
+
+        pattern = r"(?:www\.)?[a-zA-Z0-9-]+\.(?:com|ma|fr|net|org)"
+
+        sites = re.findall(pattern, texte)
+
+        if sites:
+
+            for site in sites:
+
+                if "P.U" in site.upper():
+                    continue
+
+                return site
+
+        return None
+
+    def extract_fax(self, texte):
+
+        pattern = r"FAX\s*[:.]?\s*((?:\+212|0)\s*[5-7](?:[\s.\-/]?\d{2}){4})"
+
+        m = re.search(pattern, texte, re.IGNORECASE)
+
+        if m:
+
+            numero = re.sub(r"[^\d+]", "", m.group(1))
+
+            return numero
+
+        return None
+
+    def extract_ice(self, texte):
+
+        texte = self.normalize(texte)
+
+        patterns = [
+
+            r"(?:ICE|1CE)\s*[:.]?\s*([0-9]{10,20})",
+
+            r"([0-9]{15,20})"
+
+        ]
+
+        for p in patterns:
+
+            m = re.search(p, texte)
+
+            if m:
+
+                return m.group(1)
+
+        return None
+
+    def extract_if(self, texte):
+        texte = self.normalize(texte)
+
+        patterns = [
+
+            r"I\.?F\.?[,:\- ]*([0-9]{5,15})",
+
+            r"\bIF\b[,:\- ]*([0-9]{5,15})"
+
+        ]
+
+        for p in patterns:
+
+            m = re.search(p, texte)
+
+            if m:
+
+                return m.group(1)
+
+        return None
+
+    def extract_rc(self, texte):
+
+        texte = self.normalize(texte)
+
+        patterns = [
+
+            r"R\.?C\.?[,:\- ]*([0-9]{3,15})",
+
+            r"RC[,:\- ]*([0-9]{3,15})"
+
+        ]
+
+        for p in patterns:
+
+            m = re.search(p, texte)
+
+            if m:
+
+                return m.group(1)
+
+        return None
+
+    def extract_patente(self, texte):
+
+        pattern = r"PATENTE\s*[:.]?\s*([0-9]{4,20})"
+
+        m = re.search(pattern, texte, re.IGNORECASE)
+
+        if m:
+            return m.group(1)
+
+        return None
+
+    def extract_cnss(self, texte):
+
+        texte = self.normalize(texte)
+
+        patterns = [
+
+            r"C\.?N\.?S\.?S\.?[:.]?([0-9]{4,15})",
+
+            r"CNSS[:.]?([0-9]{4,15})"
+
+        ]
+
+        for p in patterns:
+
+            m = re.search(p, texte)
+
+            if m:
+
+                return m.group(1)
+
+        return None
+
+    def extract_rib(self, texte):
+
+        patterns = [
+
+            r"\bRIB\b\s*[:.]?\s*([0-9 ]{10,40})",
+
+            r"\bIBAN\b\s*[:.]?\s*([A-Z0-9 ]{15,40})"
+
+        ]
+
+        for pattern in patterns:
+
+            m = re.search(pattern, texte, re.IGNORECASE)
+
+            if m:
+
+                rib = m.group(1)
+
+                rib = rib.replace(" ", "")
+
+                return rib
+
+        return None
+
+    def extract_city(self, texte):
+
+        villes = [
+
+            "CASABLANCA",
+            "RABAT",
+            "MARRAKECH",
+            "FES",
+            "MEKNES",
+            "AGADIR",
+            "TANGER",
+            "BENI MELLAL",
+            "BENIMELLAL",
+            "OUJDA",
+            "KENITRA",
+            "SAFI",
+            "EL JADIDA",
+            "TEMARA"
+
+        ]
+
+        upper = self.normalize(texte)
+
+        for ville in villes:
+
+            if ville in upper:
+
+                return ville.title()
+
+        return None
+
+    def extract_country(self, texte):
+
+        upper = self.normalize(texte)
+
+        if "MAROC" in upper:
+            return "Maroc"
+
+        if "MOROCCO" in upper:
+            return "Morocco"
+
+        return None
+
+
+    def extract_address(self, texte):
+
+        lignes = [
+            l.strip()
+            for l in texte.splitlines()
+            if l.strip()
+        ]
+
+        # =====================================================
+        # 1) Cas le plus fiable :
+        # SIÈGE SOCIAL
+        # =====================================================
+
+        patterns = [
+
+            r"SI[EÈ]GE\s+SOCIAL\s*[:\-]?\s*(.+)",
+
+            r"SI[EÈ]GE\s*[:\-]?\s*(.+)",
+
+            r"ADRESSE\s*[:\-]?\s*(.+)"
+
+        ]
+
+        for ligne in lignes:
+
+            for pattern in patterns:
+
+                m = re.search(pattern, ligne, re.IGNORECASE)
+
+                if m:
+
+                    adresse = m.group(1).strip()
+
+                    # supprimer le nom de société devant l'adresse
+                    adresse = re.sub(
+                        r"^[A-Z0-9&\-\s]+[,:\-]+",
+                        "",
+                        adresse
+                    )
+
+                    return adresse
+
+        # =====================================================
+        # 2) Recherche d'une ligne contenant BD, Avenue...
+        # =====================================================
+
+        keywords = [
+
+            "BD",
+            "BOULEVARD",
+            "AVENUE",
+            "RUE",
+            "LOT",
+            "ZONE",
+            "PARC",
+            "IMMEUBLE",
+            "IMM",
+            "RESIDENCE",
+            "RESIDENCE",
+            "CENTRE"
+
+        ]
+
+        blacklist = [
+
+            "CLIENT",
+            "DESTINATAIRE",
+            "FACTURE",
+            "BL/FACTURE",
+            "DATE",
+            "DESIGNATION",
+            "TVA",
+            "TOTAL",
+            "TEL",
+            "FAX",
+            "EMAIL",
+            "ICE",
+            "CNSS",
+            "PATENTE",
+            "RIB"
+
+        ]
+
+        for ligne in lignes:
+
+            upper = self.normalize(ligne)
+
+            if any(x in upper for x in blacklist):
+                continue
+
+            if any(k in upper for k in keywords):
+
+                return ligne
+
+        # =====================================================
+        # 3) Dernier recours :
+        # ligne contenant une ville + numéro
+        # =====================================================
+
+        villes = [
+
+            "CASABLANCA",
+            "RABAT",
+            "FES",
+            "MARRAKECH",
+            "AGADIR",
+            "TANGER",
+            "MEKNES",
+            "BENI",
+            "BENIMELLAL"
+
+        ]
+
+        for ligne in lignes:
+
+            upper = self.normalize(ligne)
+
+            if any(v in upper for v in villes):
+
+                if re.search(r"\d", ligne):
+
+                    return ligne
+
+        return None
     
