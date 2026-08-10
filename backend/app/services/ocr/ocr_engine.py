@@ -13,82 +13,79 @@ class OCREngine:
         self.preprocessor = ImagePreprocessor()
 
         self.ocr = PaddleOCR(
-
             lang="fr",
-
             use_doc_orientation_classify=False,
-
             use_doc_unwarping=False,
-
             use_textline_orientation=False,
-
             enable_mkldnn=False
-
         )
 
-    # --------------------------------------------------
+    # ==========================================================
+    # SAVE IMAGE
+    # ==========================================================
 
     def save_temp_image(self, image):
 
         temp = Path("temp")
 
-        temp.mkdir(exist_ok=True)
+        temp.mkdir(
+            exist_ok=True
+        )
 
-        path = temp / "preprocessed.png"
+        path = (
+            temp /
+            "preprocessed.png"
+        )
 
         cv2.imwrite(
-
             str(path),
-
             image
-
         )
 
         return str(path)
 
-    # --------------------------------------------------
+    # ==========================================================
+    # NORMALIZE BOX
+    # ==========================================================
 
     def normalize_box(self, points):
 
-        xs = [p[0] for p in points]
+        xs = [
+            p[0]
+            for p in points
+        ]
 
-        ys = [p[1] for p in points]
+        ys = [
+            p[1]
+            for p in points
+        ]
 
         return [
-
             int(min(xs)),
             int(min(ys)),
             int(max(xs)),
             int(max(ys))
-
         ]
 
-    # --------------------------------------------------
+    # ==========================================================
+    # OCR
+    # ==========================================================
 
     def extraire_texte(
-
-            self,
-
-            image_path: str
-
+        self,
+        image_path: str
     ):
 
         image = self.preprocessor.preprocess(
-
             image_path
-
         )
 
         image_path = self.save_temp_image(
-
             image
-
         )
 
         resultats = self.ocr.predict(
-
             image_path
-
         )
 
         elements = []
@@ -97,89 +94,103 @@ class OCREngine:
 
             data = resultat.json
 
-            if not isinstance(data, dict):
-
+            if not isinstance(
+                data,
+                dict
+            ):
                 continue
 
             res = data.get(
-
                 "res",
-
                 data
-
             )
 
             textes = res.get(
-
                 "rec_texts",
-
                 []
-
             )
 
             scores = res.get(
-
                 "rec_scores",
-
                 []
-
             )
 
             boxes = res.get(
-
                 "rec_polys",
-
                 []
-
             )
 
             for texte, score, box in zip(
-
-                    textes,
-
-                    scores,
-
-                    boxes
-
+                textes,
+                scores,
+                boxes
             ):
 
-                elements.append(
+                texte = str(
+                    texte
+                ).strip()
 
-                    {
+                if not texte:
+                    continue
 
-                        "text": texte.strip(),
+                elements.append({
 
-                        "score": float(score),
+                    "text": texte,
 
-                        "box": self.normalize_box(box)
+                    "score": float(
+                        score
+                    ),
 
-                    }
-
-                )
+                    "box": self.normalize_box(
+                        box
+                    )
+                })
 
         return elements
 
-    def texte_complet(self, image_path: str) -> str:
-        """
-        Retourne tout le texte OCR sous forme d'une seule chaîne.
-        """
+    # ==========================================================
+    # TEXTE COMPLET
+    # ==========================================================
 
-        elements = self.extraire_texte(image_path)
+    def texte_complet(
+        self,
+        image_path: str
+    ):
 
-        lignes = []
+        elements = self.extraire_texte(
+            image_path
+        )
 
-        for e in elements:
-            lignes.append(e["text"])
+        lignes = [
+            e["text"]
+            for e in elements
+            if e.get("text")
+        ]
 
-        return "\n".join(lignes)
+        return "\n".join(
+            lignes
+        )
 
-    def extraire_blocs(self, image_path):
+    # ==========================================================
+    # BLOCS
+    # ==========================================================
 
-        image = self.preprocessor.preprocess(image_path)
+    def extraire_blocs(
+        self,
+        image_path
+    ):
 
-        image_path = self.save_temp_image(image)
+        image = self.preprocessor.preprocess(
+            image_path
+        )
 
-        resultats = self.ocr.predict(image_path)
+        image_path = self.save_temp_image(
+            image
+        )
+
+        resultats = self.ocr.predict(
+            image_path
+        )
 
         blocs = []
 
@@ -187,32 +198,62 @@ class OCREngine:
 
             data = resultat.json
 
-            if not isinstance(data, dict):
+            if not isinstance(
+                data,
+                dict
+            ):
                 continue
 
-            res = data.get("res", data)
+            res = data.get(
+                "res",
+                data
+            )
 
-            textes = res.get("rec_texts", [])
+            textes = res.get(
+                "rec_texts",
+                []
+            )
 
-            scores = res.get("rec_scores", [])
+            scores = res.get(
+                "rec_scores",
+                []
+            )
 
-            polys = res.get("rec_polys", [])
+            polys = res.get(
+                "rec_polys",
+                []
+            )
 
-            for texte, score, poly in zip(textes, scores, polys):
+            for texte, score, poly in zip(
+                textes,
+                scores,
+                polys
+            ):
 
-                box = self.normalize_box(poly)
+                texte = str(
+                    texte
+                ).strip()
+
+                if not texte:
+                    continue
+
+                box = self.normalize_box(
+                    poly
+                )
 
                 blocs.append({
 
-                    "text": texte.strip(),
+                    "text": texte,
 
-                    "score": float(score),
+                    "score": float(
+                        score
+                    ),
 
                     "x1": box[0],
                     "y1": box[1],
                     "x2": box[2],
                     "y2": box[3]
-
                 })
 
         return blocs
+    

@@ -1,0 +1,195 @@
+{
+    "articles": [
+        {
+            "reference": "HP-F6V25AE",
+            "designation": "Cartouche HP 652 Black",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 430.0
+        },
+        {
+            "reference": "HP-F6V24AE",
+            "designation": "Cartouche HP 652 Couleur",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 178.0
+        },
+        {
+            "reference": "HP-CH561HE",
+            "designation": "Cartouche HP CH561 n?122 black - HP DESKJET",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 380.0
+        },
+        {
+            "reference": "EPST103BK",
+            "designation": "(C13T00S14A) Bouteille d'encre Epson : 103 pour L3150/L31111/L3110 Black",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 230.0
+        },
+        {
+            "reference": "EPST103C",
+            "designation": "(C13T00S24A) Bouteile d'encre Epson 103 pour L3150/L31111/L3110 Cyan",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 220.0
+        },
+        {
+            "reference": "EPST103M",
+            "designation": "(C13T00S34A) Bouteille d'encre Epson 103 pour L3150/L31111/L3110 Magenta",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 220.0
+        },
+        {
+            "reference": "EPST103Y",
+            "designation": "(C13T00S44A)Bouteille d'encre Epson 103 pour L3150/L31111/L3110 Yellow",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 220.0
+        },
+        {
+            "reference": "CANGI490M",
+            "designation": "CARTOUCHE CANON GI-490 MAGENTA",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 180.0
+        },
+        {
+            "reference": "CANGI490Y",
+            "designation": "CARTOUCHE CANON GI490YELLOW",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 90.0
+        },
+        {
+            "reference": "HP-W2072A",
+            "designation": "Toner HP 117A LASER POUR 150/178/179A YELLOW 1 360.00 C e N°sene:100951068420/100951068634/ th /SINE Laia Yecouts Casabia a0522 45 02",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 2.0
+        }
+    ],
+    "fournisseur": null,
+    "supplier": null,
+    "numero": null,
+    "date": null,
+    "client": null,
+    "total_ht": null,
+    "total_tva": null,
+    "total_ttc": null,
+    "validation": {
+        "score": 25,
+        "required": [
+            "numero manquant",
+            "date manquante",
+            "fournisseur manquant"
+        ],
+        "amounts": [
+            "totaux facture absents"
+        ],
+        "references": [],
+        "tva": [],
+        "designation": [],
+        "quantity": [],
+        "price": [],
+        "articles": [
+            {
+                "index": 1,
+                "reference": "HP-F6V25AE",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            },
+            {
+                "index": 2,
+                "reference": "HP-F6V24AE",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            },
+            {
+                "index": 3,
+                "reference": "HP-CH561HE",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            },
+            {
+                "index": 4,
+                "reference": "EPST103BK",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            },
+            {
+                "index": 5,
+                "reference": "EPST103C",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            },
+            {
+                "index": 6,
+                "reference": "EPST103M",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            },
+            {
+                "index": 7,
+                "reference": "EPST103Y",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            },
+            {
+                "index": 8,
+                "reference": "CANGI490M",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            },
+            {
+                "index": 9,
+                "reference": "CANGI490Y",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            },
+            {
+                "index": 10,
+                "reference": "HP-W2072A",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            }
+        ],
+        "invoice_totals": [],
+        "line_totals": [],
+        "valid": false,
+        "error_count": 24
+    },
+    "score": 25
+}

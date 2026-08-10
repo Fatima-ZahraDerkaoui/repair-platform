@@ -3,116 +3,239 @@ from pprint import pprint
 from app.services.ocr.invoice_extractor import InvoiceExtractor
 
 
-# ==========================================================
-# Choisir l'image à tester
-# ==========================================================
+def test_invoice_extractor():
 
-IMAGE = "test_data/BL Facture.jpeg"
+    print("\n" + "=" * 70)
+    print("TEST COMPLET — INVOICE EXTRACTOR")
+    print("=" * 70)
 
-# IMAGE = "test_data/avoir.jpeg"
-# IMAGE = "test_data/bon de livraison.jpeg"
+    extractor = InvoiceExtractor()
+
+    # --------------------------------------------------
+    # Données OCR simulées
+    # --------------------------------------------------
+
+    elements = [
+
+        # =========================
+        # Informations facture
+        # =========================
+
+        {
+            "text": "FACTURE N° FAC-2026-001",
+            "box": [100, 50, 350, 80]
+        },
+
+        {
+            "text": "DATE : 10/08/2026",
+            "box": [100, 90, 300, 120]
+        },
+
+        {
+            "text": "FOURNISSEUR : HP MAROC",
+            "box": [100, 130, 350, 160]
+        },
+
+        # =========================
+        # Header tableau
+        # =========================
+
+        {
+            "text": "DESIGNATION",
+            "box": [50, 200, 180, 225]
+        },
+
+        {
+            "text": "REFERENCE",
+            "box": [190, 200, 280, 225]
+        },
+
+        {
+            "text": "QTE",
+            "box": [290, 200, 330, 225]
+        },
+
+        {
+            "text": "PU",
+            "box": [340, 200, 400, 225]
+        },
+
+        {
+            "text": "TOTAL",
+            "box": [410, 200, 480, 225]
+        },
+
+        # =========================
+        # Article 1
+        # =========================
+
+        {
+            "text": "CARTOUCHE HP 652 BLACK",
+            "box": [50, 250, 180, 275]
+        },
+
+        {
+            "text": "HP-F6V25AE",
+            "box": [190, 250, 280, 275]
+        },
+
+        {
+            "text": "2",
+            "box": [290, 250, 330, 275]
+        },
+
+        {
+            "text": "215.00",
+            "box": [340, 250, 400, 275]
+        },
+
+        {
+            "text": "430.00",
+            "box": [410, 250, 480, 275]
+        },
+
+        # =========================
+        # Article 2
+        # =========================
+
+        {
+            "text": "CARTOUCHE HP 652 COULEUR HP-F6V24AE",
+            "box": [50, 300, 300, 325]
+        },
+
+        {
+            "text": "1",
+            "box": [290, 300, 330, 325]
+        },
+
+        {
+            "text": "178.00",
+            "box": [340, 300, 400, 325]
+        },
+
+        {
+            "text": "178.00",
+            "box": [410, 300, 480, 325]
+        },
+
+        # =========================
+        # Footer
+        # =========================
+
+        {
+            "text": "TOTAL HT",
+            "box": [300, 400, 380, 425]
+        },
+
+        {
+            "text": "608.00",
+            "box": [410, 400, 480, 425]
+        },
+
+        {
+            "text": "TOTAL TVA",
+            "box": [300, 430, 380, 455]
+        },
+
+        {
+            "text": "121.60",
+            "box": [410, 430, 480, 455]
+        },
+
+        {
+            "text": "TOTAL TTC",
+            "box": [300, 460, 380, 485]
+        },
+
+        {
+            "text": "729.60",
+            "box": [410, 460, 480, 485]
+        },
+    ]
+
+    # --------------------------------------------------
+    # Extraction
+    # --------------------------------------------------
+
+    try:
+
+        result = extractor.extract(elements)
+
+    except Exception as e:
+
+        print("\n❌ ERREUR INVOICE EXTRACTOR")
+        print(type(e).__name__)
+        print(str(e))
+
+        raise
+
+    # --------------------------------------------------
+    # Affichage
+    # --------------------------------------------------
+
+    print("\nRESULTAT COMPLET :")
+    pprint(result, sort_dicts=False)
+
+    # --------------------------------------------------
+    # Vérifications
+    # --------------------------------------------------
+
+    assert result is not None
+
+    assert "articles" in result
+
+    assert isinstance(result["articles"], list)
+
+    print("\n✓ Structure facture OK")
+
+    # --------------------------------------------------
+    # Articles
+    # --------------------------------------------------
+
+    assert len(result["articles"]) >= 2
+
+    print(f"✓ Nombre articles : {len(result['articles'])}")
+
+    article_1 = result["articles"][0]
+
+    assert article_1["designation"]
+    assert article_1["prix_unitaire"] == 215.0
+    assert article_1["quantite"] == 2
+    assert article_1["total"] == 430.0
+
+    print("✓ Article 1 OK")
+
+    article_2 = result["articles"][1]
+
+    assert article_2["designation"]
+    assert article_2["prix_unitaire"] == 178.0
+    assert article_2["quantite"] == 1
+    assert article_2["total"] == 178.0
+
+    print("✓ Article 2 OK")
+
+    # --------------------------------------------------
+    # Validation
+    # --------------------------------------------------
+
+    assert "validation" in result
+
+    validation = result["validation"]
+
+    assert "score" in validation
+    assert "articles" in validation
+    assert "line_totals" in validation
+
+    print(f"✓ Score validation : {validation['score']}")
+
+    # --------------------------------------------------
+    # Résultat final
+    # --------------------------------------------------
+
+    print("\n" + "=" * 70)
+    print("✓ TEST INVOICE EXTRACTOR PASSED")
+    print("=" * 70)
 
 
-# ==========================================================
-# Extraction
-# ==========================================================
-
-extractor = InvoiceExtractor()
-
-result = extractor.extract(IMAGE)
-
-
-# ==========================================================
-# Facture
-# ==========================================================
-
-print()
-print("=" * 70)
-print("FACTURE")
-print("=" * 70)
-
-print("Numéro      :", result.get("numero"))
-print("Date        :", result.get("date"))
-print("Client      :", result.get("client"))
-
-print()
-
-print("Total HT    :", result.get("total_ht"))
-print("Total TVA   :", result.get("total_tva"))
-print("Total TTC   :", result.get("total_ttc"))
-
-
-# ==========================================================
-# Fournisseur
-# ==========================================================
-
-supplier = result.get("supplier", {})
-
-print()
-print("=" * 70)
-print("FOURNISSEUR")
-print("=" * 70)
-
-for key, value in supplier.items():
-
-    print(f"{key:12}: {value}")
-
-
-# ==========================================================
-# Articles
-# ==========================================================
-
-articles = result.get("articles", [])
-
-print()
-print("=" * 70)
-print(f"ARTICLES ({len(articles)})")
-print("=" * 70)
-
-for i, article in enumerate(articles, start=1):
-
-    print()
-
-    print(f"ARTICLE {i}")
-
-    print("-" * 50)
-
-    print("Reference     :", article["reference"])
-
-    print("Designation   :", article["designation"])
-
-    print("Quantite      :", article["quantite"])
-
-    print("Prix unitaire :", article["prix_unitaire"])
-
-    print("TVA           :", article["tva"])
-
-    print("Total         :", article["total"])
-
-
-# ==========================================================
-# Métadonnées
-# ==========================================================
-
-meta = result.get("meta", {})
-
-print()
-print("=" * 70)
-print("META")
-print("=" * 70)
-
-for key, value in meta.items():
-
-    print(f"{key:20}: {value}")
-
-
-# ==========================================================
-# JSON complet
-# ==========================================================
-
-print()
-print("=" * 70)
-print("JSON COMPLET")
-print("=" * 70)
-
-pprint(result, sort_dicts=False)
+if __name__ == "__main__":
+    test_invoice_extractor()

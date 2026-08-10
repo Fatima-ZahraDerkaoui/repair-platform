@@ -1,0 +1,115 @@
+{
+    "articles": [
+        {
+            "reference": "TATN324N",
+            "designation": "IIC TONER MINOLTA BIZUHB C 258/454 TN 324/512NOIR CET",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 300.0
+        },
+        {
+            "reference": "TTN324C",
+            "designation": "TONER MINOLTABIZUHB C258/454 R",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 600.0
+        },
+        {
+            "reference": "TATN321N",
+            "designation": "/M/Y CETV TONER MINOLTA BIZUHB C 284 TN 321 NOIR CET",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 600.0
+        },
+        {
+            "reference": "TATN321CWT",
+            "designation": "TONER MINOLTABIZUHB C227TN 321 COULEUR/2M/2Y/2G WT",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 1740.0
+        },
+        {
+            "reference": "TATN3210",
+            "designation": "TONER MINOLTA BIZUHB C284TN 720:00 321 COULEUR/2M CET",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": null,
+            "total": 360.0
+        }
+    ],
+    "fournisseur": null,
+    "supplier": null,
+    "numero": null,
+    "date": null,
+    "client": null,
+    "total_ht": null,
+    "total_tva": null,
+    "total_ttc": null,
+    "validation": {
+        "score": 45,
+        "required": [
+            "numero manquant",
+            "date manquante",
+            "fournisseur manquant"
+        ],
+        "amounts": [
+            "totaux facture absents"
+        ],
+        "references": [],
+        "tva": [],
+        "designation": [],
+        "quantity": [],
+        "price": [],
+        "articles": [
+            {
+                "index": 1,
+                "reference": "TATN324N",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            },
+            {
+                "index": 2,
+                "reference": "TTN324C",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            },
+            {
+                "index": 3,
+                "reference": "TATN321N",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            },
+            {
+                "index": 4,
+                "reference": "TATN321CWT",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            },
+            {
+                "index": 5,
+                "reference": "TATN3210",
+                "errors": [
+                    "quantite absente",
+                    "prix unitaire absent"
+                ]
+            }
+        ],
+        "invoice_totals": [],
+        "line_totals": [],
+        "valid": false,
+        "error_count": 14
+    },
+    "score": 45
+}

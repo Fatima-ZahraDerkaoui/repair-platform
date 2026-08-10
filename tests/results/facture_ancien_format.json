@@ -1,0 +1,112 @@
+{
+    "numero": "FV2026-05679",
+    "date": "13/05/2026",
+    "client": null,
+    "fournisseur": {
+        "name": "CASINFO",
+        "address": "Slègo soclal: CASINFO-84, BD Lalla Yaooul-20000 CASABLANCA, Maroc",
+        "city": "Casablanca",
+        "country": "Maroc",
+        "phone": [
+            "0684201009",
+            "0522448733",
+            "0522450271",
+            "0522317480",
+            "0778000001"
+        ],
+        "fax": "0522317480",
+        "email": "zbouchra@caslnfo-maroc.com",
+        "website": "caslnfo-maroc.com",
+        "ice": "001536333000089",
+        "if": "01048180",
+        "rc": "74047",
+        "patente": "33378023",
+        "cnss": "2360775",
+        "rib": "007780000010100000287260"
+    },
+    "articles": [
+        {
+            "reference": "HP-F6V25AE",
+            "designation": "CARTOUCHE HP 652 BLACK",
+            "quantite": 2,
+            "prix_unitaire": 215.0,
+            "tva": 20.0,
+            "total": 430.0
+        },
+        {
+            "reference": "HP-F6V24AE",
+            "designation": "CARTOUCHE HP 652 COULEUR",
+            "quantite": 1,
+            "prix_unitaire": 178.0,
+            "tva": 20.0,
+            "total": 178.0
+        },
+        {
+            "reference": "HP-CH561HE",
+            "designation": "CARTOUCHE HP CH561 N?122 BLACK - HP DESKJET",
+            "quantite": 2,
+            "prix_unitaire": 380.0,
+            "tva": 20.0,
+            "total": 760.0
+        },
+        {
+            "reference": "EPST103BK",
+            "designation": "(C13T00S14A) BOUTEILLE D'ENCRE EPSON : 103 POUR L3150/L31111/L3110 BLACK",
+            "quantite": 2,
+            "prix_unitaire": 115.0,
+            "tva": 20.0,
+            "total": 230.0
+        },
+        {
+            "reference": "EPST103C",
+            "designation": "(C13T00S24A) BOUTEILE D'ENCRE EPSON 103 POUR L3150/L31111/L3110 CYAN",
+            "quantite": 2,
+            "prix_unitaire": 220.0,
+            "tva": 20.0,
+            "total": 440.0
+        },
+        {
+            "reference": "EPST103M",
+            "designation": "(C13T00S34A) BOUTEILLE D'ENCRE EPSON 103 POUR L3150/L31111/L3110 MAGENTA",
+            "quantite": 2,
+            "prix_unitaire": 220.0,
+            "tva": 20.0,
+            "total": 440.0
+        },
+        {
+            "reference": "EPST103Y",
+            "designation": "(C13T00S44A)BOUTEILLE D'ENCRE EPSON 103 POUR L3150/L31111/L3110 YELLOW",
+            "quantite": 2,
+            "prix_unitaire": 110.0,
+            "tva": 20.0,
+            "total": 220.0
+        },
+        {
+            "reference": "CANGI490M",
+            "designation": "CARTOUCHE CANON GI-490 MAGENTA",
+            "quantite": 2,
+            "prix_unitaire": 90.0,
+            "tva": 20.0,
+            "total": 180.0
+        },
+        {
+            "reference": "CANGI490Y",
+            "designation": "CARTOUCHE CANON GI490YELLOW",
+            "quantite": 1,
+            "prix_unitaire": 90.0,
+            "tva": 20.0,
+            "total": 90.0
+        },
+        {
+            "reference": "HP-W2072A",
+            "designation": "TONER HP 117A LASER POUR 150/178/179A YELLOW C E N°SENE:100951068420/100951068634/ TH /SINE LAIA YECOUTS CASABIA A0522 45 02",
+            "quantite": 2,
+            "prix_unitaire": 680.0,
+            "tva": 20.0,
+            "total": 1360.0
+        }
+    ],
+    "total_ht": 2923.32,
+    "total_tva": 584.68,
+    "total_ttc": 3508.0
+}

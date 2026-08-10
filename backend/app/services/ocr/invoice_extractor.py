@@ -1,26 +1,29 @@
 from app.services.ocr.ocr_engine import OCREngine
-
-from app.services.ocr.invoice_detector import InvoiceDetector
 from app.services.ocr.column_detector import ColumnDetector
 from app.services.ocr.column_classifier import ColumnClassifier
 from app.services.ocr.line_builder import LineBuilder
-
 from app.services.ocr.article_parser import ArticleParser
-
 from app.services.ocr.facture_parser import FactureParser
-
+from app.services.ocr.invoice_detector import InvoiceDetector
 from app.services.ocr.supplier_extractor import SupplierExtractor
+from app.services.ocr.invoice_validator import InvoiceValidator
 
 
 class InvoiceExtractor:
 
     def __init__(self):
 
+        # ==================================================
+        # SERVICES OCR
+        # ==================================================
+
         self.ocr = OCREngine()
 
         self.invoice_detector = InvoiceDetector()
 
         self.column_detector = ColumnDetector()
+
+        self.column_classifier = None
 
         self.line_builder = LineBuilder()
 
@@ -30,235 +33,274 @@ class InvoiceExtractor:
 
         self.supplier_extractor = SupplierExtractor()
 
-    # =======================================================
-    # OCR
-    # =======================================================
+        self.validator = InvoiceValidator()
 
-    def run_ocr(self, image_path):
+    # ==================================================
+    # EXTRACTION COMPLETE
+    # ==================================================
 
-        return self.ocr.extraire_texte(image_path)
+    def extract(self, elements):
 
-    # =======================================================
-    # Texte complet
-    # =======================================================
+        """
+        Pipeline complet d'extraction d'une facture.
 
-    def build_text(self, elements):
+        Entrée :
+            elements = éléments OCR déjà détectés.
 
-        return "\n".join(
+        Sortie :
+            dictionnaire facture complet.
+        """
 
-            e["text"]
+        # ==================================================
+        # 0. SECURITE
+        # ==================================================
 
-            for e in elements
+        if not elements:
 
-        )
+            facture = {
+                "numero": None,
+                "date": None,
+                "client": None,
+                "fournisseur": None,
+                "articles": [],
+                "total_ht": None,
+                "total_tva": None,
+                "total_ttc": None,
+            }
 
-    # =======================================================
-    # Extraction du tableau
-    # =======================================================
+            facture["supplier"] = None
 
-    def extract_table(self, elements):
+            facture["validation"] = {
+                "score": 0,
+                "required": ["aucun élément OCR"],
+                "amounts": [],
+                "references": [],
+                "tva": [],
+                "designation": [],
+                "quantity": [],
+                "price": [],
+                "articles": [],
+                "invoice_totals": [],
+                "line_totals": [],
+            }
 
-        return self.invoice_detector.extract_table_elements(
+            return facture
 
+        # ==================================================
+        # 1. DETECTION DES COLONNES
+        # ==================================================
+
+        columns = self.column_detector.detect(
             elements
-
         )
 
-    # =======================================================
-    # Détection des colonnes
-    # =======================================================
+        if columns is None:
 
-    def detect_columns(self, table_elements):
+            columns = {}
 
-        return self.column_detector.detect(
+        # ==================================================
+        # 2. CLASSIFICATION DES ELEMENTS
+        # ==================================================
 
-            table_elements
-
+        self.column_classifier = ColumnClassifier(
+            columns
         )
 
-    # =======================================================
-    # Classification
-    # =======================================================
-
-    def classify(self, table_elements, colonnes):
-
-        classifier = ColumnClassifier(colonnes)
-
-        return classifier.classify(
-
-            table_elements
-
+        classified = self.column_classifier.classify(
+            elements
         )
 
-    # =======================================================
-    # Reconstruction des lignes
-    # =======================================================
+        # ==================================================
+        # 3. CONSTRUCTION DES LIGNES
+        # ==================================================
 
-    def build_lines(self, classified):
-
-        return self.line_builder.build(
-
+        grouped_articles = self.line_builder.build(
             classified
-
         )
 
-    # =======================================================
-    # Extraction des articles
-    # =======================================================
+        # ==================================================
+        # DEBUG TEMPORAIRE
+        # ==================================================
 
-    def parse_articles(self, lignes):
+        print()
+        print("=" * 80)
+        print("DEBUG GROUPED ARTICLES")
+        print("=" * 80)
 
-        return self.article_parser.parse(
+        for i, group in enumerate(
+            grouped_articles,
+            start=1
+        ):
 
-            lignes
+            print()
+            print(f"GROUP {i}")
 
+            print(
+                "reference :",
+                group.get("reference")
+            )
+
+            print(
+                "reference_y :",
+                group.get("reference_y")
+            )
+
+            for element in group.get(
+                "elements",
+                []
+            ):
+
+                print(
+                    f"  {element.get('text')!r} "
+                    f"| column={element.get('column')} "
+                    f"| x={element.get('x')} "
+                    f"| y={element.get('y')}"
+                )
+
+        # ==================================================
+        # 4. ARTICLE PARSER
+        # ==================================================
+
+        articles = self.article_parser.parse(
+            grouped_articles
         )
 
-    # =======================================================
-    # Extraction fournisseur
-    # =======================================================
+        if articles is None:
 
-    def parse_supplier(self, texte):
+            articles = []
 
-        return self.supplier_extractor.extract(
+        # ==================================================
+        # 5. TEXTE COMPLET OCR
+        # ==================================================
 
-            texte
+        sorted_elements = sorted(
+            elements,
+            key=lambda e: (
+                e.get(
+                    "box",
+                    [0, 0, 0, 0]
+                )[1],
 
+                e.get(
+                    "box",
+                    [0, 0, 0, 0]
+                )[0]
+            )
         )
 
-    # =======================================================
-    # Extraction facture
-    # =======================================================
+        texte_complet = "\n".join(
+            str(
+                e.get(
+                    "text",
+                    ""
+                )
+            ).strip()
 
-    def parse_invoice(self, texte, articles):
+            for e in sorted_elements
 
-        return self.facture_parser.parse(
+            if str(
+                e.get(
+                    "text",
+                    ""
+                )
+            ).strip()
+        )
 
-            texte,
+        # ==================================================
+        # 6. FACTURE PARSER
+        # ==================================================
 
+        facture = self.facture_parser.parse(
+            texte_complet,
             articles
-
         )
 
-    # =======================================================
-    # Pipeline complet
-    # =======================================================
+        if facture is None:
 
-    def extract(self, image_path):
+            facture = {}
 
-        # -----------------------------------
-        # OCR
-        # -----------------------------------
+        # ==================================================
+        # 7. GARANTIR LA STRUCTURE
+        # ==================================================
 
-        elements = self.run_ocr(
-
-            image_path
-
+        facture.setdefault(
+            "numero",
+            None
         )
 
-        # -----------------------------------
-        # Texte complet
-        # -----------------------------------
-
-        texte = self.build_text(
-
-            elements
-
+        facture.setdefault(
+            "date",
+            None
         )
 
-        # -----------------------------------
-        # Tableau
-        # -----------------------------------
-
-        table_elements = self.extract_table(
-
-            elements
-
+        facture.setdefault(
+            "client",
+            None
         )
 
-        # -----------------------------------
-        # Colonnes
-        # -----------------------------------
-
-        colonnes = self.detect_columns(
-
-            table_elements
-
+        facture.setdefault(
+            "fournisseur",
+            None
         )
 
-        # -----------------------------------
-        # Classification
-        # -----------------------------------
-
-        classified = self.classify(
-
-            table_elements,
-
-            colonnes
-
-        )
-
-        # -----------------------------------
-        # Lignes
-        # -----------------------------------
-
-        lignes = self.build_lines(
-
-            classified
-
-        )
-
-        # -----------------------------------
-        # Articles
-        # -----------------------------------
-
-        articles = self.parse_articles(
-
-            lignes
-
-        )
-
-        # -----------------------------------
-        # Informations facture
-        # -----------------------------------
-
-        facture = self.parse_invoice(
-
-            texte,
-
+        facture.setdefault(
+            "articles",
             articles
-
         )
 
-        # -----------------------------------
-        # Fournisseur
-        # -----------------------------------
-
-        fournisseur = self.parse_supplier(
-
-            texte
-
+        facture.setdefault(
+            "total_ht",
+            None
         )
 
-        facture["supplier"] = fournisseur
+        facture.setdefault(
+            "total_tva",
+            None
+        )
 
-        # -----------------------------------
-        # Informations techniques
-        # -----------------------------------
+        facture.setdefault(
+            "total_ttc",
+            None
+        )
 
-        facture["meta"] = {
+        # ==================================================
+        # 8. SECURISER LES ARTICLES
+        # ==================================================
 
-            "ocr_elements": len(elements),
+        if not facture.get("articles"):
 
-            "table_elements": len(table_elements),
+            facture["articles"] = articles
 
-            "classified_elements": len(classified),
+        # ==================================================
+        # 9. COMPATIBILITE VALIDATOR
+        # ==================================================
 
-            "articles_detected": len(articles),
+        # FactureParser utilise "fournisseur".
+        #
+        # InvoiceValidator utilise "supplier".
+        #
+        # On conserve les deux pour le moment afin
+        # de ne casser aucun composant existant.
 
-            "columns": colonnes
+        if "supplier" not in facture:
 
-        }
+            facture["supplier"] = facture.get(
+                "fournisseur"
+            )
+
+        # ==================================================
+        # 10. VALIDATION
+        # ==================================================
+
+        validation = self.validator.validate(
+            facture
+        )
+
+        # ==================================================
+        # 11. RESULTAT FINAL
+        # ==================================================
+
+        facture["validation"] = validation
 
         return facture
     

@@ -1,160 +1,497 @@
-import re
-import unicodedata
+import statistics
 
 
 class ColumnDetector:
 
-    HEADERS = {
+    def __init__(self):
 
-        "reference": [
-            "REFERENCE",
-            "RÉFÉRENCE",
-            "REF",
-            "REF.",
-            "CODE",
-            "CODE ARTICLE",
-            "N ARTICLE",
-            "ARTICLE",
-            "SKU",
-            "ITEM",
-            "ITEM CODE",
-            "PRODUCT CODE"
-        ],
-
-        "designation": [
-            "DESIGNATION",
-            "DÉSIGNATION",
-            "DESCRIPTION",
-            "LIBELLE",
-            "LIBELLÉ",
-            "PRODUIT",
-            "ARTICLE",
-            "ITEM",
-            "DESCRIPTIF",
-            "DESIGNATION ARTICLE"
-        ],
-
-        "qte": [
-            "QTE",
-            "QTÉ",
-            "QUANTITE",
-            "QUANTITÉ",
-            "QTY",
-            "NBR",
-            "NB",
-            "PCS",
-            "PIECES",
-            "UNITES"
-        ],
-
-        "pu": [
-            "PU",
-            "P.U",
-            "P.U.",
-            "P.U HT",
-            "P.U TTC",
-            "PRIX",
-            "PRIX HT",
-            "PRIX TTC",
-            "PRIX UNITAIRE",
-            "UNIT PRICE",
-            "UNIT COST"
-        ],
-
-        "remise": [
-            "REMISE",
-            "REM",
-            "DISCOUNT",
-            "REDUCTION",
-            "RABAIS"
-        ],
-
-        "tva": [
-            "TVA",
-            "VAT",
-            "TAXE",
-            "TAX"
-        ],
-
-        "total": [
-            "TOTAL",
-            "TOTAL HT",
-            "TOTAL TTC",
-            "MONTANT",
-            "MONTANT TTC",
-            "NET TTC",
-            "AMOUNT",
-            "LINE TOTAL"
+        self.expected_columns = [
+            "reference",
+            "designation",
+            "qte",
+            "pu",
+            "total",
+            "tva",
         ]
-    }
 
-    # -----------------------------------------------------
+    # ==========================================================
+    # CENTRE X
+    # ==========================================================
+
+    def center_x(self, element):
+
+        x1, y1, x2, y2 = element["box"]
+
+        return (x1 + x2) / 2
+
+    # ==========================================================
+    # CENTRE Y
+    # ==========================================================
+
+    def center_y(self, element):
+
+        x1, y1, x2, y2 = element["box"]
+
+        return (y1 + y2) / 2
+
+    # ==========================================================
+    # NORMALISATION
+    # ==========================================================
 
     def normalize(self, text):
 
-        text = text.upper()
+        if text is None:
+            return ""
 
-        text = unicodedata.normalize("NFD", text)
+        return str(text).strip().upper()
 
-        text = "".join(
-            c for c in text
-            if unicodedata.category(c) != "Mn"
+    # ==========================================================
+    # NOMBRE
+    # ==========================================================
+
+    def is_numeric(self, text):
+
+        text = self.normalize(text)
+
+        if not text:
+            return False
+
+        text = (
+            text
+            .replace("DHS", "")
+            .replace("MAD", "")
+            .replace("DH", "")
+            .replace("%", "")
+            .replace(" ", "")
         )
 
-        text = re.sub(r"[^A-Z0-9 ]", " ", text)
+        text = text.replace(",", ".")
 
-        text = re.sub(r"\s+", " ", text)
+        try:
+            float(text)
+            return True
+        except (ValueError, TypeError):
+            return False
 
-        return text.strip()
+    # ==========================================================
+    # ELEMENT TABLEAU
+    # ==========================================================
 
-    # -----------------------------------------------------
+    def is_table_candidate(self, element):
+
+        text = self.normalize(
+            element.get("text", "")
+        )
+
+        if not text:
+            return False
+
+        y = self.center_y(element)
+
+        if y < 250:
+            return False
+
+        if y > 1400:
+            return False
+
+        return True
+
+    # ==========================================================
+    # HEADERS
+    # ==========================================================
+
+    def is_reference_header(self, text):
+
+        text = self.normalize(text)
+
+        return (
+            "REFERENCE" in text
+            or "RÉFÉRENCE" in text
+            or text in ("REF", "REF.")
+        )
+
+    def is_designation_header(self, text):
+
+        text = self.normalize(text)
+
+        return (
+            "DESIGNATION" in text
+            or "DESCRIPTION" in text
+        )
+
+    def is_quantity_header(self, text):
+
+        text = self.normalize(text)
+
+        return (
+            "QUANTITE" in text
+            or "QTE" in text
+            or "QTÉ" in text
+        )
+
+    def is_price_header(self, text):
+
+        text = self.normalize(text)
+
+        return (
+            "PRIX UNITAIRE" in text
+            or "PX UNITAIRE" in text
+            or "P.U" in text
+            or text == "PU"
+            or "UNITAIRE" in text
+            or text.startswith("P.U.")
+        )
+
+    def is_total_header(self, text):
+
+        text = self.normalize(text)
+
+        return (
+            text == "TOTAL"
+            or "TOTAL TTC" in text
+            or "MONTANT TTC" in text
+            or text == "MONTANT"
+        )
+
+    def is_tva_header(self, text):
+
+        text = self.normalize(text)
+
+        return (
+            text == "TVA"
+            or "TAUX TVA" in text
+            or text == "TAUX"
+        )
+
+    # ==========================================================
+    # DETECTION HEADERS
+    # ==========================================================
+
+    def detect_headers(self, elements):
+
+        columns = {}
+
+        for element in elements:
+
+            text = self.normalize(
+                element.get("text", "")
+            )
+
+            x = self.center_x(element)
+
+            if self.is_reference_header(text):
+                columns["reference"] = x
+
+            elif self.is_designation_header(text):
+                columns["designation"] = x
+
+            elif self.is_quantity_header(text):
+                columns["qte"] = x
+
+            elif self.is_price_header(text):
+                columns["pu"] = x
+
+            elif self.is_total_header(text):
+                columns["total"] = x
+
+            elif self.is_tva_header(text):
+                columns["tva"] = x
+
+        return columns
+
+    # ==========================================================
+    # COLONNES NUMERIQUES
+    # ==========================================================
+
+    def detect_numeric_columns(self, elements):
+
+        numeric_x = []
+
+        for element in elements:
+
+            text = self.normalize(
+                element.get("text", "")
+            )
+
+            if not self.is_numeric(text):
+                continue
+
+            x = self.center_x(element)
+
+            numeric_x.append(x)
+
+        if not numeric_x:
+            return []
+
+        numeric_x.sort()
+
+        clusters = []
+
+        for x in numeric_x:
+
+            if not clusters:
+                clusters.append([x])
+                continue
+
+            center = statistics.mean(
+                clusters[-1]
+            )
+
+            if abs(x - center) <= 45:
+                clusters[-1].append(x)
+            else:
+                clusters.append([x])
+
+        return [
+            statistics.mean(cluster)
+            for cluster in clusters
+        ]
+
+    # ==========================================================
+    # QUANTITE
+    # ==========================================================
+
+    def detect_quantity_column(
+        self,
+        elements,
+        existing_columns
+    ):
+
+        if "qte" in existing_columns:
+            return existing_columns["qte"]
+
+        candidates = []
+
+        for element in elements:
+
+            text = self.normalize(
+                element.get("text", "")
+            )
+
+            if not self.is_numeric(text):
+                continue
+
+            cleaned = (
+                text
+                .replace(",", ".")
+                .replace(" ", "")
+            )
+
+            try:
+                value = float(cleaned)
+            except (ValueError, TypeError):
+                continue
+
+            if (
+                value.is_integer()
+                and 0 < value <= 100
+            ):
+                candidates.append(
+                    self.center_x(element)
+                )
+
+        if not candidates:
+            return None
+
+        return min(
+            candidates,
+            key=lambda x: abs(x - 792)
+        )
+
+    # ==========================================================
+    # PU / TOTAL
+    # ==========================================================
+
+    def detect_price_total_columns(
+        self,
+        elements,
+        columns,
+        numeric_columns
+    ):
+
+        # Si les deux headers existent :
+        # on leur fait confiance.
+        if (
+            "pu" in columns
+            and "total" in columns
+        ):
+            return
+
+        # ------------------------------------------------------
+        # NOUVEAU FORMAT MAFOCOPI
+        # ------------------------------------------------------
+
+        if "reference" in columns:
+
+            # Positions connues du nouveau format.
+            #
+            # Reference     ~224
+            # Designation   ~515
+            # Qte           ~792
+            # PU            ~1002
+            # Total         ~1168
+
+            if "pu" not in columns:
+                columns["pu"] = 1002.0
+
+            if "total" not in columns:
+                columns["total"] = 1168.0
+
+            return
+
+        # ------------------------------------------------------
+        # ANCIEN FORMAT
+        # ------------------------------------------------------
+
+        candidates = []
+
+        for x in numeric_columns:
+
+            if (
+                "qte" in columns
+                and abs(x - columns["qte"]) < 50
+            ):
+                continue
+
+            if (
+                "tva" in columns
+                and abs(x - columns["tva"]) < 50
+            ):
+                continue
+
+            candidates.append(x)
+
+        candidates = sorted(candidates)
+
+        if len(candidates) >= 2:
+
+            if "pu" not in columns:
+                columns["pu"] = candidates[-2]
+
+            if "total" not in columns:
+                columns["total"] = candidates[-1]
+
+        elif len(candidates) == 1:
+
+            if "total" not in columns:
+                columns["total"] = candidates[0]
+
+    # ==========================================================
+    # DETECTION PRINCIPALE
+    # ==========================================================
 
     def detect(self, elements):
 
-        candidats = {}
+        table_elements = [
+            e
+            for e in elements
+            if self.is_table_candidate(e)
+        ]
 
-        for e in elements:
+        if not table_elements:
+            return {}
 
-            texte = self.normalize(e["text"])
+        columns = self.detect_headers(
+            table_elements
+        )
 
-            x1, y1, x2, y2 = e["box"]
+        numeric_columns = (
+            self.detect_numeric_columns(
+                table_elements
+            )
+        )
 
-            centre = (x1 + x2) / 2
+        has_reference_column = (
+            "reference" in columns
+        )
 
-            largeur = x2 - x1
+        # ======================================================
+        # NOUVEAU FORMAT
+        # ======================================================
 
-            score = e.get("score", 1)
+        if has_reference_column:
 
-            for colonne, aliases in self.HEADERS.items():
+            defaults_new = {
+                "reference": 224.0,
+                "designation": 514.5,
+                "qte": 792.0,
+                "pu": 1002.0,
+                "total": 1168.0,
+            }
 
-                for alias in aliases:
+            if "designation" not in columns:
+                columns["designation"] = (
+                    defaults_new["designation"]
+                )
 
-                    alias = self.normalize(alias)
+            if "qte" not in columns:
 
-                    if alias == texte or alias in texte:
+                qte = self.detect_quantity_column(
+                    table_elements,
+                    columns
+                )
 
-                        poids = score * largeur
+                columns["qte"] = (
+                    qte
+                    if qte is not None
+                    else defaults_new["qte"]
+                )
 
-                        if (
-                            colonne not in candidats
-                            or poids > candidats[colonne]["poids"]
-                        ):
+            self.detect_price_total_columns(
+                table_elements,
+                columns,
+                numeric_columns
+            )
 
-                            candidats[colonne] = {
+            for column, value in defaults_new.items():
 
-                                "x": centre,
+                if column not in columns:
+                    columns[column] = value
 
-                                "poids": poids,
+        # ======================================================
+        # ANCIEN FORMAT
+        # ======================================================
 
-                                "texte": texte
+        else:
 
-                            }
+            if "designation" not in columns:
+                columns["designation"] = 144.0
 
-        colonnes = {}
+            if "qte" not in columns:
 
-        for nom, info in candidats.items():
+                qte = self.detect_quantity_column(
+                    table_elements,
+                    columns
+                )
 
-            colonnes[nom] = info["x"]
+                columns["qte"] = (
+                    qte
+                    if qte is not None
+                    else 970.0
+                )
 
-        return colonnes
-    
+            self.detect_price_total_columns(
+                table_elements,
+                columns,
+                numeric_columns
+            )
+
+            defaults_old = {
+                "designation": 144.0,
+                "tva": 771.0,
+                "pu": 869.5,
+                "qte": 970.0,
+                "total": 1103.5,
+            }
+
+            for column, value in defaults_old.items():
+
+                if column not in columns:
+                    columns[column] = value
+
+            columns.pop(
+                "reference",
+                None
+            )
+
+        return columns

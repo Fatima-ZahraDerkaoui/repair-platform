@@ -78,26 +78,67 @@ class InvoiceValidator:
 
         articles = facture.get("articles", [])
 
-        total_lignes = 0
+        # ==================================================
+        # 1. Calcul du total des lignes
+        # ==================================================
+
+        total_lignes = 0.0
 
         for article in articles:
 
-            if article["total"] is not None:
+            total = article.get("total")
 
-                total_lignes += article["total"]
+            if total is not None:
+                total_lignes += total
 
-        total_ttc = facture.get("total_ttc")
+        total_lignes = round(total_lignes, 2)
 
-        if total_ttc is not None:
+        # ==================================================
+        # 2. Vérification avec Total HT
+        # ==================================================
 
-            if not self.almost_equal(total_lignes, total_ttc):
+        total_ht = facture.get("total_ht")
+
+        if total_ht is not None:
+
+            total_ht = round(total_ht, 2)
+
+            if not self.almost_equal(
+                total_lignes,
+                total_ht
+            ):
 
                 errors.append(
-
                     f"Somme lignes = {total_lignes:.2f}"
+                    f" / HT facture = {total_ht:.2f}"
+                )
 
+        # ==================================================
+        # 3. Vérification HT + TVA = TTC
+        # ==================================================
+
+        total_tva = facture.get("total_tva")
+        total_ttc = facture.get("total_ttc")
+
+        if (
+            total_ht is not None
+            and total_tva is not None
+            and total_ttc is not None
+        ):
+
+            attendu_ttc = round(
+                total_ht + total_tva,
+                2
+            )
+
+            if not self.almost_equal(
+                attendu_ttc,
+                total_ttc
+            ):
+
+                errors.append(
+                    f"HT + TVA = {attendu_ttc:.2f}"
                     f" / TTC facture = {total_ttc:.2f}"
-
                 )
 
         return errors
