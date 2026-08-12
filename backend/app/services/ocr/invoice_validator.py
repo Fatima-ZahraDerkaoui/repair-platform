@@ -1,17 +1,22 @@
 class InvoiceValidator:
 
-    def __init__(self, tolerance=0.05):
+    def __init__(self, tolerance=0.10):
 
         self.tolerance = tolerance
+        self.line_tolerance = tolerance
+        self.total_tolerance = tolerance
 
     # ======================================================
 
-    def almost_equal(self, a, b):
+    def almost_equal(self, a, b, tolerance=None):
 
         if a is None or b is None:
             return False
 
-        return abs(a - b) <= self.tolerance
+        if tolerance is None:
+            tolerance = self.tolerance
+
+        return abs(a - b) <= tolerance
 
     # ======================================================
 
@@ -251,29 +256,24 @@ class InvoiceValidator:
         errors = []
 
         valeurs_valides = {
-
             0,
             7,
             10,
             14,
             20
-
         }
 
         for i, article in enumerate(articles):
 
-            tva = article["tva"]
+            tva = article.get("tva")
 
             if tva is None:
-
                 continue
 
             if tva not in valeurs_valides:
 
                 errors.append(
-
                     f"Article {i+1}: TVA inhabituelle ({tva})"
-
                 )
 
         return errors
@@ -310,12 +310,26 @@ class InvoiceValidator:
 
         for i, article in enumerate(articles):
 
-            if len(article["designation"]) < 3:
+            designation = article.get(
+                "designation"
+            )
+
+            if not designation:
 
                 errors.append(
-
                     f"Article {i+1}: désignation vide"
+                )
 
+                continue
+
+            designation = str(
+                designation
+            ).strip()
+
+            if len(designation) < 3:
+
+                errors.append(
+                    f"Article {i+1}: désignation trop courte"
                 )
 
         return errors

@@ -63,11 +63,11 @@
             "quantite": null,
             "prix_unitaire": 360.0,
             "tva": null,
-            "total": null
+            "total": 720.0
         },
         {
             "reference": "CYAF1515",
-            "designation": "MUGANN N° 30- CASABLANCA TOTALHT",
+            "designation": "",
             "quantite": null,
             "prix_unitaire": 120.0,
             "tva": 20.0,

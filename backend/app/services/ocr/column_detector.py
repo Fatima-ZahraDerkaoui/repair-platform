@@ -99,69 +99,107 @@ class ColumnDetector:
     # ==========================================================
     # HEADERS
     # ==========================================================
-
     def is_reference_header(self, text):
 
         text = self.normalize(text)
 
-        return (
-            "REFERENCE" in text
-            or "RÉFÉRENCE" in text
-            or text in ("REF", "REF.")
-        )
+        return text in {
+            "REFERENCE",
+            "RÉFÉRENCE",
+            "REF",
+            "REF."
+        }
+
 
     def is_designation_header(self, text):
 
         text = self.normalize(text)
 
-        return (
-            "DESIGNATION" in text
-            or "DESCRIPTION" in text
-        )
+        return text in {
+            "DESIGNATION",
+            "DÉSIGNATION",
+            "DESCRIPTION"
+        }
+
 
     def is_quantity_header(self, text):
 
         text = self.normalize(text)
 
-        return (
-            "QUANTITE" in text
-            or "QTE" in text
-            or "QTÉ" in text
-        )
+        return text in {
+            "QUANTITE",
+            "QUANTITÉ",
+            "QTE",
+            "QTÉ",
+            "QTY"
+        }
+
 
     def is_price_header(self, text):
 
         text = self.normalize(text)
 
-        return (
-            "PRIX UNITAIRE" in text
-            or "PX UNITAIRE" in text
-            or "P.U" in text
-            or text == "PU"
-            or "UNITAIRE" in text
-            or text.startswith("P.U.")
-        )
+        return text in {
+            "PU",
+            "P.U",
+            "P.U.",
+            "P.U HT",
+            "P.U TTC",
+            "PU HT",
+            "PU TTC",
+            "PRIX",
+            "PRIX UNITAIRE",
+            "PRIX UNITAIRE HT",
+            "PRIX UNITAIRE TTC",
+            "PRIX U"
+        }
+
 
     def is_total_header(self, text):
 
         text = self.normalize(text)
 
-        return (
-            text == "TOTAL"
-            or "TOTAL TTC" in text
-            or "MONTANT TTC" in text
-            or text == "MONTANT"
-        )
+        return text in {
+            "TOTAL",
+            "TOTAL HT",
+            "TOTAL H.T",
+            "TOTAL TTC",
+            "TOTAL T.T.C",
+            "MONTANT",
+            "MONTANT HT",
+            "MONTANT TTC",
+            "MONTANT T.T.C"
+        }
+
 
     def is_tva_header(self, text):
 
         text = self.normalize(text)
 
-        return (
-            text == "TVA"
-            or "TAUX TVA" in text
-            or text == "TAUX"
-        )
+        return text in {
+            "TVA",
+            "TAUX TVA",
+            "TAUX T.V.A",
+            "TAUX"
+        }
+
+    def has_real_reference_header(self, elements):
+
+        for element in elements:
+
+            text = self.normalize(
+                element.get("text", "")
+            )
+
+            if text in {
+                "REFERENCE",
+                "RÉFÉRENCE",
+                "REF",
+                "REF."
+            }:
+                return True
+
+        return False
 
     # ==========================================================
     # DETECTION HEADERS
@@ -301,7 +339,6 @@ class ColumnDetector:
     # ==========================================================
     # PU / TOTAL
     # ==========================================================
-
     def detect_price_total_columns(
         self,
         elements,
@@ -309,39 +346,70 @@ class ColumnDetector:
         numeric_columns
     ):
 
-        # Si les deux headers existent :
-        # on leur fait confiance.
-        if (
-            "pu" in columns
-            and "total" in columns
-        ):
+        # ======================================================
+        # 1. Si les deux headers sont détectés
+        # ======================================================
+
+        if "pu" in columns and "total" in columns:
             return
 
-        # ------------------------------------------------------
-        # NOUVEAU FORMAT MAFOCOPI
-        # ------------------------------------------------------
+        # ======================================================
+        # 2. Nouveau format avec référence
+        # ======================================================
 
         if "reference" in columns:
 
-            # Positions connues du nouveau format.
-            #
-            # Reference     ~224
-            # Designation   ~515
-            # Qte           ~792
-            # PU            ~1002
-            # Total         ~1168
+            # Si PU manque, chercher une colonne numérique
+            # située après QTE et avant TOTAL éventuel.
+
+            available = list(numeric_columns)
+
+            if "qte" in columns:
+
+                available = [
+                    x for x in available
+                    if abs(x - columns["qte"]) > 50
+                ]
+
+            # TVA éventuelle
+            if "tva" in columns:
+
+                available = [
+                    x for x in available
+                    if abs(x - columns["tva"]) > 50
+                ]
+
+            available = sorted(available)
+
+            # --------------------------------------------------
+            # PU
+            # --------------------------------------------------
 
             if "pu" not in columns:
-                columns["pu"] = 1002.0
+
+                if len(available) >= 2:
+
+                    columns["pu"] = available[-2]
+
+                elif len(available) == 1:
+
+                    columns["pu"] = available[0]
+
+            # --------------------------------------------------
+            # TOTAL
+            # --------------------------------------------------
 
             if "total" not in columns:
-                columns["total"] = 1168.0
+
+                if len(available) >= 2:
+
+                    columns["total"] = available[-1]
 
             return
 
-        # ------------------------------------------------------
-        # ANCIEN FORMAT
-        # ------------------------------------------------------
+        # ======================================================
+        # 3. Ancien format
+        # ======================================================
 
         candidates = []
 
@@ -402,7 +470,9 @@ class ColumnDetector:
         )
 
         has_reference_column = (
-            "reference" in columns
+            self.has_real_reference_header(
+                table_elements
+            )
         )
 
         # ======================================================

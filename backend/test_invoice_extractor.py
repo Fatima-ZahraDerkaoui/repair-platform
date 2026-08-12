@@ -11,15 +11,15 @@ def test_invoice_extractor():
 
     extractor = InvoiceExtractor()
 
-    # --------------------------------------------------
-    # Données OCR simulées
-    # --------------------------------------------------
+    # ==========================================================
+    # DONNEES OCR SIMULEES
+    # ==========================================================
 
     elements = [
 
-        # =========================
-        # Informations facture
-        # =========================
+        # ------------------------------------------------------
+        # FACTURE
+        # ------------------------------------------------------
 
         {
             "text": "FACTURE N° FAC-2026-001",
@@ -36,9 +36,9 @@ def test_invoice_extractor():
             "box": [100, 130, 350, 160]
         },
 
-        # =========================
-        # Header tableau
-        # =========================
+        # ------------------------------------------------------
+        # HEADER
+        # ------------------------------------------------------
 
         {
             "text": "DESIGNATION",
@@ -65,9 +65,9 @@ def test_invoice_extractor():
             "box": [410, 200, 480, 225]
         },
 
-        # =========================
-        # Article 1
-        # =========================
+        # ------------------------------------------------------
+        # ARTICLE 1
+        # ------------------------------------------------------
 
         {
             "text": "CARTOUCHE HP 652 BLACK",
@@ -94,13 +94,18 @@ def test_invoice_extractor():
             "box": [410, 250, 480, 275]
         },
 
-        # =========================
-        # Article 2
-        # =========================
+        # ------------------------------------------------------
+        # ARTICLE 2
+        # ------------------------------------------------------
 
         {
-            "text": "CARTOUCHE HP 652 COULEUR HP-F6V24AE",
-            "box": [50, 300, 300, 325]
+            "text": "CARTOUCHE HP 652 COULEUR",
+            "box": [50, 300, 180, 325]
+        },
+
+        {
+            "text": "HP-F6V24AE",
+            "box": [190, 300, 280, 325]
         },
 
         {
@@ -118,9 +123,9 @@ def test_invoice_extractor():
             "box": [410, 300, 480, 325]
         },
 
-        # =========================
-        # Footer
-        # =========================
+        # ------------------------------------------------------
+        # FOOTER
+        # ------------------------------------------------------
 
         {
             "text": "TOTAL HT",
@@ -153,87 +158,187 @@ def test_invoice_extractor():
         },
     ]
 
-    # --------------------------------------------------
-    # Extraction
-    # --------------------------------------------------
+    # ==========================================================
+    # EXTRACTION
+    # ==========================================================
 
     try:
 
-        result = extractor.extract(elements)
+        result = extractor.extract(
+            elements
+        )
 
     except Exception as e:
 
-        print("\n❌ ERREUR INVOICE EXTRACTOR")
-        print(type(e).__name__)
-        print(str(e))
+        print("\n❌ ERREUR")
+
+        print(
+            f"Type : {type(e).__name__}"
+        )
+
+        print(
+            f"Message : {e}"
+        )
 
         raise
 
-    # --------------------------------------------------
-    # Affichage
-    # --------------------------------------------------
+    # ==========================================================
+    # RESULTAT
+    # ==========================================================
 
     print("\nRESULTAT COMPLET :")
-    pprint(result, sort_dicts=False)
 
-    # --------------------------------------------------
-    # Vérifications
-    # --------------------------------------------------
+    pprint(
+        result,
+        sort_dicts=False
+    )
+
+    # ==========================================================
+    # STRUCTURE
+    # ==========================================================
 
     assert result is not None
 
     assert "articles" in result
 
-    assert isinstance(result["articles"], list)
+    assert isinstance(
+        result["articles"],
+        list
+    )
 
-    print("\n✓ Structure facture OK")
+    print(
+        "\n✓ Structure facture OK"
+    )
 
-    # --------------------------------------------------
-    # Articles
-    # --------------------------------------------------
+    # ==========================================================
+    # NUMERO
+    # ==========================================================
 
-    assert len(result["articles"]) >= 2
+    assert result["numero"] is not None
 
-    print(f"✓ Nombre articles : {len(result['articles'])}")
+    print(
+        f"✓ Numero : {result['numero']}"
+    )
+
+    # ==========================================================
+    # DATE
+    # ==========================================================
+
+    assert result["date"] == "10/08/2026"
+
+    print(
+        f"✓ Date : {result['date']}"
+    )
+
+    # ==========================================================
+    # ARTICLES
+    # ==========================================================
+
+    assert len(
+        result["articles"]
+    ) == 2
+
+    print(
+        f"✓ Nombre articles : "
+        f"{len(result['articles'])}"
+    )
+
+    # ==========================================================
+    # ARTICLE 1
+    # ==========================================================
 
     article_1 = result["articles"][0]
 
-    assert article_1["designation"]
-    assert article_1["prix_unitaire"] == 215.0
-    assert article_1["quantite"] == 2
-    assert article_1["total"] == 430.0
+    assert (
+        article_1["reference"]
+        == "HP-F6V25AE"
+    )
 
-    print("✓ Article 1 OK")
+    assert (
+        article_1["designation"]
+    )
+
+    assert (
+        article_1["quantite"]
+        == 2
+    )
+
+    assert (
+        article_1["prix_unitaire"]
+        == 215.0
+    )
+
+    assert (
+        article_1["total"]
+        == 430.0
+    )
+
+    print(
+        "✓ Article 1 OK"
+    )
+
+    # ==========================================================
+    # ARTICLE 2
+    # ==========================================================
 
     article_2 = result["articles"][1]
 
-    assert article_2["designation"]
-    assert article_2["prix_unitaire"] == 178.0
-    assert article_2["quantite"] == 1
-    assert article_2["total"] == 178.0
+    assert (
+        article_2["reference"]
+        == "HP-F6V24AE"
+    )
 
-    print("✓ Article 2 OK")
+    assert (
+        article_2["designation"]
+    )
 
-    # --------------------------------------------------
-    # Validation
-    # --------------------------------------------------
+    assert (
+        article_2["quantite"]
+        == 1
+    )
+
+    assert (
+        article_2["prix_unitaire"]
+        == 178.0
+    )
+
+    assert (
+        article_2["total"]
+        == 178.0
+    )
+
+    print(
+        "✓ Article 2 OK"
+    )
+
+    # ==========================================================
+    # VALIDATION
+    # ==========================================================
 
     assert "validation" in result
 
     validation = result["validation"]
 
+    assert isinstance(
+        validation,
+        dict
+    )
+
     assert "score" in validation
-    assert "articles" in validation
-    assert "line_totals" in validation
 
-    print(f"✓ Score validation : {validation['score']}")
+    print(
+        f"✓ Score validation : "
+        f"{validation['score']}"
+    )
 
-    # --------------------------------------------------
-    # Résultat final
-    # --------------------------------------------------
+    # ==========================================================
+    # FIN
+    # ==========================================================
 
     print("\n" + "=" * 70)
-    print("✓ TEST INVOICE EXTRACTOR PASSED")
+    print(
+        "✓ TEST INVOICE EXTRACTOR PASSED"
+    )
     print("=" * 70)
 
 

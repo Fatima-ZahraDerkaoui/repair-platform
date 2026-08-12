@@ -45,9 +45,9 @@
             "reference": "HP-CH561HE",
             "designation": "CARTOUCHE HP CH561 N?122 BLACK - HP DESKJET",
             "quantite": 2,
-            "prix_unitaire": 380.0,
+            "prix_unitaire": 190.0,
             "tva": 20.0,
-            "total": 760.0
+            "total": 380.0
         },
         {
             "reference": "EPST103BK",
@@ -61,17 +61,17 @@
             "reference": "EPST103C",
             "designation": "(C13T00S24A) BOUTEILE D'ENCRE EPSON 103 POUR L3150/L31111/L3110 CYAN",
             "quantite": 2,
-            "prix_unitaire": 220.0,
+            "prix_unitaire": 110.0,
             "tva": 20.0,
-            "total": 440.0
+            "total": 220.0
         },
         {
             "reference": "EPST103M",
             "designation": "(C13T00S34A) BOUTEILLE D'ENCRE EPSON 103 POUR L3150/L31111/L3110 MAGENTA",
             "quantite": 2,
-            "prix_unitaire": 220.0,
+            "prix_unitaire": 110.0,
             "tva": 20.0,
-            "total": 440.0
+            "total": 220.0
         },
         {
             "reference": "EPST103Y",
@@ -99,7 +99,7 @@
         },
         {
             "reference": "HP-W2072A",
-            "designation": "TONER HP 117A LASER POUR 150/178/179A YELLOW C E N°SENE:100951068420/100951068634/ TH /SINE LAIA YECOUTS CASABIA A0522 45 02",
+            "designation": "TONER HP 117A LASER POUR 150/178/179A YELLOW C N°SENE:100951068420/100951068634/ /SINE LAIA YECOUTS CASABIA A0522 45 02",
             "quantite": 2,
             "prix_unitaire": 680.0,
             "tva": 20.0,

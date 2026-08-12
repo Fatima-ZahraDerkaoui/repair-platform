@@ -4,7 +4,7 @@ import re
 
 class LineBuilder:
 
-    def __init__(self, tolerance_y=15):
+    def __init__(self, tolerance_y=3.0):
 
         self.tolerance_y = tolerance_y
 
@@ -211,7 +211,6 @@ class LineBuilder:
     # ==========================================================
     # REFERENCE
     # ==========================================================
-
     def is_reference(self, text):
 
         if not text:
@@ -222,21 +221,12 @@ class LineBuilder:
         if not text:
             return False
 
-        # Une référence doit être une seule cellule
+        # Une référence = une cellule
         if len(text.split()) > 1:
             return False
 
-        # Longueur raisonnable
+        # Longueur
         if len(text) > self.max_reference_length:
-            return False
-
-        compact = self.compact(text)
-
-        if not compact:
-            return False
-
-        # Au moins un chiffre
-        if not re.search(r"\d", compact):
             return False
 
         # Pourcentage
@@ -244,31 +234,29 @@ class LineBuilder:
             return False
 
         # Nombre simple
+        numeric_candidate = text.replace(",", ".")
+
         if re.fullmatch(
-            r"\d+(?:[.,]\d+)?",
-            text
+            r"\d+(?:\.\d+)?",
+            numeric_candidate
         ):
             return False
 
         # Caractères autorisés
         if not re.fullmatch(
-            r"[A-Z0-9][A-Z0-9._/\-]*",
+            r"[A-Z0-9][A-Z0-9._/\\-]*",
             text
         ):
             return False
 
-        # ------------------------------------------------------
-        # FAUX POSITIFS
-        # ------------------------------------------------------
+        # ======================================================
+        # BLACKLIST
+        # ======================================================
 
         for prefix in self.reference_blacklist_prefixes:
 
             if text.startswith(prefix):
                 return False
-
-        # ------------------------------------------------------
-        # MOTS COURANTS
-        # ------------------------------------------------------
 
         forbidden = {
             "ARTICLE",
@@ -293,50 +281,34 @@ class LineBuilder:
             return False
 
         # ======================================================
-        # PATTERNS
+        # Une référence doit contenir au moins un chiffre
+        # ======================================================
+
+        if not re.search(r"\d", text):
+            return False
+
+        # ======================================================
+        # Patterns
         # ======================================================
 
         patterns = [
 
-            # ----------------------------------------------
-            # HP-F6V25AE
-            # LEN-100245
-            # ----------------------------------------------
-
             r"^[A-Z]{2,}-[A-Z0-9]+$",
-
-            # ----------------------------------------------
-            # A125-45B
-            # ----------------------------------------------
 
             r"^[A-Z][0-9]+-[0-9A-Z]+$",
 
-            # ----------------------------------------------
-            # EPST103BK
-            # CANGI490M
-            # ----------------------------------------------
-
             r"^[A-Z]{3,}[0-9]+[A-Z0-9]*$",
-
-            # ----------------------------------------------
-            # références avec /
-            # ----------------------------------------------
 
             r"^[A-Z0-9]+/[A-Z0-9]+$",
 
-            # ----------------------------------------------
-            # références avec _
-            # ----------------------------------------------
-
             r"^[A-Z0-9]+_[A-Z0-9]+$",
+
+            r"^[0-9]+-[A-Z0-9]+$",
         ]
 
         for pattern in patterns:
 
-            if re.fullmatch(
-                pattern,
-                text
-            ):
+            if re.fullmatch(pattern, text):
                 return True
 
         return False
@@ -631,7 +603,6 @@ class LineBuilder:
     # ==========================================================
     # TROUVER ARTICLE LE PLUS PROCHE
     # ==========================================================
-
     def find_best_article(
         self,
         element,
@@ -643,25 +614,50 @@ class LineBuilder:
 
         y = self.get_y(element)
 
-        best_article = None
-        best_distance = float("inf")
+        # ==================================================
+        # 1. PRIORITE AUX INTERVALLES
+        # ==================================================
 
         for article in articles:
 
-            ref_y = article[
-                "reference_y"
-            ]
-
-            distance = abs(
-                y - ref_y
+            start_y = article.get(
+                "start_y",
+                article["reference_y"] - 3
             )
 
-            if distance < best_distance:
+            end_y = article.get(
+                "end_y",
+                float("inf")
+            )
 
-                best_distance = distance
-                best_article = article
+            if start_y <= y < end_y:
+                return article
 
-        return best_article
+        # ==================================================
+        # 2. FALLBACK TRES STRICT
+        # ==================================================
+
+        candidates = [
+            article
+            for article in articles
+            if article["reference_y"] <= y
+        ]
+
+        if not candidates:
+            return None
+
+        best = candidates[-1]
+
+        distance = abs(
+            y - best["reference_y"]
+        )
+
+        # Ne jamais envoyer un élément éloigné
+        # arbitrairement vers le dernier article.
+        if distance <= 35:
+            return best
+
+        return None
 
     # ==========================================================
     # NETTOYER ELEMENT DESIGNATION
@@ -939,6 +935,86 @@ class LineBuilder:
             cleaned.append(element)
 
         return cleaned
+
+    # ==========================================================
+    # FUSIONNER LES ELEMENTS DE DESIGNATION
+    # ==========================================================
+
+    def merge_designation_elements(self, elements):
+
+        if not elements:
+            return elements
+
+        designation_elements = [
+            e for e in elements
+            if e.get("column") == "designation"
+        ]
+
+        if len(designation_elements) <= 1:
+            return elements
+
+        # ------------------------------------------------------
+        # Trier les morceaux par Y puis X
+        # ------------------------------------------------------
+
+        designation_elements.sort(
+            key=lambda e: (
+                self.get_y(e),
+                self.get_x(e)
+            )
+        )
+
+        # ------------------------------------------------------
+        # Construire le texte complet
+        # ------------------------------------------------------
+
+        parts = []
+
+        for element in designation_elements:
+
+            text = self.normalize(
+                element.get("text", "")
+            )
+
+            if text:
+                parts.append(text)
+
+        if not parts:
+            return elements
+
+        designation_complete = " ".join(parts)
+
+        # ------------------------------------------------------
+        # Garder le premier élément comme élément principal
+        # ------------------------------------------------------
+
+        first = designation_elements[0].copy()
+
+        first["text"] = designation_complete
+
+        # ------------------------------------------------------
+        # Supprimer les anciens morceaux designation
+        # ------------------------------------------------------
+
+        result = []
+
+        first_added = False
+
+        for element in elements:
+
+            if element.get("column") == "designation":
+
+                if not first_added:
+
+                    result.append(first)
+
+                    first_added = True
+
+                continue
+
+            result.append(element)
+
+        return result
     
     # ==========================================================
     # BUILD
@@ -1096,35 +1172,64 @@ class LineBuilder:
             )
 
         # ======================================================
-        # 6. INTERVALLES
+        # 6. DETECTER LA FIN DU TABLEAU
         # ======================================================
 
-        for i, article in enumerate(
-            articles
-        ):
+        stop_y = float("inf")
 
-            current_y = (
-                article["reference_y"]
+        for element in elements:
+
+            text = self.normalize(
+                element.get("text", "")
             )
+
+            if not self.is_stop(text):
+                continue
+
+            y = self.get_y(element)
+
+            if y < stop_y:
+                stop_y = y
+
+
+        # ======================================================
+        # 7. INTERVALLES DES ARTICLES
+        # ======================================================
+        for i, article in enumerate(articles):
+
+            current_y = article["reference_y"]
+
+            # --------------------------------------------------
+            # Début
+            # --------------------------------------------------
+
+            article["start_y"] = current_y - 3
+
+            # --------------------------------------------------
+            # Fin = référence suivante
+            # --------------------------------------------------
 
             if i < len(articles) - 1:
 
-                next_y = (
-                    articles[i + 1]
-                    ["reference_y"]
-                )
+                next_y = articles[i + 1]["reference_y"]
+
+                article["end_y"] = next_y
+
+            # --------------------------------------------------
+            # Dernier article = fin du tableau
+            # --------------------------------------------------
 
             else:
 
-                next_y = float("inf")
+                article["end_y"] = stop_y
 
-            article["start_y"] = (
-                current_y - 8
-            )
+                # Aucun élément de fin détecté
+                if article["end_y"] == float("inf"):
 
-            article["end_y"] = (
-                next_y - 5
-            )
+                    # On garde une limite raisonnable
+                    article["end_y"] = (
+                        article["reference_y"] + 80
+                    )
 
         # ======================================================
         # 7. ASSIGNATION
@@ -1148,7 +1253,12 @@ class LineBuilder:
             # --------------------------------------------------
 
             if self.is_stop(text):
-                continue
+
+                if element.get("column") not in {
+                    "designation",
+                    "reference"
+                }:
+                    continue
 
             # --------------------------------------------------
             # NE PAS AJOUTER LES REFERENCES
@@ -1294,15 +1404,15 @@ class LineBuilder:
                 if best:
 
                     distance = abs(
-                        y -
-                        best["reference_y"]
+                        y - best["reference_y"]
                     )
 
-                    if distance <= 100:
+                    if distance <= max(
+                        35,
+                        self.tolerance_y * 2
+                    ):
 
-                        best[
-                            "elements"
-                        ].append(
+                        best["elements"].append(
                             element
                         )
 
@@ -1346,6 +1456,11 @@ class LineBuilder:
 
             elements_article = (
                 self.clean_new_format_designations(
+                    elements_article
+                )
+            )
+            elements_article = (
+                self.merge_designation_elements(
                     elements_article
                 )
             )
@@ -1673,3 +1788,4 @@ class LineBuilder:
             "elements":
                 elements,
         }
+    
