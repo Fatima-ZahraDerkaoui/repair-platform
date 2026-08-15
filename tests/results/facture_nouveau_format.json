@@ -60,7 +60,7 @@
         {
             "reference": "TATN3210",
             "designation": "TONER MINOLTA BIZUHB C284TN 321 COULEUR/2M CET",
-            "quantite": null,
+            "quantite": 2,
             "prix_unitaire": 360.0,
             "tva": null,
             "total": 720.0
@@ -68,9 +68,9 @@
         {
             "reference": "CYAF1515",
             "designation": "",
-            "quantite": null,
+            "quantite": 2,
             "prix_unitaire": 120.0,
-            "tva": 20.0,
+            "tva": null,
             "total": 240.0
         }
     ],

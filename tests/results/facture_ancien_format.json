@@ -4,30 +4,30 @@
     "client": null,
     "fournisseur": {
         "name": "CASINFO",
-        "address": "Slègo soclal: CASINFO-84, BD Lalla Yaooul-20000 CASABLANCA, Maroc",
+        "address": "Slego sodial: CASINFO-84, BD Lalla Yacoul-20000 CASABLANCA, Maroc",
         "city": "Casablanca",
         "country": "Maroc",
         "phone": [
             "0684201009",
-            "0522448733",
+            "0522448783",
             "0522450271",
             "0522317480",
             "0778000001"
         ],
         "fax": "0522317480",
-        "email": "zbouchra@caslnfo-maroc.com",
-        "website": "caslnfo-maroc.com",
+        "email": "zbouohra@bas1nfo-maroo.cam",
+        "website": null,
         "ice": "001536333000089",
-        "if": "01048180",
+        "if": "0104818",
         "rc": "74047",
-        "patente": "33378023",
-        "cnss": "2360775",
+        "patente": null,
+        "cnss": null,
         "rib": "007780000010100000287260"
     },
     "articles": [
         {
-            "reference": "HP-F6V25AE",
-            "designation": "CARTOUCHE HP 652 BLACK",
+            "reference": "N756",
+            "designation": "BL/FACTUREN°:FV2026-05679 BENIMELLAL DATE FACTURATION: 13/05/2026 DESIGNALION 4P-F6V25AE-CARTOUCHE HP 652 BLACK",
             "quantite": 2,
             "prix_unitaire": 215.0,
             "tva": 20.0,
@@ -36,30 +36,30 @@
         {
             "reference": "HP-F6V24AE",
             "designation": "CARTOUCHE HP 652 COULEUR",
-            "quantite": 1,
-            "prix_unitaire": 178.0,
-            "tva": 20.0,
-            "total": 178.0
+            "quantite": 2,
+            "prix_unitaire": 190.0,
+            "tva": null,
+            "total": 380.0
         },
         {
             "reference": "HP-CH561HE",
             "designation": "CARTOUCHE HP CH561 N?122 BLACK - HP DESKJET",
-            "quantite": 2,
-            "prix_unitaire": 190.0,
-            "tva": 20.0,
-            "total": 380.0
-        },
-        {
-            "reference": "EPST103BK",
-            "designation": "(C13T00S14A) BOUTEILLE D'ENCRE EPSON : 103 POUR L3150/L31111/L3110 BLACK",
             "quantite": 2,
             "prix_unitaire": 115.0,
             "tva": 20.0,
             "total": 230.0
         },
         {
+            "reference": "EPST103BK",
+            "designation": "(C13T00S14A) BOUTELLLE D'ENCRE EPSON 103 POUR L3150/L31111/L3110 BLACK",
+            "quantite": null,
+            "prix_unitaire": null,
+            "tva": 20.0,
+            "total": 230.0
+        },
+        {
             "reference": "EPST103C",
-            "designation": "(C13T00S24A) BOUTEILE D'ENCRE EPSON 103 POUR L3150/L31111/L3110 CYAN",
+            "designation": "(C13T00S24A) BOUTELILLE D'ENCRE EPSON 103 POUR L3150/L31111/L3110 CYAN",
             "quantite": 2,
             "prix_unitaire": 110.0,
             "tva": 20.0,
@@ -75,7 +75,7 @@
         },
         {
             "reference": "EPST103Y",
-            "designation": "(C13T00S44A)BOUTEILLE D'ENCRE EPSON 103 POUR L3150/L31111/L3110 YELLOW",
+            "designation": "(C13T00S44A)BOUTELLLE D'ENCRE EPSON 103 POUR L3150/L31111/L3110 YELLOW",
             "quantite": 2,
             "prix_unitaire": 110.0,
             "tva": 20.0,
@@ -91,7 +91,7 @@
         },
         {
             "reference": "CANGI490Y",
-            "designation": "CARTOUCHE CANON GI490YELLOW",
+            "designation": "YELLOW",
             "quantite": 1,
             "prix_unitaire": 90.0,
             "tva": 20.0,
@@ -99,14 +99,14 @@
         },
         {
             "reference": "HP-W2072A",
-            "designation": "TONER HP 117A LASER POUR 150/178/179A YELLOW C N°SENE:100951068420/100951068634/ /SINE LAIA YECOUTS CASABIA A0522 45 02",
+            "designation": "POUR150/178/179AYELLOW N°SERIE:100951068420/1009510686347 S/GIE LALE YACCUT-CASAB! 0622 45 02T",
             "quantite": 2,
             "prix_unitaire": 680.0,
             "tva": 20.0,
             "total": 1360.0
         }
     ],
-    "total_ht": 2923.32,
-    "total_tva": 584.68,
-    "total_ttc": 3508.0
+    "total_ht": null,
+    "total_tva": 2923.32,
+    "total_ttc": 584.68
 }

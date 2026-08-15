@@ -34,7 +34,7 @@ from app.services.ocr.facture_parser import FactureParser
 # ------------------------------------------------------------
 
 FACTURE_ANCIEN_FORMAT = (
-    ROOT_DIR /"backend" /"test_data" / "BL Facture.jpeg"
+    ROOT_DIR /"backend" /"test_data" / "facture5.jpeg"
 )
 
 FACTURE_NOUVEAU_FORMAT = (

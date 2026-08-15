@@ -221,25 +221,16 @@ class LineBuilder:
         if not text:
             return False
 
-        # Une référence = une cellule
+        # Une référence explicite doit être une seule cellule
         if len(text.split()) > 1:
             return False
 
-        # Longueur
+        # Longueur raisonnable
         if len(text) > self.max_reference_length:
             return False
 
         # Pourcentage
         if "%" in text:
-            return False
-
-        # Nombre simple
-        numeric_candidate = text.replace(",", ".")
-
-        if re.fullmatch(
-            r"\d+(?:\.\d+)?",
-            numeric_candidate
-        ):
             return False
 
         # Caractères autorisés
@@ -249,9 +240,9 @@ class LineBuilder:
         ):
             return False
 
-        # ======================================================
+        # ------------------------------------------------------
         # BLACKLIST
-        # ======================================================
+        # ------------------------------------------------------
 
         for prefix in self.reference_blacklist_prefixes:
 
@@ -262,13 +253,18 @@ class LineBuilder:
             "ARTICLE",
             "TOTAL",
             "REFERENCE",
+            "REF",
             "DESIGNATION",
             "DESCRIPTION",
             "QUANTITE",
             "QTE",
             "TVA",
             "PRIX",
+            "PU",
+            "PUTTC",
+            "PUHT",
             "MONTANT",
+            "REMISE",
             "CARTOUCHE",
             "TONER",
             "BLACK",
@@ -280,33 +276,62 @@ class LineBuilder:
         if text in forbidden:
             return False
 
-        # ======================================================
-        # Une référence doit contenir au moins un chiffre
-        # ======================================================
+        # ------------------------------------------------------
+        # Une référence doit généralement contenir un chiffre
+        # ------------------------------------------------------
 
         if not re.search(r"\d", text):
             return False
 
-        # ======================================================
-        # Patterns
-        # ======================================================
+        # ------------------------------------------------------
+        # Cas purement numérique
+        # ------------------------------------------------------
 
-        patterns = [
+        if re.fullmatch(r"\d+(?:[.,]\d+)?", text):
+            return False
 
+        # ------------------------------------------------------
+        # Protection contre les valeurs monétaires
+        # ------------------------------------------------------
+
+        if re.fullmatch(
+            r"\d+[.,]\d{1,4}",
+            text
+        ):
+            return False
+
+        # ------------------------------------------------------
+        # Formats typiques
+        # ------------------------------------------------------
+
+        reference_patterns = [
+
+            # HP-F6V25AE
             r"^[A-Z]{2,}-[A-Z0-9]+$",
 
-            r"^[A-Z][0-9]+-[0-9A-Z]+$",
+            # F6V25AE
+            r"^[A-Z]+[0-9]+[A-Z0-9]*$",
 
+            # EPST103BK
             r"^[A-Z]{3,}[0-9]+[A-Z0-9]*$",
 
+            # TN324/512
             r"^[A-Z0-9]+/[A-Z0-9]+$",
 
+            # ABC123-XYZ
+            r"^[A-Z0-9]+-[A-Z0-9]+$",
+
+            # ABC123_XYZ
             r"^[A-Z0-9]+_[A-Z0-9]+$",
 
+            # 12345-ABC
             r"^[0-9]+-[A-Z0-9]+$",
+
+            # A12.B34
+            r"^[A-Z0-9]+\.[A-Z0-9]+$",
         ]
 
-        for pattern in patterns:
+        for pattern in reference_patterns:
 
             if re.fullmatch(pattern, text):
                 return True
@@ -327,52 +352,43 @@ class LineBuilder:
         if not text:
             return None
 
-        # ======================================================
+        # ------------------------------------------------------
         # CAS 1
-        # REFERENCE SEULE
-        # ======================================================
+        # Référence seule
+        # ------------------------------------------------------
 
         if self.is_reference(text):
             return text
 
-        # ======================================================
+        # ------------------------------------------------------
         # CAS 2
-        # HP-F6V25AE-Cartouche...
+        #
+        # HP-F6V25AE-Cartouche HP 652 Black
         # HP-F6V25AE - Cartouche...
         # HP-F6V25AE : Cartouche...
-        # ======================================================
+        # ------------------------------------------------------
 
-        match = re.match(
+        patterns = [
+
             r"^([A-Z]{2,}-[A-Z0-9]+)"
-            r"(?:[-=:]+|\s+-\s+|\s+)"
-            r"(.+)$",
-            text
-        )
+            r"\s*(?:[-=:])\s*(.+)$",
 
-        if match:
+            r"^([A-Z]+[0-9]+[A-Z0-9]*)"
+            r"\s*(?:[-=:])\s*(.+)$",
 
-            candidate = self.normalize(
-                match.group(1)
-            )
-
-            if self.is_reference(candidate):
-
-                return candidate
-
-        # ======================================================
-        # CAS 3
-        # EPST103BK - ...
-        # CANGI490M-CARTOUCHE...
-        # ======================================================
-
-        match = re.match(
             r"^([A-Z]{3,}[0-9]+[A-Z0-9]*)"
-            r"(?:[-=:]+|\s+-\s+|\s+)"
-            r"(.+)$",
-            text
-        )
+            r"\s+(.+)$",
+        ]
 
-        if match:
+        for pattern in patterns:
+
+            match = re.match(
+                pattern,
+                text
+            )
+
+            if not match:
+                continue
 
             candidate = self.normalize(
                 match.group(1)
@@ -381,6 +397,24 @@ class LineBuilder:
             if self.is_reference(candidate):
 
                 return candidate
+
+        # ------------------------------------------------------
+        # CAS 3
+        #
+        # Rechercher une référence au début du texte
+        # ------------------------------------------------------
+
+        first_token = text.split()[0]
+
+        first_token = re.sub(
+            r"^[^\w]+|[^\w]+$",
+            "",
+            first_token
+        )
+
+        if self.is_reference(first_token):
+
+            return first_token
 
         return None
 
@@ -428,20 +462,81 @@ class LineBuilder:
     # ==========================================================
     # STOP
     # ==========================================================
-
     def is_stop(self, text):
+
+        if not text:
+            return False
 
         text = self.normalize(text)
 
         if not text:
             return False
 
+        # ------------------------------------------------------
+        # Comparaison exacte
+        # ------------------------------------------------------
+
         for word in self.stop_words:
 
             word = self.normalize(word)
 
-            if word in text:
+            if text == word:
                 return True
+
+        # ------------------------------------------------------
+        # Variantes OCR
+        # ------------------------------------------------------
+
+        compact = self.compact(text)
+
+        stop_compacts = {
+
+            "TOTALHT",
+            "TOTALHTT",
+            "TOTALTVA",
+            "TOTALTTC",
+
+            "NETAPAYER",
+            "NETAPAYE",
+
+            "APAYER",
+
+            "SOUSTOTAL",
+            "SOUSTOTALHT",
+            "SOUSTOTALTTC",
+
+            "ARRETEELAPRESENTEFACTURE",
+
+            "MODEDEREGLEMENT",
+        }
+
+        if compact in stop_compacts:
+            return True
+
+        # ------------------------------------------------------
+        # Une ligne peut contenir :
+        #
+        # TOTAL HT : 1500.00
+        #
+        # ------------------------------------------------------
+
+        if re.search(
+            r"\bTOTAL\s+(?:H\s*\.?\s*T|T\s*\.?\s*T\s*C|TVA)\b",
+            text
+        ):
+            return True
+
+        if re.search(
+            r"\bNET\s+A\s+PAYER\b",
+            text
+        ):
+            return True
+
+        if re.search(
+            r"\bSOUS[-\s]+TOTAL\b",
+            text
+        ):
+            return True
 
         return False
 
@@ -757,24 +852,53 @@ class LineBuilder:
 
         return unique
 
-        # ==========================================================
+    # ==========================================================
+    def get_global_column_x(self, elements, column):
+
+        values = [
+            self.get_x(e)
+            for e in elements
+            if e.get("column") == column
+        ]
+
+        if not values:
+            return None
+
+        return sum(values) / len(values)
+
+    def get_numeric_boundaries(self, elements):
+
+        qte_x = self.get_global_column_x(
+            elements,
+            "qte"
+        )
+
+        pu_x = self.get_global_column_x(
+            elements,
+            "pu"
+        )
+
+        total_x = self.get_global_column_x(
+            elements,
+            "total"
+        )
+
+        return {
+            "qte": qte_x,
+            "pu": pu_x,
+            "total": total_x,
+        }
+
+
     # VERIFIER DESIGNATION NOUVEAU FORMAT
     # ==========================================================
 
     def is_valid_new_format_designation(
         self,
         element,
-        article_elements
+        article_elements,
+        boundaries=None
     ):
-        """
-        Vérifie qu'un élément classifié comme designation
-        correspond réellement à une désignation.
-
-        IMPORTANT :
-        On ne modifie PAS l'ancien format.
-        Cette validation est utilisée uniquement
-        dans le nouveau format avec référence explicite.
-        """
 
         if element.get("column") != "designation":
             return True
@@ -786,60 +910,35 @@ class LineBuilder:
         if not text:
             return False
 
+        # ------------------------------------------------------
+        # Caractère isolé
+        # ------------------------------------------------------
+
+        if len(text) <= 1:
+            return False
+
+        # ------------------------------------------------------
+        # Une désignation doit contenir une lettre
+        # ------------------------------------------------------
+
+        if not re.search(r"[A-Z]", text):
+            return False
+
         x = self.get_x(element)
 
         # ------------------------------------------------------
-        # 1. Un seul caractère = généralement bruit OCR
-        #
-        # Exemple :
-        # R
-        # C
-        # I
+        # Limites globales
         # ------------------------------------------------------
 
-        if len(text) == 1:
-            return False
+        if boundaries:
 
-        # ------------------------------------------------------
-        # 2. Trouver la position de la colonne QTE
-        # ------------------------------------------------------
+            qte_x = boundaries.get("qte")
 
-        qte_elements = [
-            e for e in article_elements
-            if e.get("column") == "qte"
-        ]
+            if qte_x is not None:
 
-        if qte_elements:
-
-            qte_x = min(
-                self.get_x(e)
-                for e in qte_elements
-            )
-
-            # --------------------------------------------------
-            # Une désignation doit être à gauche de QTE.
-            #
-            # Exemple faux :
-            #
-            # x=977 IIC
-            # x=791 QTE
-            #
-            # IIC est donc rejeté.
-            # --------------------------------------------------
-
-            if x >= qte_x - 10:
-                return False
-
-        # ------------------------------------------------------
-        # 3. Une désignation doit contenir au moins
-        #    une lettre
-        # ------------------------------------------------------
-
-        if not re.search(
-            r"[A-Z]",
-            text
-        ):
-            return False
+                # La désignation doit être à gauche de QTE
+                if x >= qte_x - 10:
+                    return False
 
         return True
 
@@ -1070,6 +1169,10 @@ class LineBuilder:
 
         if not elements:
             return []
+
+        boundaries = self.get_numeric_boundaries(
+            elements
+        )
 
         # ======================================================
         # 2. REFERENCES EXPLICITES
@@ -1307,11 +1410,14 @@ class LineBuilder:
 
                 if element.get("column") == "designation":
 
-                    qte_x_values = [
-                        self.get_x(e)
-                        for e in article["elements"]
-                        if e.get("column") == "qte"
-                    ]
+                    if element.get("column") == "designation":
+
+                        if not self.is_valid_new_format_designation(
+                            element,
+                            article["elements"],
+                            boundaries
+                        ):
+                            continue
 
                     if qte_x_values:
 

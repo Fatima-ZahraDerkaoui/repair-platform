@@ -1,5 +1,5 @@
-import re
 
+import re
 
 class ArticleParser:
     """
@@ -1610,12 +1610,13 @@ class ArticleParser:
         article
     ):
         """
-        Récupère uniquement les champs numériques qui ont été
-        explicitement classifiés par ColumnDetector.
+        Récupère les champs numériques manquants.
 
-        IMPORTANT :
-        on ne devine pas une quantité ou un PU à partir de la
-        position uniquement.
+        Priorité :
+            1. récupérer les valeurs explicitement classifiées
+            2. récupérer le total
+            3. si quantité absente et PU + total connus,
+            calculer quantité = total / PU
         """
 
         numeric_candidates = []
@@ -1657,18 +1658,14 @@ class ArticleParser:
             )
 
             numeric_candidates.append({
-
                 "value": value,
-
                 "column": colonne,
-
                 "x": x,
-
                 "element": cellule
             })
 
         # =========================================================
-        # QUANTITE
+        # QUANTITE EXPLICITE
         # =========================================================
 
         if article["quantite"] is None:
@@ -1690,14 +1687,12 @@ class ArticleParser:
                 if self.is_quantity_column(
                     candidate["column"]
                 ):
-
                     quantity_candidates.append(
                         candidate
                     )
 
             if quantity_candidates:
 
-                # si plusieurs, prendre le plus à gauche
                 quantity_candidates.sort(
                     key=lambda item: item["x"]
                 )
@@ -1726,7 +1721,6 @@ class ArticleParser:
                 if self.is_unit_price_column(
                     candidate["column"]
                 ):
-
                     price_candidates.append(
                         candidate
                     )
@@ -1761,7 +1755,6 @@ class ArticleParser:
                 if self.is_tva_column(
                     candidate["column"]
                 ):
-
                     tva_candidates.append(
                         candidate
                     )
@@ -1784,21 +1777,47 @@ class ArticleParser:
 
             total = self.find_line_total(
                 ligne=ligne,
-                quantity=article[
-                    "quantite"
-                ],
-                unit_price=article[
-                    "prix_unitaire"
-                ],
-                tva=article[
-                    "tva"
-                ],
+                quantity=article["quantite"],
+                unit_price=article["prix_unitaire"],
+                tva=article["tva"],
                 existing_total=None
             )
 
             if total is not None:
 
                 article["total"] = total
+
+        # =========================================================
+        # RECUPERATION QUANTITE
+        # TOTAL / PU
+        # =========================================================
+
+        if (
+            article["quantite"] is None
+            and article["prix_unitaire"] is not None
+            and article["total"] is not None
+        ):
+
+            unit_price = article["prix_unitaire"]
+            total = article["total"]
+
+            if unit_price > 0:
+
+                recovered_quantity = (
+                    total / unit_price
+                )
+
+                if (
+                    recovered_quantity > 0
+                    and recovered_quantity.is_integer()
+                    and self.is_valid_quantity(
+                        recovered_quantity
+                    )
+                ):
+
+                    article["quantite"] = int(
+                        recovered_quantity
+                    )
 
         return article
 
@@ -2014,17 +2033,37 @@ class ArticleParser:
 
             if colonne == "REFERENCE":
 
-                if not article["reference"]:
+                # ---------------------------------------------------------
+                # Référence seule
+                # ---------------------------------------------------------
 
-                    if self.is_reference(
-                        texte
-                    ):
+                if self.is_reference(texte):
 
-                        article["reference"] = (
-                            texte.upper()
-                        )
+                    if not article["reference"]:
+                        article["reference"] = texte.upper()
 
-                continue
+                    continue
+
+                # ---------------------------------------------------------
+                # Référence + désignation dans la même cellule
+                # Exemple :
+                # HP-W2072A -Toner HP 117A LASER POUR 150/178/179A YELLOW
+                # ---------------------------------------------------------
+
+                extracted_ref = self.extract_reference_from_text(texte)
+
+                if extracted_ref:
+
+                    if not article["reference"]:
+                        article["reference"] = extracted_ref.upper()
+
+                    self.add_designation_text(
+                        designation_parts,
+                        texte,
+                        article["reference"]
+                    )
+
+                    continue
 
             # -----------------------------------------------------
             # QUANTITY
@@ -2412,4 +2451,4 @@ class ArticleParser:
                 )
 
         return articles
-    
+
