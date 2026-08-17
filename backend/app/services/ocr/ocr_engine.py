@@ -26,23 +26,48 @@ class OCREngine:
 
     def save_temp_image(self, image):
 
-        temp = Path("temp")
+        temp_dir = Path("temp")
+        temp_dir.mkdir(exist_ok=True)
 
-        temp.mkdir(
-            exist_ok=True
-        )
+        path = temp_dir / "preprocessed.png"
 
-        path = (
-            temp /
-            "preprocessed.png"
-        )
-
-        cv2.imwrite(
+        success = cv2.imwrite(
             str(path),
             image
         )
 
+        if not success:
+            raise ValueError(
+                f"Impossible de sauvegarder l'image temporaire : {path}"
+            )
+
         return str(path)
+
+    # ==========================================================
+    # PREPARE IMAGE
+    # ==========================================================
+
+    def prepare_image(self, image_path):
+
+        image = self.preprocessor.preprocess(
+            image_path
+        )
+
+        return self.save_temp_image(
+            image
+        )
+
+    # ==========================================================
+    # OCR RAW
+    # ==========================================================
+
+    def run_ocr(self, image_path):
+
+        resultats = self.ocr.predict(
+            image_path
+        )
+
+        return resultats
 
     # ==========================================================
     # NORMALIZE BOX
@@ -68,25 +93,10 @@ class OCREngine:
         ]
 
     # ==========================================================
-    # OCR
+    # PARSE OCR RESULT
     # ==========================================================
 
-    def extraire_texte(
-        self,
-        image_path: str
-    ):
-
-        image = self.preprocessor.preprocess(
-            image_path
-        )
-
-        image_path = self.save_temp_image(
-            image
-        )
-
-        resultats = self.ocr.predict(
-            image_path
-        )
+    def parse_resultats(self, resultats):
 
         elements = []
 
@@ -94,10 +104,7 @@ class OCREngine:
 
             data = resultat.json
 
-            if not isinstance(
-                data,
-                dict
-            ):
+            if not isinstance(data, dict):
                 continue
 
             res = data.get(
@@ -133,6 +140,10 @@ class OCREngine:
                 if not texte:
                     continue
 
+                normalized_box = self.normalize_box(
+                    box
+                )
+
                 elements.append({
 
                     "text": texte,
@@ -141,12 +152,31 @@ class OCREngine:
                         score
                     ),
 
-                    "box": self.normalize_box(
-                        box
-                    )
+                    "box": normalized_box
                 })
 
         return elements
+
+    # ==========================================================
+    # EXTRAIRE ELEMENTS
+    # ==========================================================
+
+    def extraire_texte(
+        self,
+        image_path: str
+    ):
+
+        prepared_path = self.prepare_image(
+            image_path
+        )
+
+        resultats = self.run_ocr(
+            prepared_path
+        )
+
+        return self.parse_resultats(
+            resultats
+        )
 
     # ==========================================================
     # TEXTE COMPLET
@@ -162,9 +192,9 @@ class OCREngine:
         )
 
         lignes = [
-            e["text"]
-            for e in elements
-            if e.get("text")
+            element["text"]
+            for element in elements
+            if element.get("text")
         ]
 
         return "\n".join(
@@ -180,80 +210,26 @@ class OCREngine:
         image_path
     ):
 
-        image = self.preprocessor.preprocess(
-            image_path
-        )
-
-        image_path = self.save_temp_image(
-            image
-        )
-
-        resultats = self.ocr.predict(
+        elements = self.extraire_texte(
             image_path
         )
 
         blocs = []
 
-        for resultat in resultats:
+        for element in elements:
 
-            data = resultat.json
+            box = element["box"]
 
-            if not isinstance(
-                data,
-                dict
-            ):
-                continue
+            blocs.append({
 
-            res = data.get(
-                "res",
-                data
-            )
+                "text": element["text"],
 
-            textes = res.get(
-                "rec_texts",
-                []
-            )
+                "score": element["score"],
 
-            scores = res.get(
-                "rec_scores",
-                []
-            )
-
-            polys = res.get(
-                "rec_polys",
-                []
-            )
-
-            for texte, score, poly in zip(
-                textes,
-                scores,
-                polys
-            ):
-
-                texte = str(
-                    texte
-                ).strip()
-
-                if not texte:
-                    continue
-
-                box = self.normalize_box(
-                    poly
-                )
-
-                blocs.append({
-
-                    "text": texte,
-
-                    "score": float(
-                        score
-                    ),
-
-                    "x1": box[0],
-                    "y1": box[1],
-                    "x2": box[2],
-                    "y2": box[3]
-                })
+                "x1": box[0],
+                "y1": box[1],
+                "x2": box[2],
+                "y2": box[3]
+            })
 
         return blocs
-    

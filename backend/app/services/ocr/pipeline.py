@@ -1,130 +1,55 @@
-from app.services.ocr.image_preprocessor import ImagePreprocessor
-from app.services.ocr.ocr_engine import OCREngine
-
-from app.services.ocr.invoice_detector import InvoiceDetector
-from app.services.ocr.column_detector import ColumnDetector
-from app.services.ocr.column_classifier import ColumnClassifier
-from app.services.ocr.line_builder import LineBuilder
-from app.services.ocr.facture_parser import FactureParser
+from app.services.ocr.facture_ocr_service import FactureOCRService
 
 
 class OCRPipeline:
 
     def __init__(self):
 
-        self.preprocessor = ImagePreprocessor()
+        # =====================================================
+        # SERVICE OCR FACTURE
+        # =====================================================
 
-        self.engine = OCREngine()
+        self.facture_ocr_service = FactureOCRService()
 
-        self.invoice_detector = InvoiceDetector()
-
-        self.column_detector = ColumnDetector()
-
-        self.line_builder = LineBuilder()
-
-        self.facture_parser = FactureParser()
-
+    # =========================================================
+    # PIPELINE PRINCIPAL
     # =========================================================
 
     def process(self, image_path):
 
-        # -----------------------------------------------------
-        # Prétraitement
-        # -----------------------------------------------------
+        print("=" * 80)
+        print("OCR PIPELINE")
+        print("=" * 80)
 
-        image = self.preprocessor.preprocess(image_path)
-
-        # -----------------------------------------------------
-        # OCR
-        # -----------------------------------------------------
-
-        elements = self.engine.extraire_texte(image)
-
-        texte = "\n".join(
-
-            e["text"]
-
-            for e in elements
-
+        print(
+            "IMAGE PATH :",
+            image_path
         )
 
-        # -----------------------------------------------------
-        # Détection du tableau
-        # -----------------------------------------------------
-
-        table_elements = self.invoice_detector.extract_table_elements(
-
-            elements
-
+        print(
+            "TYPE IMAGE PATH :",
+            type(image_path)
         )
 
-        # -----------------------------------------------------
-        # Détection des colonnes
-        # -----------------------------------------------------
+        # =====================================================
+        # UTILISER LE MEME PIPELINE QUE LE TEST
+        # =====================================================
 
-        colonnes = self.column_detector.detect(
-
-            table_elements
-
+        data = self.facture_ocr_service.analyser(
+            image_path
         )
 
-        # -----------------------------------------------------
-        # Classification des mots dans les colonnes
-        # -----------------------------------------------------
-
-        classifier = ColumnClassifier(
-
-            colonnes
-
-        )
-
-        classified = classifier.classify(
-
-            table_elements
-
-        )
-
-        # -----------------------------------------------------
-        # Construction des lignes
-        # -----------------------------------------------------
-
-        lignes = self.line_builder.build(
-
-            classified
-
-        )
-
-        # -----------------------------------------------------
-        # Parsing
-        # -----------------------------------------------------
-
-        data = self.facture_parser.parse(
-
-            texte,
-
-            lignes
-
-        )
-
-        # -----------------------------------------------------
+        # =====================================================
+        # RESULTAT FINAL
+        # =====================================================
 
         return {
-
-            "texte": texte,
-
-            "elements": elements,
-
-            "table_elements": table_elements,
-
-            "colonnes": colonnes,
-
-            "classified": classified,
-
-            "lignes": lignes,
-
             "data": data
-
         }
 
+
+# =============================================================
+# INSTANCE GLOBALE
+# =============================================================
 
 pipeline = OCRPipeline()

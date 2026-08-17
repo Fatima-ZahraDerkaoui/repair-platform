@@ -1408,6 +1408,7 @@ class LineBuilder:
                 # => IIC ne peut pas être une designation.
                 # ==================================================
 
+                qte_x_values = []
                 if element.get("column") == "designation":
 
                     if element.get("column") == "designation":

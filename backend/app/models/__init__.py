@@ -5,6 +5,9 @@ from app.models.reparation import Reparation
 from app.models.reparation_piece import ReparationPiece
 from app.models.historique_statut import HistoriqueStatut
 from app.models.alerte_stock import AlerteStock
+from app.models.fournisseur import Fournisseur
+from app.models.facture import Facture
+from app.models.facture_ligne import FactureLigne
 
 '''
 TABLES EXISTANTES

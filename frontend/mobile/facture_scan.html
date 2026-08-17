@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Scanner une facture</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+
+            font-family:
+                Arial,
+                sans-serif;
+
+            background: #f4f6f8;
+            color: #1f2937;
+        }
+
+        .container {
+            max-width: 500px;
+
+            margin: 0 auto;
+
+            background: white;
+
+            padding: 25px;
+
+            border-radius: 16px;
+
+            box-shadow:
+                0 4px 20px
+                rgba(0,0,0,0.08);
+        }
+
+        h1 {
+            text-align: center;
+
+            font-size: 24px;
+
+            margin-bottom: 10px;
+        }
+
+        .description {
+            text-align: center;
+
+            color: #6b7280;
+
+            line-height: 1.5;
+
+            margin-bottom: 25px;
+        }
+
+        .file-label {
+            display: block;
+
+            width: 100%;
+
+            padding: 16px;
+
+            margin-top: 15px;
+
+            border-radius: 10px;
+
+            text-align: center;
+
+            background: #2563eb;
+
+            color: white;
+
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        #preview {
+            width: 100%;
+
+            max-height: 500px;
+
+            object-fit: contain;
+
+            margin-top: 20px;
+
+            border-radius: 10px;
+
+            display: none;
+        }
+
+        button {
+            width: 100%;
+
+            padding: 16px;
+
+            margin-top: 20px;
+
+            border: none;
+
+            border-radius: 10px;
+
+            background: #16a34a;
+
+            color: white;
+
+            font-size: 16px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background: #9ca3af;
+
+            cursor: not-allowed;
+        }
+
+        #message {
+            margin-top: 20px;
+
+            text-align: center;
+
+            font-weight: bold;
+
+            line-height: 1.5;
+        }
+
+        .success {
+            color: #15803d;
+        }
+
+        .error {
+            color: #dc2626;
+        }
+
+        .loading {
+            color: #2563eb;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <h1>
+        📱 Scanner une facture
+    </h1>
+
+    <div class="description">
+
+        Prenez une photo de votre facture
+        ou sélectionnez une image depuis
+        la galerie de votre téléphone.
+
+    </div>
+
+
+    <label
+        class="file-label"
+        for="fileInput"
+    >
+        📷 Choisir / prendre une photo
+    </label>
+
+
+    <input
+        id="fileInput"
+        type="file"
+        accept="image/*"
+        capture="environment"
+    >
+
+
+    <img
+        id="preview"
+        alt="Aperçu de la facture"
+    >
+
+
+    <button
+        id="uploadButton"
+        disabled
+    >
+        Envoyer la facture
+    </button>
+
+
+    <div id="message"></div>
+
+</div>
+
+
+<script>
+
+    // =========================================================
+    // SESSION
+    // =========================================================
+
+    const sessionId =
+        "{{SESSION_ID}}";
+
+
+    // =========================================================
+    // ELEMENTS
+    // =========================================================
+
+    const fileInput =
+        document.getElementById(
+            "fileInput"
+        );
+
+    const preview =
+        document.getElementById(
+            "preview"
+        );
+
+    const uploadButton =
+        document.getElementById(
+            "uploadButton"
+        );
+
+    const message =
+        document.getElementById(
+            "message"
+        );
+
+
+    let selectedFile = null;
+
+
+    // =========================================================
+    // SELECTION IMAGE
+    // =========================================================
+
+    fileInput.addEventListener(
+        "change",
+        function () {
+
+            selectedFile =
+                this.files[0];
+
+            if (!selectedFile) {
+
+                uploadButton.disabled = true;
+
+                return;
+            }
+
+
+            const reader =
+                new FileReader();
+
+
+            reader.onload =
+                function (event) {
+
+                    preview.src =
+                        event.target.result;
+
+                    preview.style.display =
+                        "block";
+                };
+
+
+            reader.readAsDataURL(
+                selectedFile
+            );
+
+
+            uploadButton.disabled =
+                false;
+
+            message.textContent =
+                "Image sélectionnée.";
+
+            message.className = "";
+
+        }
+    );
+
+
+    // =========================================================
+    // UPLOAD
+    // =========================================================
+
+    uploadButton.addEventListener(
+        "click",
+        async function () {
+
+            if (!selectedFile) {
+                return;
+            }
+
+
+            uploadButton.disabled =
+                true;
+
+
+            message.textContent =
+                "Envoi de la facture...";
+
+            message.className =
+                "loading";
+
+
+            const formData =
+                new FormData();
+
+
+            formData.append(
+                "image",
+                selectedFile
+            );
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        `/facture-scan/upload/${sessionId}`,
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.detail ||
+                        "Erreur pendant l'envoi."
+                    );
+                }
+
+
+                message.textContent =
+                    "✅ Facture envoyée. " +
+                    "L'analyse OCR est en cours...";
+
+
+                message.className =
+                    "success";
+
+
+                uploadButton.disabled =
+                    true;
+
+
+            }
+            catch (error) {
+
+                console.error(error);
+
+
+                message.textContent =
+                    "❌ " +
+                    error.message;
+
+
+                message.className =
+                    "error";
+
+
+                uploadButton.disabled =
+                    false;
+            }
+
+        }
+    );
+
+</script>
+
+</body>
+
+</html>

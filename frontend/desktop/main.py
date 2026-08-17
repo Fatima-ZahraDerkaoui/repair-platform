@@ -2,19 +2,32 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
-from ui.facture_dialog import FactureDialog
+from views.main_window import MainWindow
 
 
 def main():
 
-    app = QApplication(sys.argv)
+    app = QApplication(
+        sys.argv
+    )
 
-    window = FactureDialog()
+    app.setApplicationName(
+        "Repair Platform"
+    )
+
+    app.setStyle(
+        "Fusion"
+    )
+
+    window = MainWindow()
 
     window.show()
 
-    sys.exit(app.exec())
+    sys.exit(
+        app.exec()
+    )
 
 
 if __name__ == "__main__":
+
     main()

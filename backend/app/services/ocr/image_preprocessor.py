@@ -1,31 +1,54 @@
+from pathlib import Path
+
 import cv2
 import numpy as np
 
 
 class ImagePreprocessor:
 
-    def __init__(self):
-        pass
+    # ==========================================================
+    # LOAD
+    # ==========================================================
 
-    # ---------------------------------------------------------
+    def load(self, image_path):
 
-    def load(self, image_path: str):
+        image_path = Path(
+            image_path
+        )
 
-        image = cv2.imread(image_path)
+        if not image_path.exists():
+
+            raise FileNotFoundError(
+                f"Image introuvable : {image_path}"
+            )
+
+        image_path = str(
+            image_path.resolve()
+        )
+
+        image = cv2.imread(
+            image_path
+        )
 
         if image is None:
-            raise ValueError("Impossible de lire l'image.")
+
+            raise ValueError(
+                f"OpenCV ne peut pas lire l'image : "
+                f"{image_path}"
+            )
 
         return image
 
-    # ---------------------------------------------------------
+    # ==========================================================
+    # ROTATION
+    # ==========================================================
 
     def rotate_if_needed(self, image):
 
         h, w = image.shape[:2]
 
-        # Facture scannée en portrait
         if h < w:
+
             image = cv2.rotate(
                 image,
                 cv2.ROTATE_90_COUNTERCLOCKWISE
@@ -33,19 +56,45 @@ class ImagePreprocessor:
 
         return image
 
-    # ---------------------------------------------------------
+    # ==========================================================
+    # DOCUMENT DETECTION
+    # ==========================================================
 
     def detect_document(self, image):
 
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(
+            image,
+            cv2.COLOR_BGR2GRAY
+        )
 
-        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        blur = cv2.GaussianBlur(
+            gray,
+            (5, 5),
+            0
+        )
 
-        edges = cv2.Canny(blur, 50, 150)
+        edges = cv2.Canny(
+            blur,
+            50,
+            150
+        )
 
-        kernel = np.ones((5, 5), np.uint8)
-        edges = cv2.dilate(edges, kernel, iterations=2)
-        edges = cv2.erode(edges, kernel, iterations=1)
+        kernel = np.ones(
+            (5, 5),
+            np.uint8
+        )
+
+        edges = cv2.dilate(
+            edges,
+            kernel,
+            iterations=2
+        )
+
+        edges = cv2.erode(
+            edges,
+            kernel,
+            iterations=1
+        )
 
         contours, _ = cv2.findContours(
             edges,
@@ -54,7 +103,10 @@ class ImagePreprocessor:
         )
 
         if not contours:
-            return self.crop_content(image)
+
+            return self.crop_content(
+                image
+            )
 
         contours = sorted(
             contours,
@@ -62,14 +114,24 @@ class ImagePreprocessor:
             reverse=True
         )
 
+        image_area = (
+            image.shape[0] *
+            image.shape[1]
+        )
+
         for contour in contours:
 
-            area = cv2.contourArea(contour)
+            area = cv2.contourArea(
+                contour
+            )
 
-            if area < image.shape[0] * image.shape[1] * 0.20:
+            if area < image_area * 0.20:
                 continue
 
-            peri = cv2.arcLength(contour, True)
+            peri = cv2.arcLength(
+                contour,
+                True
+            )
 
             approx = cv2.approxPolyDP(
                 contour,
@@ -79,16 +141,23 @@ class ImagePreprocessor:
 
             if len(approx) == 4:
 
-                pts = approx.reshape(4, 2)
+                points = approx.reshape(
+                    4,
+                    2
+                )
 
                 return self.four_point_transform(
                     image,
-                    pts
+                    points
                 )
 
-        return self.crop_content(image)
+        return self.crop_content(
+            image
+        )
 
-    # ---------------------------------------------------------
+    # ==========================================================
+    # ORDER POINTS
+    # ==========================================================
 
     def order_points(self, pts):
 
@@ -97,110 +166,130 @@ class ImagePreprocessor:
             dtype="float32"
         )
 
-        s = pts.sum(axis=1)
+        s = pts.sum(
+            axis=1
+        )
 
-        rect[0] = pts[np.argmin(s)]
+        rect[0] = pts[
+            np.argmin(s)
+        ]
 
-        rect[2] = pts[np.argmax(s)]
+        rect[2] = pts[
+            np.argmax(s)
+        ]
 
         diff = np.diff(
             pts,
             axis=1
         )
 
-        rect[1] = pts[np.argmin(diff)]
+        rect[1] = pts[
+            np.argmin(diff)
+        ]
 
-        rect[3] = pts[np.argmax(diff)]
+        rect[3] = pts[
+            np.argmax(diff)
+        ]
 
         return rect
 
-    # ---------------------------------------------------------
+    # ==========================================================
+    # PERSPECTIVE TRANSFORM
+    # ==========================================================
 
     def four_point_transform(
-            self,
-            image,
-            pts
+        self,
+        image,
+        pts
     ):
 
         rect = self.order_points(
             pts
         )
 
-        (tl, tr, br, bl) = rect
+        tl, tr, br, bl = rect
 
-        widthA = np.linalg.norm(
+        width_a = np.linalg.norm(
             br - bl
         )
 
-        widthB = np.linalg.norm(
+        width_b = np.linalg.norm(
             tr - tl
         )
 
-        maxWidth = max(
-            int(widthA),
-            int(widthB)
+        max_width = max(
+            int(width_a),
+            int(width_b)
         )
 
-        heightA = np.linalg.norm(
+        height_a = np.linalg.norm(
             tr - br
         )
 
-        heightB = np.linalg.norm(
+        height_b = np.linalg.norm(
             tl - bl
         )
 
-        maxHeight = max(
-            int(heightA),
-            int(heightB)
+        max_height = max(
+            int(height_a),
+            int(height_b)
         )
 
-        dst = np.array([
-            [0, 0],
-            [maxWidth - 1, 0],
-            [maxWidth - 1, maxHeight - 1],
-            [0, maxHeight - 1]
-        ], dtype="float32")
+        dst = np.array(
+            [
+                [0, 0],
+                [max_width - 1, 0],
+                [max_width - 1, max_height - 1],
+                [0, max_height - 1]
+            ],
+            dtype="float32"
+        )
 
-        M = cv2.getPerspectiveTransform(
+        matrix = cv2.getPerspectiveTransform(
             rect,
             dst
         )
 
-        warped = cv2.warpPerspective(
+        return cv2.warpPerspective(
             image,
-            M,
+            matrix,
             (
-                maxWidth,
-                maxHeight
+                max_width,
+                max_height
             )
         )
 
-        return warped
-
-    # ---------------------------------------------------------
+    # ==========================================================
+    # RESIZE
+    # ==========================================================
 
     def resize(self, image):
 
-        h, w = image.shape[:2]
+        height, width = image.shape[:2]
 
-        target = 1800
+        target_height = 1800
 
-        if h < target:
+        if height < target_height:
 
-            ratio = target / h
+            ratio = (
+                target_height /
+                height
+            )
 
             image = cv2.resize(
                 image,
                 (
-                    int(w * ratio),
-                    target
+                    int(width * ratio),
+                    target_height
                 ),
                 interpolation=cv2.INTER_CUBIC
             )
 
         return image
 
-    # ---------------------------------------------------------
+    # ==========================================================
+    # CLAHE
+    # ==========================================================
 
     def clahe(self, image):
 
@@ -214,11 +303,13 @@ class ImagePreprocessor:
             tileGridSize=(8, 8)
         )
 
-        gray = clahe.apply(gray)
+        return clahe.apply(
+            gray
+        )
 
-        return gray
-
-    # ---------------------------------------------------------
+    # ==========================================================
+    # DENOISE
+    # ==========================================================
 
     def denoise(self, image):
 
@@ -230,15 +321,19 @@ class ImagePreprocessor:
             21
         )
 
-    # ---------------------------------------------------------
+    # ==========================================================
+    # SHARPEN
+    # ==========================================================
 
     def sharpen(self, image):
 
-        kernel = np.array([
-            [-1, -1, -1],
-            [-1, 9, -1],
-            [-1, -1, -1]
-        ])
+        kernel = np.array(
+            [
+                [-1, -1, -1],
+                [-1, 9, -1],
+                [-1, -1, -1]
+            ]
+        )
 
         return cv2.filter2D(
             image,
@@ -246,27 +341,49 @@ class ImagePreprocessor:
             kernel
         )
 
-    # ---------------------------------------------------------
+    # ==========================================================
+    # PREPROCESS
+    # ==========================================================
 
-    def preprocess(self, image_path):
+    def preprocess(
+        self,
+        image_path
+    ):
 
-        image = self.load(image_path)
+        image = self.load(
+            image_path
+        )
 
-        image = self.rotate_if_needed(image)
+        image = self.rotate_if_needed(
+            image
+        )
 
-        image = self.detect_document(image)
+        image = self.detect_document(
+            image
+        )
 
-        image = self.resize(image)
+        image = self.resize(
+            image
+        )
 
-        image = self.clahe(image)
+        image = self.clahe(
+            image
+        )
 
-        image = self.denoise(image)
+        image = self.denoise(
+            image
+        )
 
-        image = self.sharpen(image)
+        image = self.sharpen(
+            image
+        )
 
         return image
-    
-    #---------------------
+
+    # ==========================================================
+    # CROP CONTENT
+    # ==========================================================
+
     def crop_content(self, image):
 
         gray = cv2.cvtColor(
@@ -281,7 +398,10 @@ class ImagePreprocessor:
             cv2.THRESH_BINARY_INV
         )
 
-        kernel = np.ones((7,7), np.uint8)
+        kernel = np.ones(
+            (7, 7),
+            np.uint8
+        )
 
         thresh = cv2.morphologyEx(
             thresh,
@@ -289,20 +409,41 @@ class ImagePreprocessor:
             kernel
         )
 
-        coords = cv2.findNonZero(thresh)
+        coords = cv2.findNonZero(
+            thresh
+        )
 
         if coords is None:
+
             return image
 
-        x, y, w, h = cv2.boundingRect(coords)
+        x, y, w, h = cv2.boundingRect(
+            coords
+        )
 
-        marge = 20
+        margin = 20
 
-        x = max(0, x - marge)
-        y = max(0, y - marge)
+        x = max(
+            0,
+            x - margin
+        )
 
-        w = min(image.shape[1] - x, w + marge * 2)
-        h = min(image.shape[0] - y, h + marge * 2)
+        y = max(
+            0,
+            y - margin
+        )
 
-        return image[y:y+h, x:x+w]
-    
+        w = min(
+            image.shape[1] - x,
+            w + margin * 2
+        )
+
+        h = min(
+            image.shape[0] - y,
+            h + margin * 2
+        )
+
+        return image[
+            y:y + h,
+            x:x + w
+        ]
