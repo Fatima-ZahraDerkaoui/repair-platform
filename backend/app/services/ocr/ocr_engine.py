@@ -21,23 +21,67 @@ class OCREngine:
         print("INITIALISATION OCR ENGINE")
         print("=" * 80)
 
-        self.ocr = PaddleOCR(
-            lang="fr",
+        # ------------------------------------------------------
+        # INITIALISATION PADDLE OCR
+        # ------------------------------------------------------
 
-            # Désactivation des traitements
-            # non nécessaires pour les factures.
-            use_doc_orientation_classify=False,
-            use_doc_unwarping=False,
-            use_textline_orientation=False,
+        try:
 
-            # IMPORTANT :
-            # désactivation de oneDNN/MKLDNN
-            # pour éviter l'erreur :
-            #
-            # ConvertPirAttribute2RuntimeAttribute
-            #
-            enable_mkldnn=False,
-        )
+            self.ocr = PaddleOCR(
+                lang="fr",
+
+                # --------------------------------------------------
+                # Désactivation des traitements non nécessaires
+                # pour les factures.
+                # --------------------------------------------------
+
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False,
+
+                # --------------------------------------------------
+                # LIMITATION DE LA TAILLE DE L'IMAGE
+                # --------------------------------------------------
+                #
+                # Les images mobiles peuvent être très grandes
+                # (exemple : 3468 x 4624).
+                #
+                # Le preprocessing réduit déjà l'image.
+                # Cette limite évite à PaddleOCR de retravailler
+                # inutilement une image trop grande.
+                #
+                # 1800 conserve suffisamment de résolution pour
+                # les références, désignations et prix.
+                # --------------------------------------------------
+
+                text_det_limit_side_len=1800,
+                text_det_limit_type="max",
+
+                # --------------------------------------------------
+                # CPU
+                # --------------------------------------------------
+                #
+                # On conserve False pour éviter l'erreur MKLDNN
+                # rencontrée précédemment dans ton environnement.
+                #
+                # IMPORTANT :
+                # On ne change pas cette valeur à l'aveugle.
+                # --------------------------------------------------
+
+                enable_mkldnn=False,
+            )
+
+        except Exception as e:
+
+            print(
+                "[ERREUR] Impossible d'initialiser PaddleOCR."
+            )
+
+            print(
+                f"[ERREUR] {e}"
+            )
+
+            raise
 
         print("OCR Engine prêt.")
         print("=" * 80)
@@ -78,27 +122,49 @@ class OCREngine:
 
     def prepare_image(self, image_path):
 
-        # IMPORTANT :
-        # On conserve exactement la logique
-        # de l'ancienne version.
-        #
-        # Pas de resize supplémentaire ici.
-        #
-        # Le préprocesseur effectue déjà :
-        # - rotation
-        # - détection document
-        # - resize éventuel à 1800 px de hauteur
-        # - CLAHE
-        # - débruitage
-        # - sharpening
+        start = time.perf_counter()
 
         image = self.preprocessor.preprocess(
             image_path
         )
 
-        return self.save_temp_image(
+        preprocessing_time = (
+            time.perf_counter()
+            - start
+        )
+
+        print(
+            f"[TIME] ImagePreprocessor : "
+            f"{preprocessing_time:.2f}s"
+        )
+
+        print(
+            f"[PREPROCESS] Image finale : "
+            f"{image.shape[1]}x{image.shape[0]}"
+        )
+
+        print(
+            f"[OCR] Dimensions avant sauvegarde : "
+            f"{image.shape[1]}x{image.shape[0]}"
+        )
+
+        start = time.perf_counter()
+
+        prepared_path = self.save_temp_image(
             image
         )
+
+        save_time = (
+            time.perf_counter()
+            - start
+        )
+
+        print(
+            f"[TIME] Sauvegarde image : "
+            f"{save_time:.2f}s"
+        )
+
+        return prepared_path
 
     # ==========================================================
     # PADDLE OCR
@@ -109,6 +175,13 @@ class OCREngine:
         print(
             "[PADDLE OCR] Analyse de l'image..."
         )
+
+        # ------------------------------------------------------
+        # Un seul appel OCR.
+        #
+        # Aucune deuxième reconnaissance.
+        # Aucune boucle sur différentes tailles.
+        # ------------------------------------------------------
 
         results = self.ocr.predict(
             image_path
@@ -295,9 +368,6 @@ class OCREngine:
             f"{len(elements)}"
         )
 
-        # ------------------------------------------------------
-        # TEMPS TOTAL
-        # ------------------------------------------------------
 
         total_time = (
             time.perf_counter()
@@ -383,3 +453,4 @@ class OCREngine:
             )
 
         return blocks
+    

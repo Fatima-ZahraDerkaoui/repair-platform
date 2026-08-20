@@ -7,6 +7,18 @@ import numpy as np
 class ImagePreprocessor:
 
     # ==========================================================
+    # CONFIGURATION PERFORMANCE
+    # ==========================================================
+
+    # Taille maximale utilisée pour les traitements OpenCV.
+    # Cela évite de travailler sur les photos mobiles
+    # de plusieurs milliers de pixels.
+    MAX_PROCESSING_SIDE = 2000
+
+    # Taille maximale finale envoyée à PaddleOCR.
+    MAX_FINAL_SIDE = 1800
+
+    # ==========================================================
     # LOAD
     # ==========================================================
 
@@ -37,7 +49,59 @@ class ImagePreprocessor:
                 f"{image_path}"
             )
 
+        print(
+            f"[PREPROCESS] Image originale : "
+            f"{image.shape[1]}x{image.shape[0]}"
+        )
+
         return image
+
+    # ==========================================================
+    # RESIZE INITIAL
+    # ==========================================================
+
+    def resize_for_processing(self, image):
+
+        height, width = image.shape[:2]
+
+        max_side = max(
+            height,
+            width
+        )
+
+        if max_side <= self.MAX_PROCESSING_SIDE:
+
+            return image
+
+        ratio = (
+            self.MAX_PROCESSING_SIDE /
+            max_side
+        )
+
+        new_width = max(
+            1,
+            int(width * ratio)
+        )
+
+        new_height = max(
+            1,
+            int(height * ratio)
+        )
+
+        print(
+            f"[PREPROCESS] Réduction initiale : "
+            f"{width}x{height} -> "
+            f"{new_width}x{new_height}"
+        )
+
+        return cv2.resize(
+            image,
+            (
+                new_width,
+                new_height
+            ),
+            interpolation=cv2.INTER_AREA
+        )
 
     # ==========================================================
     # ROTATION
@@ -126,6 +190,7 @@ class ImagePreprocessor:
             )
 
             if area < image_area * 0.20:
+
                 continue
 
             peri = cv2.arcLength(
@@ -235,11 +300,19 @@ class ImagePreprocessor:
             int(height_b)
         )
 
+        # Protection contre une taille invalide
+        if max_width <= 0 or max_height <= 0:
+
+            return image
+
         dst = np.array(
             [
                 [0, 0],
                 [max_width - 1, 0],
-                [max_width - 1, max_height - 1],
+                [
+                    max_width - 1,
+                    max_height - 1
+                ],
                 [0, max_height - 1]
             ],
             dtype="float32"
@@ -260,29 +333,49 @@ class ImagePreprocessor:
         )
 
     # ==========================================================
-    # RESIZE
+    # RESIZE FINAL
     # ==========================================================
-
     def resize(self, image):
 
         height, width = image.shape[:2]
 
         target_height = 1800
+        max_height = 1800
+
+        # ------------------------------------------------------
+        # PETITE IMAGE
+        # ------------------------------------------------------
 
         if height < target_height:
 
-            ratio = (
-                target_height /
-                height
-            )
+            ratio = target_height / height
+
+            width = int(width * ratio)
+            height = target_height
 
             image = cv2.resize(
                 image,
-                (
-                    int(width * ratio),
-                    target_height
-                ),
+                (width, height),
                 interpolation=cv2.INTER_CUBIC
+            )
+
+            return image
+
+        # ------------------------------------------------------
+        # GRANDE IMAGE
+        # ------------------------------------------------------
+
+        if height > max_height:
+
+            ratio = max_height / height
+
+            width = int(width * ratio)
+            height = max_height
+
+            image = cv2.resize(
+                image,
+                (width, height),
+                interpolation=cv2.INTER_AREA
             )
 
         return image
@@ -354,6 +447,15 @@ class ImagePreprocessor:
             image_path
         )
 
+        # ------------------------------------------------------
+        # IMPORTANT :
+        # réduire avant les opérations coûteuses OpenCV
+        # ------------------------------------------------------
+
+        image = self.resize_for_processing(
+            image
+        )
+
         image = self.rotate_if_needed(
             image
         )
@@ -361,6 +463,10 @@ class ImagePreprocessor:
         image = self.detect_document(
             image
         )
+
+        # ------------------------------------------------------
+        # Taille finale destinée à PaddleOCR
+        # ------------------------------------------------------
 
         image = self.resize(
             image
@@ -376,6 +482,11 @@ class ImagePreprocessor:
 
         image = self.sharpen(
             image
+        )
+
+        print(
+            f"[PREPROCESS] Image finale : "
+            f"{image.shape[1]}x{image.shape[0]}"
         )
 
         return image
