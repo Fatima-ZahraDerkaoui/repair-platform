@@ -99,6 +99,8 @@ def session_status(session_id: str):
         "connected": session.connected,
 
         "closed": session.closed,
+        
+        "status": session.status,
 
         "documents": len(session.uploaded_files)
 

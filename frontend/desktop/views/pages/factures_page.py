@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QDialog
 )
+from pathlib import Path
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import (
     Signal,
@@ -598,6 +599,10 @@ class FacturesPage(QWidget):
     # =========================================================
     # SCAN TELEPHONE
     # =========================================================
+    # =========================================================
+    # SCAN TELEPHONE
+    # =========================================================
+
     def scanner_telephone(self):
 
         try:
@@ -658,19 +663,15 @@ class FacturesPage(QWidget):
             print("=" * 80)
 
             # =====================================================
-            # 4. AFFICHER QR
+            # 4. AFFICHER LE SCAN DANS L'INTERFACE PRINCIPALE
             # =====================================================
 
-            self.scan_dialog = (
-                self.afficher_qr_code(
-                    url
-                )
+            self.show_scan_interface(
+                url
             )
 
-            self.scan_dialog.show()
-
             # =====================================================
-            # 5. LANCER POLLING
+            # 5. LANCER LE POLLING
             # =====================================================
 
             self.start_scan_worker(
@@ -729,143 +730,7 @@ class FacturesPage(QWidget):
 
             return "127.0.0.1"
 
-    def afficher_qr_code(
-        self,
-        url
-    ):
-
-        dialog = QDialog(
-            self
-        )
-
-        dialog.setWindowTitle(
-            "Scanner la facture avec le téléphone"
-        )
-
-        dialog.setMinimumSize(
-            450,
-            550
-        )
-
-        layout = QVBoxLayout(
-            dialog
-        )
-
-        # =====================================================
-        # TITRE
-        # =====================================================
-
-        titre = QLabel(
-            "Scanner la facture avec votre téléphone"
-        )
-
-        titre.setAlignment(
-            Qt.AlignCenter
-        )
-
-        titre.setStyleSheet("""
-            QLabel {
-                font-size: 18px;
-                font-weight: bold;
-                padding: 10px;
-            }
-        """)
-
-        layout.addWidget(
-            titre
-        )
-
-        # =====================================================
-        # INSTRUCTIONS
-        # =====================================================
-
-        instructions = QLabel(
-            "1. Scannez le QR Code avec votre téléphone.\n"
-            "2. Prenez une photo de la facture ou choisissez-la depuis la galerie.\n"
-            "3. Envoyez la facture.\n"
-            "4. Attendez la fin de l'analyse."
-        )
-
-        instructions.setAlignment(
-            Qt.AlignCenter
-        )
-
-        instructions.setWordWrap(
-            True
-        )
-
-        layout.addWidget(
-            instructions
-        )
-
-        # =====================================================
-        # QR
-        # =====================================================
-
-        qr = qrcode.make(
-            url
-        )
-
-        qr_path = "temp_scan_qr.png"
-
-        qr.save(
-            qr_path
-        )
-
-        image = QPixmap(
-            qr_path
-        )
-
-        image = image.scaled(
-            350,
-            350,
-            Qt.KeepAspectRatio,
-            Qt.SmoothTransformation
-        )
-
-        qr_label = QLabel()
-
-        qr_label.setPixmap(
-            image
-        )
-
-        qr_label.setAlignment(
-            Qt.AlignCenter
-        )
-
-        layout.addWidget(
-            qr_label
-        )
-
-        # =====================================================
-        # URL
-        # =====================================================
-
-        url_label = QLabel(
-            url
-        )
-
-        url_label.setAlignment(
-            Qt.AlignCenter
-        )
-
-        url_label.setWordWrap(
-            True
-        )
-
-        url_label.setStyleSheet("""
-            QLabel {
-                color: #6b7280;
-                font-size: 11px;
-            }
-        """)
-
-        layout.addWidget(
-            url_label
-        )
-
-        return dialog
-
+    
     def start_scan_worker(
         self,
         session_id
@@ -941,6 +806,15 @@ class FacturesPage(QWidget):
             message
         )
 
+        if hasattr(
+            self,
+            "scan_status_label"
+        ):
+
+            self.scan_status_label.setText(
+                message
+            )
+            
     def scan_finished(
         self,
         data
@@ -958,19 +832,6 @@ class FacturesPage(QWidget):
         print("=" * 80)
 
         # =====================================================
-        # FERMER QR
-        # =====================================================
-
-        if hasattr(
-            self,
-            "scan_dialog"
-        ):
-
-            self.scan_dialog.close()
-
-            self.scan_dialog = None
-
-        # =====================================================
         # AFFICHER RESULTAT
         # =====================================================
 
@@ -983,14 +844,57 @@ class FacturesPage(QWidget):
         message
     ):
 
-        if hasattr(
-            self,
-            "scan_dialog"
-        ):
+        self.clear_result()
 
-            self.scan_dialog.close()
+        label = QLabel(
+            "❌ Erreur pendant le scan de la facture"
+        )
 
-            self.scan_dialog = None
+        label.setAlignment(
+            Qt.AlignCenter
+        )
+
+        label.setWordWrap(
+            True
+        )
+
+        label.setStyleSheet("""
+            QLabel {
+                color: #b91c1c;
+                font-size: 18px;
+                font-weight: bold;
+                padding: 30px;
+            }
+        """)
+
+        self.result_layout.addWidget(
+            label
+        )
+
+        detail = QLabel(
+            str(message)
+        )
+
+        detail.setAlignment(
+            Qt.AlignCenter
+        )
+
+        detail.setWordWrap(
+            True
+        )
+
+        detail.setStyleSheet("""
+            QLabel {
+                color: #6b7280;
+                padding: 15px;
+            }
+        """)
+
+        self.result_layout.addWidget(
+            detail
+        )
+
+        self.result_layout.addStretch()
 
         QMessageBox.critical(
             self,
@@ -1013,3 +917,188 @@ class FacturesPage(QWidget):
 
         self.scan_thread = None
         self.scan_worker = None
+
+    # =========================================================
+    # INTERFACE SCAN TELEPHONE
+    # =========================================================
+
+    def show_scan_interface(self, url):
+
+        self.clear_result()
+
+        # =====================================================
+        # TITRE
+        # =====================================================
+
+        titre = QLabel(
+            "📱 Scanner la facture avec votre téléphone"
+        )
+
+        titre.setAlignment(
+            Qt.AlignCenter
+        )
+
+        titre.setStyleSheet("""
+            QLabel {
+                font-size: 22px;
+                font-weight: bold;
+                padding: 15px;
+            }
+        """)
+
+        self.result_layout.addWidget(
+            titre
+        )
+
+        # =====================================================
+        # INSTRUCTIONS
+        # =====================================================
+
+        instructions = QLabel(
+            "1. Scannez le QR Code avec votre téléphone.\n"
+            "2. Prenez une photo de la facture ou choisissez-la depuis la galerie.\n"
+            "3. Envoyez la facture.\n"
+            "4. Attendez la fin de l'analyse OCR."
+        )
+
+        instructions.setAlignment(
+            Qt.AlignCenter
+        )
+
+        instructions.setWordWrap(
+            True
+        )
+
+        instructions.setStyleSheet("""
+            QLabel {
+                color: #4b5563;
+                font-size: 14px;
+                padding: 10px;
+            }
+        """)
+
+        self.result_layout.addWidget(
+            instructions
+        )
+
+        # =====================================================
+        # QR CODE
+        # =====================================================
+
+        qr = qrcode.make(
+            url
+        )
+
+        qr_path = (
+            Path("temp_scan_qr.png")
+        )
+
+        qr.save(
+            str(qr_path)
+        )
+
+        image = QPixmap(
+            str(qr_path)
+        )
+
+        image = image.scaled(
+            320,
+            320,
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation
+        )
+
+        qr_label = QLabel()
+
+        qr_label.setPixmap(
+            image
+        )
+
+        qr_label.setAlignment(
+            Qt.AlignCenter
+        )
+
+        self.result_layout.addWidget(
+            qr_label
+        )
+
+        # =====================================================
+        # URL
+        # =====================================================
+
+        url_label = QLabel(
+            url
+        )
+
+        url_label.setAlignment(
+            Qt.AlignCenter
+        )
+
+        url_label.setWordWrap(
+            True
+        )
+
+        url_label.setStyleSheet("""
+            QLabel {
+                color: #6b7280;
+                font-size: 11px;
+                padding: 8px;
+            }
+        """)
+
+        self.result_layout.addWidget(
+            url_label
+        )
+
+        # =====================================================
+        # STATUT
+        # =====================================================
+
+        self.scan_status_label = QLabel(
+            "⏳ En attente de la facture..."
+        )
+
+        self.scan_status_label.setAlignment(
+            Qt.AlignCenter
+        )
+
+        self.scan_status_label.setStyleSheet("""
+            QLabel {
+                font-size: 16px;
+                font-weight: bold;
+                padding: 15px;
+            }
+        """)
+
+        self.result_layout.addWidget(
+            self.scan_status_label
+        )
+
+        # =====================================================
+        # PROGRESSION
+        # =====================================================
+
+        self.scan_progress_bar = QProgressBar()
+
+        self.scan_progress_bar.setRange(
+            0,
+            0
+        )
+
+        self.scan_progress_bar.setMinimumHeight(
+            8
+        )
+
+        self.result_layout.addWidget(
+            self.scan_progress_bar
+        )
+
+        self.result_layout.addStretch()
+
+        # =====================================================
+        # RETOUR EN HAUT
+        # =====================================================
+
+        self.scroll_area.verticalScrollBar().setValue(
+            0
+        )

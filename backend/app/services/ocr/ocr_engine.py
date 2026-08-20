@@ -1,53 +1,96 @@
 from pathlib import Path
 
 import cv2
+import time
 from paddleocr import PaddleOCR
 
 from app.services.ocr.image_preprocessor import ImagePreprocessor
 
 
 class OCREngine:
+    """Moteur OCR basé sur PaddleOCR."""
+
+    TEMP_DIRECTORY = Path("temp")
+    TEMP_IMAGE_NAME = "preprocessed.png"
 
     def __init__(self):
 
         self.preprocessor = ImagePreprocessor()
 
+        print("=" * 80)
+        print("INITIALISATION OCR ENGINE")
+        print("=" * 80)
+
         self.ocr = PaddleOCR(
             lang="fr",
+
+            # Désactivation des traitements
+            # non nécessaires pour les factures.
             use_doc_orientation_classify=False,
             use_doc_unwarping=False,
             use_textline_orientation=False,
-            enable_mkldnn=False
+
+            # IMPORTANT :
+            # désactivation de oneDNN/MKLDNN
+            # pour éviter l'erreur :
+            #
+            # ConvertPirAttribute2RuntimeAttribute
+            #
+            enable_mkldnn=False,
         )
 
+        print("OCR Engine prêt.")
+        print("=" * 80)
+
     # ==========================================================
-    # SAVE IMAGE
+    # SAUVEGARDE IMAGE TEMPORAIRE
     # ==========================================================
 
     def save_temp_image(self, image):
 
-        temp_dir = Path("temp")
-        temp_dir.mkdir(exist_ok=True)
+        self.TEMP_DIRECTORY.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
 
-        path = temp_dir / "preprocessed.png"
+        image_path = (
+            self.TEMP_DIRECTORY
+            / self.TEMP_IMAGE_NAME
+        )
 
         success = cv2.imwrite(
-            str(path),
-            image
+            str(image_path),
+            image,
         )
 
         if not success:
+
             raise ValueError(
-                f"Impossible de sauvegarder l'image temporaire : {path}"
+                "Impossible de sauvegarder l'image temporaire : "
+                f"{image_path}"
             )
 
-        return str(path)
+        return str(image_path)
 
     # ==========================================================
-    # PREPARE IMAGE
+    # PREPARATION IMAGE
     # ==========================================================
 
     def prepare_image(self, image_path):
+
+        # IMPORTANT :
+        # On conserve exactement la logique
+        # de l'ancienne version.
+        #
+        # Pas de resize supplémentaire ici.
+        #
+        # Le préprocesseur effectue déjà :
+        # - rotation
+        # - détection document
+        # - resize éventuel à 1800 px de hauteur
+        # - CLAHE
+        # - débruitage
+        # - sharpening
 
         image = self.preprocessor.preprocess(
             image_path
@@ -58,107 +101,115 @@ class OCREngine:
         )
 
     # ==========================================================
-    # OCR RAW
+    # PADDLE OCR
     # ==========================================================
 
     def run_ocr(self, image_path):
 
-        resultats = self.ocr.predict(
+        print(
+            "[PADDLE OCR] Analyse de l'image..."
+        )
+
+        results = self.ocr.predict(
             image_path
         )
 
-        return resultats
+        print(
+            "[PADDLE OCR] Analyse terminée."
+        )
+
+        return results
 
     # ==========================================================
-    # NORMALIZE BOX
+    # NORMALISATION BOX
     # ==========================================================
 
-    def normalize_box(self, points):
+    @staticmethod
+    def normalize_box(points):
 
         xs = [
-            p[0]
-            for p in points
+            point[0]
+            for point in points
         ]
 
         ys = [
-            p[1]
-            for p in points
+            point[1]
+            for point in points
         ]
 
         return [
             int(min(xs)),
             int(min(ys)),
             int(max(xs)),
-            int(max(ys))
+            int(max(ys)),
         ]
 
     # ==========================================================
-    # PARSE OCR RESULT
+    # PARSING RESULTATS OCR
     # ==========================================================
 
-    def parse_resultats(self, resultats):
+    def parse_results(self, results):
 
         elements = []
 
-        for resultat in resultats:
+        for result in results:
 
-            data = resultat.json
+            data = result.json
 
             if not isinstance(data, dict):
                 continue
 
-            res = data.get(
+            result_data = data.get(
                 "res",
-                data
+                data,
             )
 
-            textes = res.get(
+            texts = result_data.get(
                 "rec_texts",
-                []
+                [],
             )
 
-            scores = res.get(
+            scores = result_data.get(
                 "rec_scores",
-                []
+                [],
             )
 
-            boxes = res.get(
+            boxes = result_data.get(
                 "rec_polys",
-                []
+                [],
             )
 
-            for texte, score, box in zip(
-                textes,
+            for text, score, box in zip(
+                texts,
                 scores,
-                boxes
+                boxes,
             ):
 
-                texte = str(
-                    texte
+                text = str(
+                    text
                 ).strip()
 
-                if not texte:
+                if not text:
                     continue
 
-                normalized_box = self.normalize_box(
-                    box
+                normalized_box = (
+                    self.normalize_box(
+                        box
+                    )
                 )
 
-                elements.append({
-
-                    "text": texte,
-
-                    "score": float(
-                        score
-                    ),
-
-                    "box": normalized_box
-                })
+                elements.append(
+                    {
+                        "text": text,
+                        "score": float(score),
+                        "box": normalized_box,
+                    }
+                )
 
         return elements
 
     # ==========================================================
-    # EXTRAIRE ELEMENTS
+    # EXTRACTION OCR
     # ==========================================================
 
     def extraire_texte(
@@ -166,20 +217,124 @@ class OCREngine:
         image_path: str
     ):
 
-        prepared_path = self.prepare_image(
-            image_path
+        total_start = time.perf_counter()
+
+        # ------------------------------------------------------
+        # PREPARATION
+        # ------------------------------------------------------
+
+        print(
+            "[OCR] Préparation image..."
         )
+
+        start = time.perf_counter()
+
+        prepared_path = (
+            self.prepare_image(
+                image_path
+            )
+        )
+
+        preparation_time = (
+            time.perf_counter()
+            - start
+        )
+
+        print(
+            f"[TIME] Préparation image : "
+            f"{preparation_time:.2f}s"
+        )
+
+        print(
+            "[OCR] Image préparée :",
+            prepared_path
+        )
+
+        # ------------------------------------------------------
+        # OCR
+        # ------------------------------------------------------
+
+        start = time.perf_counter()
 
         resultats = self.run_ocr(
             prepared_path
         )
 
-        return self.parse_resultats(
+        paddle_time = (
+            time.perf_counter()
+            - start
+        )
+
+        print(
+            f"[TIME] PaddleOCR : "
+            f"{paddle_time:.2f}s"
+        )
+
+        # ------------------------------------------------------
+        # PARSING
+        # ------------------------------------------------------
+
+        start = time.perf_counter()
+
+        elements = self.parse_results(
             resultats
         )
 
+        parsing_time = (
+            time.perf_counter()
+            - start
+        )
+
+        print(
+            f"[TIME] Parsing OCR : "
+            f"{parsing_time:.2f}s"
+        )
+
+        print(
+            f"[OCR] Éléments extraits : "
+            f"{len(elements)}"
+        )
+
+        # ------------------------------------------------------
+        # TEMPS TOTAL
+        # ------------------------------------------------------
+
+        total_time = (
+            time.perf_counter()
+            - total_start
+        )
+
+        print(
+            f"[TIME] TOTAL OCR ENGINE : "
+            f"{total_time:.2f}s"
+        )
+
+        return elements
+
     # ==========================================================
-    # TEXTE COMPLET
+    # TEXTE COMPLET DEPUIS ELEMENTS
+    # ==========================================================
+
+    @staticmethod
+    def texte_complet_depuis_elements(
+        elements
+    ):
+
+        if not elements:
+            return ""
+
+        lines = [
+            element["text"]
+            for element in elements
+            if element.get("text")
+        ]
+
+        return "\n".join(
+            lines
+        )
+
+    # ==========================================================
+    # TEXTE COMPLET DEPUIS IMAGE
     # ==========================================================
 
     def texte_complet(
@@ -191,18 +346,14 @@ class OCREngine:
             image_path
         )
 
-        lignes = [
-            element["text"]
-            for element in elements
-            if element.get("text")
-        ]
-
-        return "\n".join(
-            lignes
+        return (
+            self.texte_complet_depuis_elements(
+                elements
+            )
         )
 
     # ==========================================================
-    # BLOCS
+    # BLOCS OCR
     # ==========================================================
 
     def extraire_blocs(
@@ -214,22 +365,21 @@ class OCREngine:
             image_path
         )
 
-        blocs = []
+        blocks = []
 
         for element in elements:
 
             box = element["box"]
 
-            blocs.append({
+            blocks.append(
+                {
+                    "text": element["text"],
+                    "score": element["score"],
+                    "x1": box[0],
+                    "y1": box[1],
+                    "x2": box[2],
+                    "y2": box[3],
+                }
+            )
 
-                "text": element["text"],
-
-                "score": element["score"],
-
-                "x1": box[0],
-                "y1": box[1],
-                "x2": box[2],
-                "y2": box[3]
-            })
-
-        return blocs
+        return blocks

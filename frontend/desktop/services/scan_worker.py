@@ -8,7 +8,9 @@ from services.backend_api import BackendAPI
 class ScanWorker(QObject):
 
     finished = Signal(dict)
+
     error = Signal(str)
+
     progress = Signal(str)
 
     def __init__(
@@ -17,7 +19,9 @@ class ScanWorker(QObject):
         parent=None
     ):
 
-        super().__init__(parent)
+        super().__init__(
+            parent
+        )
 
         self.session_id = session_id
 
@@ -35,20 +39,55 @@ class ScanWorker(QObject):
                 "En attente de la facture envoyée depuis le téléphone..."
             )
 
+            # =================================================
+            # BOUCLE D'ATTENTE
+            # =================================================
+
             while self.running:
 
-                status = BackendAPI.get_session_status(
-                    self.session_id
-                )
+                try:
 
-                etat = status.get(
-                    "status",
-                    ""
+                    status = BackendAPI.get_session_status(
+                        self.session_id
+                    )
+
+                except Exception as e:
+
+                    # Une erreur réseau temporaire ne doit
+                    # PAS arrêter le scan immédiatement.
+
+                    self.progress.emit(
+                        "Connexion au serveur..."
+                    )
+
+                    print(
+                        "[SCAN] Erreur temporaire statut :",
+                        e
+                    )
+
+                    time.sleep(3)
+
+                    continue
+
+                if not isinstance(
+                    status,
+                    dict
+                ):
+
+                    raise ValueError(
+                        "Réponse invalide du serveur."
+                    )
+
+                etat = str(
+                    status.get(
+                        "status",
+                        ""
+                    )
                 ).upper()
 
-                # -------------------------------------------------
-                # ATTENTE
-                # -------------------------------------------------
+                # =============================================
+                # WAITING
+                # =============================================
 
                 if etat == "WAITING":
 
@@ -56,9 +95,9 @@ class ScanWorker(QObject):
                         "En attente de la facture..."
                     )
 
-                # -------------------------------------------------
-                # OCR EN COURS
-                # -------------------------------------------------
+                # =============================================
+                # PROCESSING
+                # =============================================
 
                 elif etat == "PROCESSING":
 
@@ -66,9 +105,9 @@ class ScanWorker(QObject):
                         "Facture reçue. Analyse OCR en cours..."
                     )
 
-                # -------------------------------------------------
-                # TERMINE
-                # -------------------------------------------------
+                # =============================================
+                # READY
+                # =============================================
 
                 elif etat == "READY":
 
@@ -76,11 +115,30 @@ class ScanWorker(QObject):
                         "Analyse terminée. Récupération du résultat..."
                     )
 
-                    resultat = (
-                        BackendAPI.get_facture_result(
-                            self.session_id
+                    try:
+
+                        resultat = (
+                            BackendAPI.get_facture_result(
+                                self.session_id
+                            )
                         )
-                    )
+
+                    except Exception as e:
+
+                        self.error.emit(
+                            f"Impossible de récupérer le résultat OCR : {e}"
+                        )
+
+                        return
+
+                    if not isinstance(
+                        resultat,
+                        dict
+                    ):
+
+                        raise ValueError(
+                            "Résultat OCR invalide."
+                        )
 
                     self.finished.emit(
                         resultat
@@ -88,22 +146,31 @@ class ScanWorker(QObject):
 
                     return
 
-                # -------------------------------------------------
-                # ERREUR
-                # -------------------------------------------------
+                # =============================================
+                # ERROR
+                # =============================================
 
                 elif etat == "ERROR":
 
+                    # IMPORTANT :
+                    # Le backend retourne actuellement HTTP 500
+                    # pour /result lorsque status == ERROR.
+                    #
+                    # On récupère donc directement le message
+                    # via la réponse HTTP dans BackendAPI.
+                    #
+                    # Pour le moment, message générique.
+
                     self.error.emit(
-                        "Le serveur a rencontré une erreur "
-                        "pendant l'analyse OCR."
+                        "Le scan de la facture a échoué. "
+                        "Vérifiez les logs du serveur OCR."
                     )
 
                     return
 
-                # -------------------------------------------------
-                # ETAT INCONNU
-                # -------------------------------------------------
+                # =============================================
+                # SESSION INCONNUE / AUTRE
+                # =============================================
 
                 else:
 
@@ -111,9 +178,20 @@ class ScanWorker(QObject):
                         f"État de la session : {etat}"
                     )
 
-                time.sleep(2)
+                # =================================================
+                # ATTENTE
+                # =================================================
+
+                time.sleep(
+                    2
+                )
 
         except Exception as e:
+
+            print(
+                "[SCAN] ERREUR WORKER :",
+                e
+            )
 
             self.error.emit(
                 str(e)

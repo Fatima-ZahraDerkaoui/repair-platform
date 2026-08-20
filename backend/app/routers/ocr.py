@@ -2,6 +2,8 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from pathlib import Path
 import uuid
 import traceback
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 from app.services.ocr.pipeline import pipeline
 
@@ -12,6 +14,10 @@ router = APIRouter(
 )
 
 
+# =========================================================
+# DOSSIER
+# =========================================================
+
 DOSSIER_DOCUMENTS = Path("uploads/documents")
 
 DOSSIER_DOCUMENTS.mkdir(
@@ -20,14 +26,75 @@ DOSSIER_DOCUMENTS.mkdir(
 )
 
 
+# =========================================================
+# EXECUTEUR OCR
+# =========================================================
+
+OCR_EXECUTOR = ThreadPoolExecutor(
+    max_workers=1,
+    thread_name_prefix="OCR"
+)
+
+
+# =========================================================
+# FONCTION OCR
+# =========================================================
+
+def executer_ocr(chemin):
+
+    print()
+    print("=" * 80)
+    print("OCR DIRECT")
+    print("=" * 80)
+
+    print(
+        f"Fichier : {chemin}"
+    )
+
+    print(
+        "Lancement pipeline OCR..."
+    )
+
+    try:
+
+        resultat = pipeline.process(
+            str(chemin)
+        )
+
+        print(
+            "OCR terminé avec succès."
+        )
+
+        print("=" * 80)
+
+        return resultat
+
+    except Exception:
+
+        print()
+        print("=" * 80)
+        print("ERREUR PIPELINE OCR")
+        print("=" * 80)
+
+        traceback.print_exc()
+
+        print("=" * 80)
+
+        raise
+
+
+# =========================================================
+# ANALYSER FACTURE
+# =========================================================
+
 @router.post("/analyser")
 async def analyser_document(
     fichier: UploadFile = File(...)
 ):
 
-    # =========================================================
-    # 1. VERIFICATION FICHIER
-    # =========================================================
+    # =====================================================
+    # 1. VERIFICATION
+    # =====================================================
 
     if not fichier.filename:
 
@@ -64,9 +131,9 @@ async def analyser_document(
         )
 
 
-    # =========================================================
-    # 2. CREATION NOM FICHIER
-    # =========================================================
+    # =====================================================
+    # 2. NOM FICHIER
+    # =====================================================
 
     nom_fichier = (
         f"{uuid.uuid4()}"
@@ -81,9 +148,9 @@ async def analyser_document(
     )
 
 
-    # =========================================================
-    # 3. LECTURE FICHIER
-    # =========================================================
+    # =====================================================
+    # 3. SAUVEGARDE
+    # =====================================================
 
     try:
 
@@ -102,7 +169,9 @@ async def analyser_document(
             "wb"
         ) as f:
 
-            f.write(contenu)
+            f.write(
+                contenu
+            )
 
 
     except HTTPException:
@@ -112,74 +181,46 @@ async def analyser_document(
 
     except Exception as e:
 
-        print()
-        print("=" * 80)
-        print("ERREUR SAUVEGARDE DOCUMENT")
-        print("=" * 80)
         traceback.print_exc()
-        print("=" * 80)
 
         raise HTTPException(
             status_code=500,
-            detail=f"Erreur lors de la sauvegarde : {str(e)}"
+            detail=(
+                "Erreur lors de la sauvegarde : "
+                f"{str(e)}"
+            )
         )
 
 
-    # =========================================================
-    # 4. OCR
-    # =========================================================
+    # =====================================================
+    # 4. OCR DANS THREADPOOL
+    # =====================================================
 
     try:
 
-        print()
-        print("=" * 80)
-        print("OCR DIRECT")
-        print("=" * 80)
+        loop = asyncio.get_running_loop()
 
-        print(
-            f"Fichier original : {fichier.filename}"
-        )
-
-        print(
-            f"Fichier sauvegardé : {chemin}"
-        )
-
-        print(
-            f"Extension : {extension}"
-        )
-
-        print(
-            "Lancement pipeline OCR..."
-        )
-
-
-        resultat = pipeline.process(
+        resultat = await loop.run_in_executor(
+            OCR_EXECUTOR,
+            executer_ocr,
             str(chemin)
         )
 
 
-        print(
-            "OCR terminé avec succès."
-        )
-
-        print("=" * 80)
-
-
-        # =====================================================
+        # =================================================
         # 5. REPONSE
-        # =====================================================
+        # =================================================
 
         return {
 
             "message":
-            "Document analysé avec succès",
+                "Document analysé avec succès",
 
             "fichier":
-            nom_fichier,
+                nom_fichier,
 
             "resultat":
-            resultat
-
+                resultat
         }
 
 
@@ -187,7 +228,7 @@ async def analyser_document(
 
         print()
         print("=" * 80)
-        print("ERREUR PIPELINE OCR")
+        print("ERREUR ANALYSE OCR")
         print("=" * 80)
 
         print(
@@ -204,12 +245,9 @@ async def analyser_document(
 
 
         raise HTTPException(
-
             status_code=500,
-
             detail=(
                 "Erreur pendant l'analyse OCR : "
                 f"{str(e)}"
             )
-
         )

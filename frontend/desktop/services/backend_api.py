@@ -6,7 +6,14 @@ class BackendAPI:
 
     BASE_URL = "http://127.0.0.1:8000"
 
-    OCR_TIMEOUT = 300
+    # OCR DIRECT
+    OCR_TIMEOUT = 600
+
+    # Requêtes rapides
+    REQUEST_TIMEOUT = 15
+
+    # Résultat session
+    RESULT_TIMEOUT = 30
 
     # =========================================================
     # OCR DIRECT
@@ -15,9 +22,14 @@ class BackendAPI:
     @staticmethod
     def analyser_facture_direct(image_path):
 
-        filename = Path(image_path).name
+        filename = Path(
+            image_path
+        ).name
 
-        with open(image_path, "rb") as f:
+        with open(
+            image_path,
+            "rb"
+        ) as f:
 
             files = {
                 "fichier": (
@@ -38,7 +50,7 @@ class BackendAPI:
         return response.json()
 
     # =========================================================
-    # FACTURE SCAN - CREER SESSION
+    # CREER SESSION
     # =========================================================
 
     @staticmethod
@@ -46,7 +58,7 @@ class BackendAPI:
 
         response = requests.post(
             f"{BackendAPI.BASE_URL}/facture-scan/session",
-            timeout=15
+            timeout=BackendAPI.REQUEST_TIMEOUT
         )
 
         response.raise_for_status()
@@ -54,7 +66,7 @@ class BackendAPI:
         return response.json()
 
     # =========================================================
-    # FACTURE SCAN - STATUT
+    # STATUT SESSION
     # =========================================================
 
     @staticmethod
@@ -62,15 +74,23 @@ class BackendAPI:
 
         response = requests.get(
             f"{BackendAPI.BASE_URL}/facture-scan/session/{session_id}",
-            timeout=15
+            timeout=BackendAPI.REQUEST_TIMEOUT
         )
 
         response.raise_for_status()
 
-        return response.json()
+        data = response.json()
+
+        if not isinstance(data, dict):
+
+            raise ValueError(
+                "Réponse statut session invalide."
+            )
+
+        return data
 
     # =========================================================
-    # FACTURE SCAN - RESULTAT
+    # RESULTAT SESSION
     # =========================================================
 
     @staticmethod
@@ -78,31 +98,50 @@ class BackendAPI:
 
         response = requests.get(
             f"{BackendAPI.BASE_URL}/facture-scan/result/{session_id}",
-            timeout=30
+            timeout=BackendAPI.RESULT_TIMEOUT
         )
 
         response.raise_for_status()
 
-        return response.json()
+        data = response.json()
+
+        if not isinstance(data, dict):
+
+            raise ValueError(
+                "Résultat OCR invalide."
+            )
+
+        return data
 
     # =========================================================
-    # FACTURE SCAN - FERMER SESSION
+    # FERMER SESSION
     # =========================================================
 
     @staticmethod
     def close_session(session_id):
 
-        response = requests.delete(
-            f"{BackendAPI.BASE_URL}/facture-scan/session/{session_id}",
-            timeout=15
-        )
+        try:
 
-        response.raise_for_status()
+            response = requests.delete(
+                f"{BackendAPI.BASE_URL}/facture-scan/session/{session_id}",
+                timeout=BackendAPI.REQUEST_TIMEOUT
+            )
 
-        return response.json()
+            response.raise_for_status()
+
+            return response.json()
+
+        except Exception as e:
+
+            print(
+                "[SCAN] Impossible de fermer la session :",
+                e
+            )
+
+            return None
 
     # =========================================================
-    # FACTURE SCAN - UPLOAD
+    # UPLOAD
     # =========================================================
 
     @staticmethod
@@ -111,9 +150,14 @@ class BackendAPI:
         image_path
     ):
 
-        filename = Path(image_path).name
+        filename = Path(
+            image_path
+        ).name
 
-        with open(image_path, "rb") as f:
+        with open(
+            image_path,
+            "rb"
+        ) as f:
 
             files = {
                 "image": (
@@ -131,5 +175,13 @@ class BackendAPI:
 
         response.raise_for_status()
 
-        return response.json()
+        data = response.json()
+
+        if not isinstance(data, dict):
+
+            raise ValueError(
+                "Réponse upload invalide."
+            )
+
+        return data
     
