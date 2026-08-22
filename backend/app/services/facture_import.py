@@ -41,21 +41,17 @@ class FactureImportService:
                 if not value:
                     return None
 
-                # Gestion formats :
-                # 1234.50
-                # 1234,50
-                # 1 234,50
-                # 1.234,50
-
                 value = value.replace(" ", "")
 
                 if "," in value and "." in value:
 
                     if value.rfind(",") > value.rfind("."):
+
                         value = value.replace(".", "")
                         value = value.replace(",", ".")
 
                     else:
+
                         value = value.replace(",", "")
 
                 else:
@@ -64,7 +60,11 @@ class FactureImportService:
 
             return Decimal(str(value))
 
-        except (InvalidOperation, ValueError, TypeError):
+        except (
+            InvalidOperation,
+            ValueError,
+            TypeError
+        ):
 
             return None
 
@@ -94,9 +94,14 @@ class FactureImportService:
         for fmt in formats:
 
             try:
-                return datetime.strptime(value, fmt)
+
+                return datetime.strptime(
+                    value,
+                    fmt
+                )
 
             except ValueError:
+
                 continue
 
         return None
@@ -119,6 +124,48 @@ class FactureImportService:
         return value
 
     # ==========================================================
+    # NORMALISATION COMPARAISON
+    # ==========================================================
+
+    @staticmethod
+    def normalize_compare(value):
+
+        if value is None:
+            return None
+
+        value = str(value).strip().upper()
+
+        if not value:
+            return None
+
+        return value
+
+    # ==========================================================
+    # EXTRACTION TELEPHONE
+    # ==========================================================
+
+    @staticmethod
+    def normalize_phone(value):
+
+        if value is None:
+            return None
+
+        if isinstance(value, list):
+
+            phones = []
+
+            for phone in value:
+
+                phone = str(phone).strip()
+
+                if phone and phone not in phones:
+                    phones.append(phone)
+
+            return ", ".join(phones) if phones else None
+
+        return str(value).strip() or None
+
+    # ==========================================================
     # RECHERCHE FOURNISSEUR
     # ==========================================================
 
@@ -130,8 +177,15 @@ class FactureImportService:
         if not fournisseur_data:
             return None
 
-        name = self.normalize_text(
+        if not isinstance(
+            fournisseur_data,
+            dict
+        ):
+            return None
+
+        nom = self.normalize_text(
             fournisseur_data.get("name")
+            or fournisseur_data.get("nom")
         )
 
         ice = self.normalize_text(
@@ -142,55 +196,141 @@ class FactureImportService:
             fournisseur_data.get("email")
         )
 
+        rc = self.normalize_text(
+            fournisseur_data.get("rc")
+        )
+
+        identifiant_fiscal = self.normalize_text(
+            fournisseur_data.get("if")
+            or fournisseur_data.get(
+                "identifiant_fiscal"
+            )
+        )
+
         # ------------------------------------------------------
-        # Recherche prioritaire par ICE
+        # 1. ICE
         # ------------------------------------------------------
 
         if ice:
 
             fournisseur = (
                 self.db.query(Fournisseur)
-                .filter(Fournisseur.ice == ice)
+                .filter(
+                    Fournisseur.ice == ice
+                )
                 .first()
             )
 
             if fournisseur:
+
+                print(
+                    "[FOURNISSEUR] Trouvé par ICE :",
+                    fournisseur.id
+                )
+
                 return fournisseur
 
         # ------------------------------------------------------
-        # Recherche par email
+        # 2. EMAIL
         # ------------------------------------------------------
 
         if email:
 
             fournisseur = (
                 self.db.query(Fournisseur)
-                .filter(Fournisseur.email == email)
+                .filter(
+                    Fournisseur.email.ilike(email)
+                )
                 .first()
             )
 
             if fournisseur:
+
+                print(
+                    "[FOURNISSEUR] Trouvé par email :",
+                    fournisseur.id
+                )
+
                 return fournisseur
 
         # ------------------------------------------------------
-        # Recherche par nom
+        # 3. RC
         # ------------------------------------------------------
 
-        if name:
+        if rc:
 
             fournisseur = (
                 self.db.query(Fournisseur)
-                .filter(Fournisseur.name.ilike(name))
+                .filter(
+                    Fournisseur.rc == rc
+                )
                 .first()
             )
 
             if fournisseur:
+
+                print(
+                    "[FOURNISSEUR] Trouvé par RC :",
+                    fournisseur.id
+                )
+
                 return fournisseur
+
+        # ------------------------------------------------------
+        # 4. IDENTIFIANT FISCAL
+        # ------------------------------------------------------
+
+        if identifiant_fiscal:
+
+            fournisseur = (
+                self.db.query(Fournisseur)
+                .filter(
+                    Fournisseur.identifiant_fiscal
+                    == identifiant_fiscal
+                )
+                .first()
+            )
+
+            if fournisseur:
+
+                print(
+                    "[FOURNISSEUR] Trouvé par IF :",
+                    fournisseur.id
+                )
+
+                return fournisseur
+
+        # ------------------------------------------------------
+        # 5. NOM
+        # ------------------------------------------------------
+
+        if nom:
+
+            fournisseur = (
+                self.db.query(Fournisseur)
+                .filter(
+                    Fournisseur.nom.ilike(nom)
+                )
+                .first()
+            )
+
+            if fournisseur:
+
+                print(
+                    "[FOURNISSEUR] Trouvé par nom :",
+                    fournisseur.id
+                )
+
+                return fournisseur
+
+        print(
+            "[FOURNISSEUR] Fournisseur non trouvé."
+        )
 
         return None
 
     # ==========================================================
-    # CREATION FOURNISSEUR
+    # CREER FOURNISSEUR
     # ==========================================================
 
     def create_fournisseur(
@@ -199,97 +339,179 @@ class FactureImportService:
     ):
 
         if not fournisseur_data:
-            return None
-
-        fournisseur = self.find_fournisseur(
-            fournisseur_data
-        )
-
-        if fournisseur:
-
-            return fournisseur
-
-        phones = fournisseur_data.get("phone")
-
-        # ------------------------------------------------------
-        # Le modèle fournisseur doit avoir un champ téléphone
-        # adapté à ta structure.
-        # ------------------------------------------------------
-
-        if isinstance(phones, list):
-
-            telephone = ", ".join(
-                str(phone)
-                for phone in phones
-                if phone
+            print(
+                "[FOURNISSEUR] Aucune information fournisseur."
             )
 
-        else:
+            return None
 
-            telephone = phones
+        if not isinstance(
+            fournisseur_data,
+            dict
+        ):
+
+            print(
+                "[FOURNISSEUR] Format fournisseur invalide."
+            )
+
+            return None
+
+        # ------------------------------------------------------
+        # Vérifier d'abord s'il existe
+        # ------------------------------------------------------
+
+        fournisseur_existant = (
+            self.find_fournisseur(
+                fournisseur_data
+            )
+        )
+
+        if fournisseur_existant:
+
+            print(
+                "[FOURNISSEUR] Fournisseur existant "
+                "réutilisé :",
+                fournisseur_existant.id
+            )
+
+            return fournisseur_existant
+
+        # ------------------------------------------------------
+        # Données OCR
+        # ------------------------------------------------------
+
+        nom = self.normalize_text(
+            fournisseur_data.get("name")
+            or fournisseur_data.get("nom")
+        )
+
+        adresse = self.normalize_text(
+            fournisseur_data.get("address")
+            or fournisseur_data.get("adresse")
+        )
+
+        ville = self.normalize_text(
+            fournisseur_data.get("city")
+            or fournisseur_data.get("ville")
+        )
+
+        pays = self.normalize_text(
+            fournisseur_data.get("country")
+            or fournisseur_data.get("pays")
+        )
+
+        telephone = self.normalize_phone(
+            fournisseur_data.get("phone")
+            or fournisseur_data.get("telephone")
+        )
+
+        fax = self.normalize_text(
+            fournisseur_data.get("fax")
+        )
+
+        email = self.normalize_text(
+            fournisseur_data.get("email")
+        )
+
+        site_web = self.normalize_text(
+            fournisseur_data.get("website")
+            or fournisseur_data.get("site_web")
+        )
+
+        ice = self.normalize_text(
+            fournisseur_data.get("ice")
+        )
+
+        identifiant_fiscal = self.normalize_text(
+            fournisseur_data.get("if")
+            or fournisseur_data.get(
+                "identifiant_fiscal"
+            )
+        )
+
+        rc = self.normalize_text(
+            fournisseur_data.get("rc")
+        )
+
+        patente = self.normalize_text(
+            fournisseur_data.get("patente")
+        )
+
+        cnss = self.normalize_text(
+            fournisseur_data.get("cnss")
+        )
+
+        rib = self.normalize_text(
+            fournisseur_data.get("rib")
+        )
+
+        # ------------------------------------------------------
+        # Nom obligatoire
+        # ------------------------------------------------------
+
+        if not nom:
+
+            print(
+                "[FOURNISSEUR] Impossible de créer : "
+                "nom fournisseur absent."
+            )
+
+            return None
+
+        # ------------------------------------------------------
+        # Création
+        # ------------------------------------------------------
 
         fournisseur = Fournisseur(
 
-            name=self.normalize_text(
-                fournisseur_data.get("name")
-            ),
+            nom=nom,
 
-            address=self.normalize_text(
-                fournisseur_data.get("address")
-            ),
+            adresse=adresse,
 
-            city=self.normalize_text(
-                fournisseur_data.get("city")
-            ),
+            ville=ville,
 
-            country=self.normalize_text(
-                fournisseur_data.get("country")
-            ),
+            pays=pays,
 
-            phone=self.normalize_text(
-                telephone
-            ),
+            telephone=telephone,
 
-            fax=self.normalize_text(
-                fournisseur_data.get("fax")
-            ),
+            fax=fax,
 
-            email=self.normalize_text(
-                fournisseur_data.get("email")
-            ),
+            email=email,
 
-            website=self.normalize_text(
-                fournisseur_data.get("website")
-            ),
+            site_web=site_web,
 
-            ice=self.normalize_text(
-                fournisseur_data.get("ice")
-            ),
+            ice=ice,
 
-            if_=self.normalize_text(
-                fournisseur_data.get("if")
-            ),
+            identifiant_fiscal=identifiant_fiscal,
 
-            rc=self.normalize_text(
-                fournisseur_data.get("rc")
-            ),
+            rc=rc,
 
-            patente=self.normalize_text(
-                fournisseur_data.get("patente")
-            ),
+            patente=patente,
 
-            cnss=self.normalize_text(
-                fournisseur_data.get("cnss")
-            ),
+            cnss=cnss,
 
-            rib=self.normalize_text(
-                fournisseur_data.get("rib")
-            )
+            rib=rib
         )
 
-        self.db.add(fournisseur)
+        self.db.add(
+            fournisseur
+        )
 
         self.db.flush()
+
+        print(
+            "[FOURNISSEUR] Nouveau fournisseur créé."
+        )
+
+        print(
+            "[FOURNISSEUR] ID :",
+            fournisseur.id
+        )
+
+        print(
+            "[FOURNISSEUR] NOM :",
+            fournisseur.nom
+        )
 
         return fournisseur
 
@@ -303,11 +525,16 @@ class FactureImportService:
         designation=None
     ):
 
-        reference = self.normalize_text(reference)
-        designation = self.normalize_text(designation)
+        reference = self.normalize_text(
+            reference
+        )
+
+        designation = self.normalize_text(
+            designation
+        )
 
         # ------------------------------------------------------
-        # 1. Recherche par référence
+        # 1. Référence
         # ------------------------------------------------------
 
         if reference:
@@ -324,7 +551,7 @@ class FactureImportService:
                 return article
 
         # ------------------------------------------------------
-        # 2. Recherche par désignation
+        # 2. Désignation
         # ------------------------------------------------------
 
         if designation:
@@ -332,7 +559,9 @@ class FactureImportService:
             article = (
                 self.db.query(Stock)
                 .filter(
-                    Stock.nom_piece.ilike(designation)
+                    Stock.nom_piece.ilike(
+                        designation
+                    )
                 )
                 .first()
             )
@@ -343,13 +572,165 @@ class FactureImportService:
         return None
 
     # ==========================================================
+    # CREER / AUGMENTER STOCK
+    # ==========================================================
+
+    def update_stock(
+        self,
+        article_data,
+        fournisseur=None
+    ):
+
+        reference = self.normalize_text(
+            article_data.get("reference")
+        )
+
+        designation = self.normalize_text(
+            article_data.get("designation")
+        )
+
+        quantite = self.to_decimal(
+            article_data.get("quantite")
+        )
+
+        prix_unitaire = self.to_decimal(
+            article_data.get("prix_unitaire")
+        )
+
+        if quantite is None:
+            quantite = Decimal("0")
+
+        # ------------------------------------------------------
+        # Recherche
+        # ------------------------------------------------------
+
+        stock_article = self.find_stock_article(
+            reference=reference,
+            designation=designation
+        )
+
+        # ======================================================
+        # ARTICLE EXISTANT
+        # ======================================================
+
+        if stock_article:
+
+            ancienne_quantite = (
+                self.to_decimal(
+                    stock_article.quantite
+                )
+                or Decimal("0")
+            )
+
+            nouvelle_quantite = (
+                ancienne_quantite
+                + quantite
+            )
+
+            stock_article.quantite = (
+                nouvelle_quantite
+            )
+
+            # Mettre à jour le prix si disponible
+            if prix_unitaire is not None:
+
+                stock_article.prix_unitaire = (
+                    prix_unitaire
+                )
+
+            # Fournisseur si vide
+            if (
+                fournisseur
+                and not stock_article.fournisseur
+            ):
+
+                stock_article.fournisseur = (
+                    fournisseur.nom
+                )
+
+            print(
+                "[STOCK] Article existant :",
+                reference
+            )
+
+            print(
+                "[STOCK] Ancienne quantité :",
+                ancienne_quantite
+            )
+
+            print(
+                "[STOCK] Quantité ajoutée :",
+                quantite
+            )
+
+            print(
+                "[STOCK] Nouvelle quantité :",
+                nouvelle_quantite
+            )
+
+            return stock_article
+
+        # ======================================================
+        # NOUVEL ARTICLE
+        # ======================================================
+
+        stock_article = Stock(
+
+            nom_piece=(
+                designation
+                or reference
+                or "Article sans désignation"
+            ),
+
+            reference=reference,
+
+            categorie=None,
+
+            quantite=quantite,
+
+            seuil_min=5,
+
+            prix_unitaire=prix_unitaire,
+
+            fournisseur=(
+                fournisseur.nom
+                if fournisseur
+                else None
+            )
+        )
+
+        self.db.add(
+            stock_article
+        )
+
+        self.db.flush()
+
+        print(
+            "[STOCK] Nouvel article :",
+            designation
+        )
+
+        print(
+            "[STOCK] Quantité initiale :",
+            quantite
+        )
+
+        print(
+            "[STOCK] Stock ID :",
+            stock_article.id
+        )
+
+        return stock_article
+
+    # ==========================================================
     # CREATION LIGNE FACTURE
     # ==========================================================
 
     def create_facture_ligne(
         self,
         facture,
-        article_data
+        article_data,
+        fournisseur=None
     ):
 
         reference = self.normalize_text(
@@ -373,27 +754,23 @@ class FactureImportService:
         )
 
         # ------------------------------------------------------
-        # Recherche dans stock
+        # STOCK
         # ------------------------------------------------------
 
-        stock_article = self.find_stock_article(
-            reference=reference,
-            designation=designation
+        stock_article = self.update_stock(
+            article_data,
+            fournisseur=fournisseur
         )
 
         # ------------------------------------------------------
-        # Création ligne
+        # LIGNE FACTURE
         # ------------------------------------------------------
 
         ligne = FactureLigne(
 
             facture_id=facture.id,
 
-            stock_id=(
-                stock_article.id
-                if stock_article
-                else None
-            ),
+            stock_id=stock_article.id,
 
             designation=designation,
 
@@ -406,7 +783,9 @@ class FactureImportService:
             total=total
         )
 
-        self.db.add(ligne)
+        self.db.add(
+            ligne
+        )
 
         return ligne
 
@@ -421,25 +800,36 @@ class FactureImportService:
         chemin_document=None
     ):
 
-        # ------------------------------------------------------
-        # Fournisseur
-        # ------------------------------------------------------
+        if not isinstance(
+            facture_data,
+            dict
+        ):
+
+            raise ValueError(
+                "Les données de facture sont invalides."
+            )
+
+        # ======================================================
+        # FOURNISSEUR
+        # ======================================================
 
         fournisseur = self.create_fournisseur(
-            facture_data.get("fournisseur")
+            facture_data.get(
+                "fournisseur"
+            )
         )
 
-        # ------------------------------------------------------
-        # Date
-        # ------------------------------------------------------
+        # ======================================================
+        # DATE
+        # ======================================================
 
         date_facture = self.parse_date(
             facture_data.get("date")
         )
 
-        # ------------------------------------------------------
-        # Facture
-        # ------------------------------------------------------
+        # ======================================================
+        # FACTURE
+        # ======================================================
 
         facture = Facture(
 
@@ -474,37 +864,104 @@ class FactureImportService:
             chemin_document=chemin_document
         )
 
-        self.db.add(facture)
+        self.db.add(
+            facture
+        )
 
         self.db.flush()
 
-        # ------------------------------------------------------
-        # Lignes
-        # ------------------------------------------------------
+        print()
+        print("=" * 80)
+        print("ENREGISTREMENT FACTURE")
+        print("=" * 80)
+
+        print(
+            "[FACTURE] ID temporaire :",
+            facture.id
+        )
+
+        print(
+            "[FACTURE] Fournisseur ID :",
+            facture.fournisseur_id
+        )
+
+        # ======================================================
+        # LIGNES
+        # ======================================================
 
         articles = facture_data.get(
             "articles",
             []
         )
 
-        for article_data in articles:
+        for index, article_data in enumerate(
+            articles,
+            start=1
+        ):
 
-            self.create_facture_ligne(
-                facture,
-                article_data
+            print()
+            print(
+                f"[LIGNE {index}]"
             )
 
-        # ------------------------------------------------------
-        # Validation transaction
-        # ------------------------------------------------------
+            print(
+                "  Référence :",
+                article_data.get(
+                    "reference"
+                )
+            )
+
+            print(
+                "  Désignation :",
+                article_data.get(
+                    "designation"
+                )
+            )
+
+            print(
+                "  Quantité :",
+                article_data.get(
+                    "quantite"
+                )
+            )
+
+            self.create_facture_ligne(
+                facture=facture,
+
+                article_data=article_data,
+
+                fournisseur=fournisseur
+            )
+
+        # ======================================================
+        # COMMIT
+        # ======================================================
 
         self.db.commit()
 
-        # ------------------------------------------------------
-        # Rafraîchir
-        # ------------------------------------------------------
+        self.db.refresh(
+            facture
+        )
 
-        self.db.refresh(facture)
+        print()
+        print("=" * 80)
+        print("FACTURE ENREGISTREE")
+        print("=" * 80)
+
+        print(
+            "FACTURE ID :",
+            facture.id
+        )
+
+        print(
+            "FOURNISSEUR ID :",
+            facture.fournisseur_id
+        )
+
+        print(
+            "NUMERO :",
+            facture.numero
+        )
 
         return facture
 
@@ -521,7 +978,7 @@ class FactureImportService:
 
         try:
 
-            facture = self.create_facture(
+            return self.create_facture(
 
                 facture_data=facture_data,
 
@@ -530,10 +987,9 @@ class FactureImportService:
                 chemin_document=chemin_document
             )
 
-            return facture
-
         except Exception:
 
             self.db.rollback()
 
             raise
+        

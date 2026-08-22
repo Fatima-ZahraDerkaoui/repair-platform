@@ -153,7 +153,7 @@ def generer_fiche_pdf(
 
         if value is None or value == "":
 
-            return "Non renseigné"
+            return " "
 
         return str(value)
 
@@ -925,6 +925,23 @@ def generer_fiche_pdf(
 
                 )
 
+            ],
+
+            [
+                Paragraph(
+                    "Accessoires déposés",
+                    label
+                ),
+                Paragraph(
+                    valeur_propre(
+                        getattr(
+                            reparation,
+                            "accessoires",
+                            None
+                        )
+                    ),
+                    valeur
+                )
             ],
 
             [

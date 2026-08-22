@@ -1,9 +1,13 @@
 from decimal import Decimal
-from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
+from pydantic import BaseModel
 
+
+# =========================================================
+# BASE
+# =========================================================
 class ReparationBase(BaseModel):
 
     client_id: int
@@ -12,9 +16,17 @@ class ReparationBase(BaseModel):
 
     type_materiel: str
 
+    marque: Optional[str] = None
+
+    modele: Optional[str] = None
+
+    numero_serie: Optional[str] = None
+
     systeme_exploitation: Optional[str] = None
 
     version_office: Optional[str] = None
+
+    mot_de_passe_pc: Optional[str] = None
 
     origine_probleme: Optional[str] = None
 
@@ -22,20 +34,30 @@ class ReparationBase(BaseModel):
 
     probleme: Optional[str] = None
 
+    diagnostic: Optional[str] = None
+
     pieces_defectueuses: Optional[str] = None
 
-    remarques: Optional[str] = None
+    accessoires: Optional[str] = None
 
-    mot_de_passe_pc: Optional[str] = None
+    remarques: Optional[str] = None
 
     urgent: bool = False
 
     resolu: bool = False
 
+# =========================================================
+# CRÉATION
+# =========================================================
 
 class ReparationCreate(ReparationBase):
+
     pass
 
+
+# =========================================================
+# MODIFICATION
+# =========================================================
 
 class ReparationUpdate(BaseModel):
 
@@ -45,6 +67,8 @@ class ReparationUpdate(BaseModel):
 
     pieces_defectueuses: Optional[str] = None
 
+    accessoires: Optional[str] = None
+
     remarques: Optional[str] = None
 
     cout_reel: Optional[Decimal] = None
@@ -52,12 +76,20 @@ class ReparationUpdate(BaseModel):
     date_fin: Optional[datetime] = None
 
 
+# =========================================================
+# MODIFICATION DU STATUT
+# =========================================================
+
 class StatutUpdate(BaseModel):
 
     nouveau_statut: str
 
     utilisateur_id: Optional[int] = None
 
+
+# =========================================================
+# CLIENT
+# =========================================================
 
 class ClientInfo(BaseModel):
 
@@ -76,6 +108,9 @@ class ClientInfo(BaseModel):
         from_attributes = True
 
 
+# =========================================================
+# RÉPONSE
+# =========================================================
 class ReparationResponse(BaseModel):
 
     id: int
@@ -88,9 +123,17 @@ class ReparationResponse(BaseModel):
 
     type_materiel: str
 
+    marque: Optional[str] = None
+
+    modele: Optional[str] = None
+
+    numero_serie: Optional[str] = None
+
     systeme_exploitation: Optional[str] = None
 
     version_office: Optional[str] = None
+
+    mot_de_passe_pc: Optional[str] = None
 
     origine_probleme: Optional[str] = None
 
@@ -102,9 +145,9 @@ class ReparationResponse(BaseModel):
 
     pieces_defectueuses: Optional[str] = None
 
-    remarques: Optional[str] = None
+    accessoires: Optional[str] = None
 
-    mot_de_passe_pc: Optional[str] = None
+    remarques: Optional[str] = None
 
     urgent: bool
 
@@ -130,7 +173,6 @@ class ReparationResponse(BaseModel):
 
     client: Optional[ClientInfo] = None
 
-
     class Config:
-
         from_attributes = True
+        

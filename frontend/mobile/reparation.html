@@ -5,972 +5,1264 @@
 
     <meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>Dossier de réparation</title>
-
 
     <style>
 
         * {
-
             box-sizing: border-box;
-
             margin: 0;
-
             padding: 0;
-
             font-family: Arial, sans-serif;
-
         }
-
 
         body {
-
             background: #f4f6f8;
-
             min-height: 100vh;
-
             padding: 20px;
-
         }
-
 
         .container {
-
-            max-width: 600px;
-
+            max-width: 650px;
             margin: auto;
-
         }
-
 
         .header {
-
             background: #1f2937;
-
             color: white;
-
             padding: 20px;
-
             border-radius: 16px;
-
             margin-bottom: 20px;
-
         }
-
 
         .header h1 {
-
             font-size: 22px;
-
             margin-bottom: 8px;
-
         }
-
 
         .numero-dossier {
-
             font-size: 14px;
-
             opacity: 0.8;
-
         }
-
 
         .card {
-
             background: white;
-
             border-radius: 16px;
-
             padding: 20px;
-
             margin-bottom: 16px;
-
-            box-shadow: 0 4px 12px rgba(
-
-                0,
-
-                0,
-
-                0,
-
-                0.08
-
-            );
-
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
-
 
         .card h2 {
-
             font-size: 18px;
-
             margin-bottom: 16px;
-
             color: #1f2937;
-
         }
-
 
         .info {
-
             margin-bottom: 14px;
-
         }
 
+        .info:last-child {
+            margin-bottom: 0;
+        }
 
         .label {
-
             font-size: 12px;
-
             color: #6b7280;
-
             margin-bottom: 4px;
-
         }
-
 
         .value {
-
             font-size: 16px;
-
             color: #111827;
-
             font-weight: 500;
-
+            white-space: pre-wrap;
+            word-break: break-word;
         }
-
 
         .statut {
-
             display: inline-block;
-
             padding: 10px 16px;
-
             border-radius: 20px;
-
             background: #fef3c7;
-
             color: #92400e;
-
             font-weight: bold;
-
         }
-
 
         .loading {
-
             text-align: center;
-
             padding: 40px;
-
             color: #6b7280;
-
         }
-
 
         .error {
-
             background: #fee2e2;
-
             color: #991b1b;
-
             padding: 16px;
-
             border-radius: 12px;
-
             text-align: center;
-
         }
 
-
         .hidden {
-
             display: none;
-
         }
 
         select {
-
             width: 100%;
-
             padding: 14px;
-
             border: 1px solid #d1d5db;
-
             border-radius: 10px;
-
             font-size: 16px;
-
             margin-bottom: 12px;
-
+            background: white;
         }
-
 
         button {
-
             width: 100%;
-
             padding: 14px;
-
             border: none;
-
             border-radius: 10px;
-
             background: #2563eb;
-
             color: white;
-
             font-size: 16px;
-
             font-weight: bold;
-
             cursor: pointer;
-
         }
-
 
         button:active {
-
             transform: scale(0.98);
-
         }
 
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
 
         .message {
-
             margin-top: 12px;
-
             padding: 10px;
-
             border-radius: 8px;
-
             text-align: center;
-
         }
 
     </style>
 
 </head>
 
-
 <body>
 
+<div class="container">
 
-    <div class="container">
+    <!-- CHARGEMENT -->
+
+    <div
+        id="loading"
+        class="loading"
+    >
+        Chargement du dossier...
+    </div>
 
 
-        <!-- CHARGEMENT -->
+    <!-- ERREUR -->
 
-        <div id="loading"
+    <div
+        id="error"
+        class="error hidden"
+    >
+    </div>
 
-             class="loading">
 
-            Chargement du dossier...
+    <!-- CONTENU -->
+
+    <div
+        id="content"
+        class="hidden"
+    >
+
+        <!-- ========================================= -->
+        <!-- EN-TÊTE -->
+        <!-- ========================================= -->
+
+        <div class="header">
+
+            <h1>
+                Dossier de réparation
+            </h1>
+
+            <div class="numero-dossier">
+
+                N° :
+                
+                <span id="numeroDossier"></span>
+
+            </div>
 
         </div>
 
 
-        <!-- ERREUR -->
+        <!-- ========================================= -->
+        <!-- CLIENT -->
+        <!-- ========================================= -->
 
-        <div id="error"
+        <div class="card">
 
-             class="error hidden">
+            <h2>
+                Informations client
+            </h2>
 
-        </div>
+            <div class="info">
 
-
-        <!-- CONTENU -->
-
-        <div id="content"
-
-             class="hidden">
-
-
-            <div class="header">
-
-                <h1>
-
-                    Dossier de réparation
-
-                </h1>
-
-
-                <div class="numero-dossier">
-
-                    N° :
-
-                    <span id="numeroDossier">
-
-                    </span>
-
+                <div class="label">
+                    Nom du client
                 </div>
-
-            </div>
-
-
-            <!-- CLIENT -->
-
-            <div class="card">
-
-                <h2>
-
-                    Informations client
-
-                </h2>
-
-
-                <div class="info">
-
-                    <div class="label">
-
-                        Client
-
-                    </div>
-
-
-                    <div class="info">
-
-                        <div class="label">
-
-                            Nom du client
-
-                        </div>
-
-
-                        <div
-
-                            class="value"
-
-                            id="clientNom"
-
-                        >
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="info">
-
-                        <div class="label">
-
-                            Téléphone
-
-                        </div>
-
-
-                        <div
-
-                            class="value"
-
-                            id="clientTelephone"
-
-                        >
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- MATÉRIEL -->
-
-            <div class="card">
-
-                <h2>
-
-                    Matériel
-
-                </h2>
-
-
-                <div class="info">
-
-                    <div class="label">
-
-                        Type de matériel
-
-                    </div>
-
-
-                    <div
-
-                        class="value"
-
-                        id="materiel"
-
-                    >
-
-                    </div>
-
-                </div>
-
-
-                <div class="info">
-
-                    <div class="label">
-
-                        Système d'exploitation
-
-                    </div>
-
-
-                    <div
-
-                        class="value"
-
-                        id="systeme"
-
-                    >
-
-                    </div>
-
-                </div>
-
-
-                <div class="info">
-
-                    <div class="label">
-
-                        Version Office
-
-                    </div>
-
-
-                    <div
-
-                        class="value"
-
-                        id="office"
-
-                    >
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- PROBLÈME -->
-
-            <div class="card">
-
-                <h2>
-
-                    Problème signalé
-
-                </h2>
-
 
                 <div
-
                     class="value"
+                    id="clientNom"
+                ></div>
 
+            </div>
+
+            <div class="info">
+
+                <div class="label">
+                    Téléphone
+                </div>
+
+                <div
+                    class="value"
+                    id="clientTelephone"
+                ></div>
+
+            </div>
+
+            <div class="info">
+
+                <div class="label">
+                    Email
+                </div>
+
+                <div
+                    class="value"
+                    id="clientEmail"
+                ></div>
+
+            </div>
+
+            <div class="info">
+
+                <div class="label">
+                    Adresse
+                </div>
+
+                <div
+                    class="value"
+                    id="clientAdresse"
+                ></div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- MATÉRIEL -->
+        <!-- ========================================= -->
+
+        <div class="card">
+
+            <h2>
+                Informations matériel
+            </h2>
+
+            <div class="info">
+
+                <div class="label">
+                    Type de matériel
+                </div>
+
+                <div
+                    class="value"
+                    id="materiel"
+                ></div>
+
+            </div>
+
+            <div class="info">
+
+                <div class="label">
+                    Marque
+                </div>
+
+                <div
+                    class="value"
+                    id="marque"
+                ></div>
+
+            </div>
+
+            <div class="info">
+
+                <div class="label">
+                    Modèle
+                </div>
+
+                <div
+                    class="value"
+                    id="modele"
+                ></div>
+
+            </div>
+
+            <div class="info">
+
+                <div class="label">
+                    Numéro de série
+                </div>
+
+                <div
+                    class="value"
+                    id="numeroSerie"
+                ></div>
+
+            </div>
+
+            <div class="info">
+
+                <div class="label">
+                    Système d'exploitation
+                </div>
+
+                <div
+                    class="value"
+                    id="systeme"
+                ></div>
+
+            </div>
+
+            <div class="info">
+
+                <div class="label">
+                    Version Office
+                </div>
+
+                <div
+                    class="value"
+                    id="office"
+                ></div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- PROBLÈME -->
+        <!-- ========================================= -->
+
+        <div class="card">
+
+            <h2>
+                Problème
+            </h2>
+
+            <div class="info">
+
+                <div class="label">
+                    Origine du problème
+                </div>
+
+                <div
+                    class="value"
+                    id="origineProbleme"
+                ></div>
+
+            </div>
+
+            <div class="info">
+
+                <div class="label">
+                    Problème signalé
+                </div>
+
+                <div
+                    class="value"
                     id="probleme"
-
-                >
-
-                </div>
+                ></div>
 
             </div>
 
+            <div class="info">
 
-            <!-- STATUT -->
-
-            <!-- STATUT -->
-
-            <div class="card">
-
-                <h2>
-                    Statut actuel
-                </h2>
+                <div class="label">
+                    Intervention demandée
+                </div>
 
                 <div
-                    class="statut"
-                    id="statut"
-                >
-                </div>
+                    class="value"
+                    id="intervention"
+                ></div>
 
             </div>
 
-
-            <!-- MODIFICATION DU STATUT -->
-
-            <div class="card">
-
-                <h2>
-                    Modifier le statut
-                </h2>
+        </div>
 
 
-                <select id="nouveauStatut">
+        <!-- ========================================= -->
+        <!-- DÉPÔT -->
+        <!-- ========================================= -->
 
-                    <option value="En attente">
-                        En attente
-                    </option>
+        <div class="card">
 
-                    <option value="En diagnostic">
-                        En diagnostic
-                    </option>
+            <h2>
+                Dépôt
+            </h2>
 
-                    <option value="En réparation">
-                        En réparation
-                    </option>
+            <div class="info">
 
-                    <option value="Terminé">
-                        Terminé
-                    </option>
-
-                </select>
-
-
-                <button
-                    onclick="modifierStatut()"
-                >
-
-                    Mettre à jour le statut
-
-                </button>
-
+                <div class="label">
+                    Pièces défectueuses
+                </div>
 
                 <div
-                    id="messageStatut"
-                    class="message"
-                >
-
-                </div>
+                    class="value"
+                    id="piecesDefectueuses"
+                ></div>
 
             </div>
 
+            <div class="info">
+
+                <div class="label">
+                    Accessoires déposés
+                </div>
+
+                <div
+                    class="value"
+                    id="accessoires"
+                ></div>
+
+            </div>
+
+            <div class="info">
+
+                <div class="label">
+                    Remarques
+                </div>
+
+                <div
+                    class="value"
+                    id="remarques"
+                ></div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- DIAGNOSTIC -->
+        <!-- ========================================= -->
+
+        <div class="card">
+
+            <h2>
+                Diagnostic
+            </h2>
+
+            <div
+                class="value"
+                id="diagnostic"
+            ></div>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- INFORMATIONS DOSSIER -->
+        <!-- ========================================= -->
+
+        <div class="card">
+
+            <h2>
+                Informations du dossier
+            </h2>
+
+            <div class="info">
+
+                <div class="label">
+                    Date de réception
+                </div>
+
+                <div
+                    class="value"
+                    id="dateReception"
+                ></div>
+
+            </div>
+
+            <div class="info">
+
+                <div class="label">
+                    Réparation urgente
+                </div>
+
+                <div
+                    class="value"
+                    id="urgent"
+                ></div>
+
+            </div>
+
+            <div class="info">
+
+                <div class="label">
+                    Délai estimé
+                </div>
+
+                <div
+                    class="value"
+                    id="delaiEstime"
+                ></div>
+
+            </div>
+
+            <div class="info">
+
+                <div class="label">
+                    Coût estimé
+                </div>
+
+                <div
+                    class="value"
+                    id="coutEstime"
+                ></div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- STATUT -->
+        <!-- ========================================= -->
+
+        <div class="card">
+
+            <h2>
+                Statut actuel
+            </h2>
+
+            <div
+                class="statut"
+                id="statut"
+            ></div>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- MODIFICATION STATUT -->
+        <!-- ========================================= -->
+
+        <div class="card">
+
+            <h2>
+                Modifier le statut
+            </h2>
+
+            <select id="nouveauStatut">
+
+                <option value="En attente">
+                    En attente
+                </option>
+
+                <option value="En diagnostic">
+                    En diagnostic
+                </option>
+
+                <option value="En réparation">
+                    En réparation
+                </option>
+
+                <option value="Terminé">
+                    Terminé
+                </option>
+
+            </select>
+
+            <button
+                id="boutonStatut"
+                onclick="modifierStatut()"
+            >
+                Mettre à jour le statut
+            </button>
+
+            <div
+                id="messageStatut"
+                class="message"
+            ></div>
 
         </div>
 
     </div>
 
-
-    <script>
-
-
-        // ======================================
-
-        // 1. RÉCUPÉRER LE NUMÉRO DEPUIS L'URL
-
-        // ======================================
+</div>
 
 
-        const params = new URLSearchParams(
+<script>
 
-            window.location.search
+    // =====================================================
+    // URL
+    // =====================================================
 
+    const params = new URLSearchParams(
+        window.location.search
+    );
+
+    let reparationActuelle = null;
+
+    const numeroDossier = params.get(
+        "numero"
+    );
+
+    const API_URL =
+        `${window.location.protocol}//`
+        + `${window.location.hostname}:8000`;
+
+
+    // =====================================================
+    // OUTILS
+    // =====================================================
+
+    function valeurOuVide(
+        valeur
+    ) {
+
+        if (
+            valeur === null
+            || valeur === undefined
+            || String(valeur).trim() === ""
+        ) {
+
+            return "";
+
+        }
+
+        return String(
+            valeur
         );
 
-        let reparationActuelle = null;
+    }
 
 
-        const numeroDossier = params.get(
+    function mettreValeur(
+        id,
+        valeur
+    ) {
 
-            "numero"
+        const element =
+            document.getElementById(id);
 
-        );
+        if (!element) {
+
+            console.warn(
+                `Élément HTML introuvable : ${id}`
+            );
+
+            return;
+
+        }
+
+        element.textContent =
+            valeurOuVide(
+                valeur
+            );
+
+    }
 
 
-        if (!numeroDossier) {
+    function formaterDate(
+        date
+    ) {
+
+        if (!date) {
+            return "";
+        }
+
+        try {
+
+            const d =
+                new Date(date);
+
+            if (isNaN(d.getTime())) {
+                return date;
+            }
+
+            return d.toLocaleString(
+                "fr-FR"
+            );
+
+        }
+        catch (_) {
+
+            return date;
+
+        }
+
+    }
+
+
+    function formaterBooléen(
+        valeur
+    ) {
+
+        if (
+            valeur === null
+            || valeur === undefined
+        ) {
+
+            return "";
+
+        }
+
+        return valeur
+            ? "Oui"
+            : "Non";
+
+    }
+
+
+    // =====================================================
+    // CHARGEMENT
+    // =====================================================
+
+    async function chargerReparation() {
+
+        try {
+
+            const response =
+                await fetch(
+                    `${API_URL}/reparations/numero/`
+                    + `${encodeURIComponent(numeroDossier)}`
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Dossier introuvable."
+                );
+
+            }
+
+
+            const data =
+                await response.json();
+
+
+            afficherReparation(
+                data
+            );
+
+        }
+
+        catch (error) {
 
             afficherErreur(
+                error.message
+            );
 
-                "Numéro de dossier absent de l'URL."
+        }
 
+    }
+
+
+    // =====================================================
+    // AFFICHAGE
+    // =====================================================
+
+    function afficherReparation(
+        reparation
+    ) {
+
+        reparationActuelle =
+            reparation;
+
+
+        document
+            .getElementById("loading")
+            .classList
+            .add("hidden");
+
+
+        document
+            .getElementById("content")
+            .classList
+            .remove("hidden");
+
+
+        // =================================================
+        // DOSSIER
+        // =================================================
+
+        mettreValeur(
+            "numeroDossier",
+            reparation.numero_dossier
+        );
+
+
+        // =================================================
+        // CLIENT
+        // =================================================
+
+        const client =
+            reparation.client;
+
+
+        if (client) {
+
+            mettreValeur(
+                "clientNom",
+                client.nom
+            );
+
+            mettreValeur(
+                "clientTelephone",
+                client.telephone
+            );
+
+            mettreValeur(
+                "clientEmail",
+                client.email
+            );
+
+            mettreValeur(
+                "clientAdresse",
+                client.adresse
+            );
+
+        }
+        else {
+
+            mettreValeur(
+                "clientNom",
+                ""
+            );
+
+            mettreValeur(
+                "clientTelephone",
+                ""
+            );
+
+            mettreValeur(
+                "clientEmail",
+                ""
+            );
+
+            mettreValeur(
+                "clientAdresse",
+                ""
             );
 
         }
 
 
+        // =================================================
+        // MATÉRIEL
+        // =================================================
 
-        const API_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
+        mettreValeur(
+            "materiel",
+            reparation.type_materiel
+        );
+
+        mettreValeur(
+            "marque",
+            reparation.marque
+        );
+
+        mettreValeur(
+            "modele",
+            reparation.modele
+        );
+
+        mettreValeur(
+            "numeroSerie",
+            reparation.numero_serie
+        );
+
+        mettreValeur(
+            "systeme",
+            reparation.systeme_exploitation
+        );
+
+        mettreValeur(
+            "office",
+            reparation.version_office
+        );
 
 
-        // IMPORTANT :
+        // =================================================
+        // PROBLÈME
+        // =================================================
 
-        // Remplace 192.168.1.10
+        mettreValeur(
+            "origineProbleme",
+            reparation.origine_probleme
+        );
 
-        // par l'IP réelle de ton PC.
+        mettreValeur(
+            "probleme",
+            reparation.probleme
+        );
 
-
-        // ======================================
-
-        // 3. APPEL À FASTAPI
-
-        // ======================================
-
-
-        async function chargerReparation() {
-
-
-            try {
+        mettreValeur(
+            "intervention",
+            reparation.intervention
+        );
 
 
-                const response = await fetch(
+        // =================================================
+        // DÉPÔT
+        // =================================================
 
-                    `${API_URL}/reparations/numero/${numeroDossier}`
+        mettreValeur(
+            "piecesDefectueuses",
+            reparation.pieces_defectueuses
+        );
 
+        mettreValeur(
+            "accessoires",
+            reparation.accessoires
+        );
+
+        mettreValeur(
+            "remarques",
+            reparation.remarques
+        );
+
+
+        // =================================================
+        // DIAGNOSTIC
+        // =================================================
+
+        mettreValeur(
+            "diagnostic",
+            reparation.diagnostic
+        );
+
+
+        // =================================================
+        // INFORMATIONS
+        // =================================================
+
+        mettreValeur(
+            "dateReception",
+            formaterDate(
+                reparation.date_reception
+            )
+        );
+
+        mettreValeur(
+            "urgent",
+            formaterBooléen(
+                reparation.urgent
+            )
+        );
+
+        mettreValeur(
+            "delaiEstime",
+            reparation.delai_estime
+                ? `${reparation.delai_estime} jour(s)`
+                : ""
+        );
+
+        mettreValeur(
+            "coutEstime",
+            reparation.cout_estime !== null
+                && reparation.cout_estime !== undefined
+                ? `${reparation.cout_estime} DH`
+                : ""
+        );
+
+
+        // =================================================
+        // STATUT
+        // =================================================
+
+        mettreValeur(
+            "statut",
+            reparation.statut
+        );
+
+
+        // =================================================
+        // SYNCHRONISER LE SELECT
+        // =================================================
+
+        const select =
+            document.getElementById(
+                "nouveauStatut"
+            );
+
+
+        if (
+            select
+            && reparation.statut
+        ) {
+
+            const optionExiste =
+                Array.from(
+                    select.options
+                ).some(
+                    option =>
+                        option.value
+                        === reparation.statut
                 );
 
 
-                if (!response.ok) {
+            if (optionExiste) {
 
-                    throw new Error(
-
-                        "Dossier introuvable"
-
-                    );
-
-                }
-
-
-                const data = await response.json();
-
-
-                afficherReparation(data);
-
-
-            }
-
-
-            catch (error) {
-
-
-                afficherErreur(
-
-                    error.message
-
-                );
+                select.value =
+                    reparation.statut;
 
             }
 
         }
 
-
-        // ======================================
-
-        // 4. AFFICHER LES DONNÉES
-
-        // ======================================
-
-        function afficherReparation(reparation) {
-
-            reparationActuelle = reparation;
-
-            document
-                .getElementById("loading")
-                .classList
-                .add("hidden");
-
-            document
-                .getElementById("content")
-                .classList
-                .remove("hidden");
+    }
 
 
-            // ================================
-            // INFORMATIONS PRINCIPALES
-            // ================================
+    // =====================================================
+    // MODIFIER STATUT
+    // =====================================================
 
-            document
-                .getElementById("numeroDossier")
-                .textContent =
-                reparation.numero_dossier || "Non disponible";
+    async function modifierStatut() {
 
+        if (!reparationActuelle) {
 
-            document
-                .getElementById("materiel")
-                .textContent =
-                reparation.type_materiel || "Non spécifié";
-
-
-            document
-                .getElementById("systeme")
-                .textContent =
-                reparation.systeme_exploitation || "Non spécifié";
-
-
-            document
-                .getElementById("office")
-                .textContent =
-                reparation.version_office || "Non spécifié";
-
-
-            document
-                .getElementById("probleme")
-                .textContent =
-                reparation.probleme || "Non spécifié";
-
-
-            document
-                .getElementById("statut")
-                .textContent =
-                reparation.statut || "Non spécifié";
-
-
-            // ================================
-            // CLIENT
-            // ================================
-
-            if (reparation.client) {
-
-                document
-                    .getElementById("clientNom")
-                    .textContent =
-                    reparation.client.nom || "Non disponible";
-
-
-                document
-                    .getElementById("clientTelephone")
-                    .textContent =
-                    reparation.client.telephone || "Non disponible";
-
-            } else {
-
-                document
-                    .getElementById("clientNom")
-                    .textContent =
-                    "Client non disponible";
-
-
-                document
-                    .getElementById("clientTelephone")
-                    .textContent =
-                    "Non disponible";
-
-            }
+            return;
 
         }
-        //===================================
-        //===================================
-        
-        async function modifierStatut() {
 
 
-            if (!reparationActuelle) {
-
-                return;
-
-            }
-
-
-            const nouveauStatut =
-
-                document
-
-                .getElementById(
-
-                    "nouveauStatut"
-
-                )
-
-                .value;
+        const select =
+            document.getElementById(
+                "nouveauStatut"
+            );
 
 
-            const message =
-
-                document
-
-                .getElementById(
-
-                    "messageStatut"
-
-                );
+        const message =
+            document.getElementById(
+                "messageStatut"
+            );
 
 
-            try {
+        const bouton =
+            document.getElementById(
+                "boutonStatut"
+            );
 
 
-                const response = await fetch(
+        if (!select || !message) {
+
+            return;
+
+        }
+
+
+        const nouveauStatut =
+            select.value;
+
+
+        message.textContent =
+            "Mise à jour en cours...";
+
+        message.style.background =
+            "#f3f4f6";
+
+        message.style.color =
+            "#374151";
+
+
+        if (bouton) {
+
+            bouton.disabled =
+                true;
+
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
 
                     `${API_URL}/reparations/`
-
                     + `${reparationActuelle.id}/statut`,
 
                     {
 
                         method: "PATCH",
 
-
                         headers: {
 
                             "Content-Type":
-
                                 "application/json"
 
                         },
 
-
                         body: JSON.stringify({
 
-                        nouveau_statut: nouveauStatut,
+                            nouveau_statut:
+                                nouveauStatut,
 
-                        utilisateur_id: 1
+                            utilisateur_id:
+                                1
 
-                    })
+                        })
 
                     }
 
                 );
 
 
-                if (!response.ok) {
+            if (!response.ok) {
+
+                let erreur =
+                    "Erreur lors de la mise à jour.";
+
+
+                try {
 
                     const error =
-
                         await response.json();
 
-
-                    throw new Error(
-
+                    erreur =
                         error.detail
+                        || erreur;
 
-                    );
-
+                }
+                catch (_) {
                 }
 
 
-                const data =
-
-                    await response.json();
-
-
-                reparationActuelle = data;
-
-
-                document
-
-                    .getElementById(
-
-                        "statut"
-
-                    )
-
-                    .textContent =
-
-                    data.statut;
-
-
-                message.textContent =
-
-                    "Statut mis à jour avec succès";
-
-
-                message.style.background =
-
-                    "#dcfce7";
-
-
-                message.style.color =
-
-                    "#166534";
-
+                throw new Error(
+                    erreur
+                );
 
             }
 
 
-            catch (error) {
+            const data =
+                await response.json();
 
 
-                message.textContent =
-
-                    error.message;
-
-
-                message.style.background =
-
-                    "#fee2e2";
+            reparationActuelle =
+                data;
 
 
-                message.style.color =
+            // Réafficher toutes les données
+            // avec la nouvelle réponse backend
 
-                    "#991b1b";
+            afficherReparation(
+                data
+            );
+
+
+            message.textContent =
+                "Statut mis à jour avec succès.";
+
+            message.style.background =
+                "#dcfce7";
+
+            message.style.color =
+                "#166534";
+
+        }
+
+        catch (error) {
+
+            message.textContent =
+                error.message;
+
+            message.style.background =
+                "#fee2e2";
+
+            message.style.color =
+                "#991b1b";
+
+        }
+
+        finally {
+
+            if (bouton) {
+
+                bouton.disabled =
+                    false;
 
             }
 
         }
 
-        // ======================================
-
-        // 5. AFFICHER UNE ERREUR
-
-        // ======================================
+    }
 
 
-        function afficherErreur(
+    // =====================================================
+    // ERREUR
+    // =====================================================
 
-            message
+    function afficherErreur(
+        message
+    ) {
 
-        ) {
-
-
-            document
-
-                .getElementById(
-
-                    "loading"
-
-                )
-
-                .classList
-
-                .add(
-
-                    "hidden"
-
-                );
+        document
+            .getElementById("loading")
+            .classList
+            .add("hidden");
 
 
-            const error = document
-
-                .getElementById(
-
-                    "error"
-
-                );
+        const error =
+            document.getElementById(
+                "error"
+            );
 
 
-            error.textContent = message;
+        error.textContent =
+            message;
 
 
-            error.classList
+        error.classList
+            .remove("hidden");
 
-                .remove(
-
-                    "hidden"
-
-                );
-
-        }
+    }
 
 
-        // ======================================
+    // =====================================================
+    // DÉMARRAGE
+    // =====================================================
 
-        // 6. LANCER LE CHARGEMENT
+    if (!numeroDossier) {
 
-        // ======================================
+        afficherErreur(
+            "Numéro de dossier absent de l'URL."
+        );
 
+    }
+    else {
 
-        if (numeroDossier) {
+        chargerReparation();
 
-            chargerReparation();
+    }
 
-        }
-
-
-    </script>
-
+</script>
 
 </body>
 

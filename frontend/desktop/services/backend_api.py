@@ -184,4 +184,62 @@ class BackendAPI:
             )
 
         return data
+
+        # =========================================================
+    
+        # =========================================================
+    
+    # DASHBOARD - STATISTIQUES
+    # =========================================================
+    @staticmethod
+    def get_dashboard_stats(periode="30j"):
+
+        response = requests.get(
+            f"{BackendAPI.BASE_URL}/dashboard/stats",
+            params={
+                "periode": periode
+            },
+            timeout=BackendAPI.REQUEST_TIMEOUT
+        )
+
+        response.raise_for_status()
+
+        data = response.json()
+
+        if not isinstance(data, dict):
+            raise ValueError(
+                "Réponse statistiques dashboard invalide."
+            )
+
+        return data
+
+    # ENREGISTRER FACTURE APRES VALIDATION
+    # =========================================================
+
+    @staticmethod
+    def enregistrer_facture(data):
+
+        if not isinstance(data, dict):
+
+            raise ValueError(
+                "Les données de facture sont invalides."
+            )
+
+        response = requests.post(
+            f"{BackendAPI.BASE_URL}/factures",
+            json=data,
+            timeout=BackendAPI.REQUEST_TIMEOUT
+        )
+
+        response.raise_for_status()
+
+        resultat = response.json()
+
+        if not isinstance(resultat, dict):
+
+            raise ValueError(
+                "Réponse d'enregistrement invalide."
+            )
+
+        return resultat
     

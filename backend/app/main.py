@@ -12,7 +12,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers.ocr import router as ocr_router
 from app.routers.document import router as document_router
-
+from app.routers import facture
+from app.routers.dashboard import router as dashboard_router
 
 app = FastAPI(
     title="Repair Platform API"
@@ -63,4 +64,12 @@ app.include_router(
 
 app.include_router(
     ocr_router
+)
+
+app.include_router(
+    facture.router
+)
+
+app.include_router(
+    dashboard_router
 )

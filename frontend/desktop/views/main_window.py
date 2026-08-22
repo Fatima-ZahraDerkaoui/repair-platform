@@ -212,6 +212,25 @@ class MainWindow(QMainWindow):
                 page
             )
 
+            # Rafraîchir les données lorsqu'on ouvre
+            # les pages concernées.
+
+            if page_name == "dashboard":
+
+                if hasattr(
+                    self.dashboard_page,
+                    "load_data"
+                ):
+                    self.dashboard_page.load_data()
+
+            elif page_name == "dossiers":
+
+                if hasattr(
+                    self.dossiers_page,
+                    "load_dossiers"
+                ):
+                    self.dossiers_page.load_dossiers()
+
     # =========================================================
     # FACTURE VALIDEE
     # =========================================================

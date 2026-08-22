@@ -1,6 +1,4 @@
 from datetime import datetime
-from sqlalchemy import Enum
-from app.core.status import StatutReparation
 
 from sqlalchemy import (
     String,
@@ -25,7 +23,13 @@ class Reparation(Base):
 
     __tablename__ = "reparation"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    # =========================================================
+    # IDENTIFICATION
+    # =========================================================
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True
+    )
 
     client_id: Mapped[int] = mapped_column(
         ForeignKey("client.id")
@@ -40,8 +44,27 @@ class Reparation(Base):
         default=datetime.utcnow
     )
 
+    # =========================================================
+    # MATÉRIEL
+    # =========================================================
+
     type_materiel: Mapped[str | None] = mapped_column(
         String(50),
+        nullable=True
+    )
+
+    marque: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True
+    )
+
+    modele: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True
+    )
+
+    numero_serie: Mapped[str | None] = mapped_column(
+        String(150),
         nullable=True
     )
 
@@ -54,6 +77,15 @@ class Reparation(Base):
         String(50),
         nullable=True
     )
+
+    mot_de_passe_pc: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True
+    )
+
+    # =========================================================
+    # PROBLÈME
+    # =========================================================
 
     origine_probleme: Mapped[str | None] = mapped_column(
         String(50),
@@ -75,11 +107,24 @@ class Reparation(Base):
         nullable=True
     )
 
-    pieces_defectueuses: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pieces_defectueuses: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
 
-    remarques: Mapped[str | None] = mapped_column(Text, nullable=True)
+    accessoires: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
 
-    mot_de_passe_pc: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    remarques: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
+
+    # =========================================================
+    # ÉTAT
+    # =========================================================
 
     urgent: Mapped[bool] = mapped_column(
         Boolean,
@@ -96,23 +141,57 @@ class Reparation(Base):
         default="En attente"
     )
 
+    # =========================================================
+    # DOSSIER
+    # =========================================================
+
     numero_dossier: Mapped[str | None] = mapped_column(
         String(30),
         unique=True,
         nullable=True
     )
 
-    qr_code: Mapped[str | None] = mapped_column(String(255))
+    qr_code: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True
+    )
 
-    texte_ocr: Mapped[str | None] = mapped_column(Text)
+    texte_ocr: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
 
-    delai_estime: Mapped[int | None] = mapped_column(Integer)
+    # =========================================================
+    # ESTIMATION
+    # =========================================================
 
-    cout_estime: Mapped[float | None] = mapped_column(Numeric(10,2))
+    delai_estime: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True
+    )
 
-    cout_reel: Mapped[float | None] = mapped_column(Numeric(10,2))
+    cout_estime: Mapped[float | None] = mapped_column(
+        Numeric(10, 2),
+        nullable=True
+    )
 
-    date_fin: Mapped[datetime | None] = mapped_column(DateTime)
+    # =========================================================
+    # FIN DE RÉPARATION
+    # =========================================================
+
+    cout_reel: Mapped[float | None] = mapped_column(
+        Numeric(10, 2),
+        nullable=True
+    )
+
+    date_fin: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True
+    )
+
+    # =========================================================
+    # RELATIONS
+    # =========================================================
 
     client = relationship(
         "Client",
@@ -135,14 +214,4 @@ class Reparation(Base):
         back_populates="reparation",
         cascade="all, delete-orphan"
     )
-'''
-    notifications = relationship(
-        "Notification",
-        back_populates="reparation"
-    )
-
-    statut: Mapped[StatutReparation] = mapped_column(
-        Enum(StatutReparation),
-        default=StatutReparation.EN_ATTENTE
-    )
-'''
+    

@@ -20,10 +20,12 @@ from PySide6.QtCore import (
 )
 import socket
 import qrcode
-
+import traceback
+import requests
 from services.backend_api import BackendAPI
 from services.ocr_worker import OCRWorker
 from services.scan_worker import ScanWorker
+from datetime import datetime
 
 class FacturesPage(QWidget):
 
@@ -584,24 +586,344 @@ class FacturesPage(QWidget):
             0
         )
 
-    # =========================================================
-    # VALIDATION
-    # =========================================================
+    def prepare_facture_for_api(self, data):
+
+        if not isinstance(data, dict):
+
+            raise ValueError(
+                "Les données de facture sont invalides."
+            )
+
+        # =====================================================
+        # FOURNISSEUR
+        # =====================================================
+
+        fournisseur = data.get(
+            "fournisseur"
+        )
+
+        fournisseur_id = None
+
+        fournisseur_data = None
+
+        if isinstance(fournisseur, dict):
+
+            # -------------------------------------------------
+            # ID si déjà existant
+            # -------------------------------------------------
+
+            fournisseur_id = fournisseur.get(
+                "id"
+            )
+
+            # -------------------------------------------------
+            # IMPORTANT :
+            # conserver toutes les informations OCR
+            # pour permettre au backend de créer le fournisseur
+            # -------------------------------------------------
+
+            fournisseur_data = {
+                "name": fournisseur.get("name")
+                    or fournisseur.get("nom"),
+
+                "address": fournisseur.get("address")
+                    or fournisseur.get("adresse"),
+
+                "city": fournisseur.get("city")
+                    or fournisseur.get("ville"),
+
+                "country": fournisseur.get("country")
+                    or fournisseur.get("pays"),
+
+                "phone": fournisseur.get("phone")
+                    or fournisseur.get("telephone"),
+
+                "fax": fournisseur.get("fax"),
+
+                "email": fournisseur.get("email"),
+
+                "website": fournisseur.get("website")
+                    or fournisseur.get("site_web"),
+
+                "ice": fournisseur.get("ice"),
+
+                "if": fournisseur.get("if")
+                    or fournisseur.get("identifiant_fiscal"),
+
+                "rc": fournisseur.get("rc"),
+
+                "patente": fournisseur.get("patente"),
+
+                "cnss": fournisseur.get("cnss"),
+
+                "rib": fournisseur.get("rib")
+            }
+
+            # -------------------------------------------------
+            # Supprimer les valeurs None / vides
+            # -------------------------------------------------
+
+            fournisseur_data = {
+                key: value
+                for key, value in fournisseur_data.items()
+                if value is not None
+                and str(value).strip() != ""
+            }
+
+            # -------------------------------------------------
+            # Si aucun ID mais aucune donnée exploitable
+            # -------------------------------------------------
+
+            if not fournisseur_data:
+
+                fournisseur_data = None
+
+        # =====================================================
+        # DATE
+        # =====================================================
+
+        date_facture = data.get(
+            "date"
+        )
+
+        # =====================================================
+        # ARTICLES
+        # =====================================================
+
+        articles = data.get(
+            "articles",
+            []
+        )
+
+        if not isinstance(articles, list):
+
+            articles = []
+
+        lignes = []
+
+        for article in articles:
+
+            if not isinstance(article, dict):
+                continue
+
+            ligne = {
+
+                "designation": article.get(
+                    "designation"
+                ),
+
+                "reference": article.get(
+                    "reference"
+                ),
+
+                "quantite": self.to_decimal(
+                    article.get("quantite")
+                ),
+
+                "prix_unitaire": self.to_decimal(
+                    article.get("prix_unitaire")
+                ),
+
+                "total": self.to_decimal(
+                    article.get("total")
+                )
+            }
+
+            # -------------------------------------------------
+            # STOCK
+            # -------------------------------------------------
+
+            stock_id = article.get(
+                "stock_id"
+            )
+
+            if stock_id is not None:
+
+                ligne["stock_id"] = stock_id
+
+            lignes.append(
+                ligne
+            )
+
+        # =====================================================
+        # DONNEES FINALES
+        # =====================================================
+
+        resultat = {
+
+            # -------------------------------------------------
+            # ID fournisseur existant
+            # -------------------------------------------------
+
+            "fournisseur_id": fournisseur_id,
+
+            # -------------------------------------------------
+            # IMPORTANT :
+            # données fournisseur OCR
+            # -------------------------------------------------
+
+            "fournisseur": fournisseur_data,
+
+            # -------------------------------------------------
+            # FACTURE
+            # -------------------------------------------------
+
+            "numero": self.clean_value(
+                data.get("numero")
+            ),
+
+            "date_facture": self.convert_date(
+                date_facture
+            ),
+
+            "total_ht": self.to_decimal(
+                data.get("total_ht")
+            ),
+
+            "total_tva": self.to_decimal(
+                data.get("total_tva")
+            ),
+
+            "total_ttc": self.to_decimal(
+                data.get("total_ttc")
+            ),
+
+            "statut": "A_VALIDER",
+
+            "texte_ocr": data.get(
+                "texte_ocr"
+            ),
+
+            "chemin_document": data.get(
+                "chemin_document"
+            ),
+
+            "lignes": lignes
+        }
+
+        # =====================================================
+        # DEBUG
+        # =====================================================
+
+        print()
+        print("=" * 80)
+        print("DONNEES FOURNISSEUR PREPAREES POUR API")
+        print("=" * 80)
+
+        print(
+            "Fournisseur ID :",
+            fournisseur_id
+        )
+
+        print(
+            "Fournisseur data :",
+            fournisseur_data
+        )
+
+        print("=" * 80)
+
+        return resultat
 
     def validate_facture(self, data):
 
         self.facture_data = data
 
-        self.facture_validated.emit(
-            data
-        )
+        try:
 
-    # =========================================================
-    # SCAN TELEPHONE
-    # =========================================================
-    # =========================================================
-    # SCAN TELEPHONE
-    # =========================================================
+            # =====================================================
+            # CONVERTIR LES DONNEES UI -> API
+            # =====================================================
+
+            facture_api = self.prepare_facture_for_api(
+                data
+            )
+
+            print()
+            print("=" * 80)
+            print("ENREGISTREMENT FACTURE")
+            print("=" * 80)
+            print(facture_api)
+            print("=" * 80)
+
+            # =====================================================
+            # ENREGISTRER DANS LA BASE
+            # =====================================================
+
+            resultat = BackendAPI.enregistrer_facture(
+                facture_api
+            )
+
+            print()
+            print("=" * 80)
+            print("FACTURE ENREGISTREE")
+            print("=" * 80)
+            print(resultat)
+            print("=" * 80)
+
+            # =====================================================
+            # CONFIRMATION
+            # =====================================================
+
+            QMessageBox.information(
+                self,
+                "Facture enregistrée",
+                (
+                    "La facture a été validée et "
+                    "enregistrée avec succès."
+                )
+            )
+
+            # =====================================================
+            # SIGNAL VERS LE PARENT
+            # =====================================================
+
+            self.facture_validated.emit(
+                resultat
+            )
+
+        except requests.exceptions.HTTPError as e:
+
+            detail = ""
+
+            try:
+
+                if e.response is not None:
+
+                    response_data = e.response.json()
+
+                    detail = response_data.get(
+                        "detail",
+                        str(response_data)
+                    )
+
+            except Exception:
+
+                detail = str(e)
+
+            QMessageBox.critical(
+                self,
+                "Erreur d'enregistrement",
+                (
+                    "Impossible d'enregistrer la facture.\n\n"
+                    f"{detail}"
+                )
+            )
+
+            traceback.print_exc()
+
+        except Exception as e:
+
+            QMessageBox.critical(
+                self,
+                "Erreur d'enregistrement",
+                (
+                    "Une erreur est survenue lors "
+                    "de l'enregistrement.\n\n"
+                    f"{str(e)}"
+                )
+            )
+
+            traceback.print_exc()
 
     def scanner_telephone(self):
 
@@ -1102,3 +1424,116 @@ class FacturesPage(QWidget):
         self.scroll_area.verticalScrollBar().setValue(
             0
         )
+
+    # =========================================================
+    # NETTOYER VALEUR
+    # =========================================================
+
+    @staticmethod
+    def clean_value(value):
+
+        if value is None:
+            return None
+
+        value = str(value).strip()
+
+        if not value:
+            return None
+
+        return value
+
+
+    # =========================================================
+    # DECIMAL
+    # =========================================================
+
+    @staticmethod
+    def to_decimal(value):
+
+        if value is None:
+            return None
+
+        if isinstance(value, (int, float)):
+
+            return value
+
+        value = str(value).strip()
+
+        if not value:
+            return None
+
+        # -----------------------------------------------------
+        # FORMAT FRANCAIS
+        # -----------------------------------------------------
+
+        value = value.replace(
+            "\u00a0",
+            ""
+        )
+
+        value = value.replace(
+            " ",
+            ""
+        )
+
+        # 1.250,50 -> 1250.50
+        if "," in value:
+
+            value = value.replace(
+                ".",
+                ""
+            )
+
+            value = value.replace(
+                ",",
+                "."
+            )
+
+        try:
+
+            return float(value)
+
+        except ValueError:
+
+            return None
+
+
+    # =========================================================
+    # DATE
+    # =========================================================
+
+    @staticmethod
+    def convert_date(value):
+
+        if value is None:
+            return None
+
+        value = str(value).strip()
+
+        if not value:
+            return None
+
+        formats = [
+            "%d/%m/%Y",
+            "%d-%m-%Y",
+            "%Y-%m-%d"
+        ]
+
+        for fmt in formats:
+
+            try:
+
+                date = datetime.strptime(
+                    value,
+                    fmt
+                )
+
+                return date.strftime(
+                    "%Y-%m-%dT%H:%M:%S"
+                )
+
+            except ValueError:
+
+                continue
+
+        return None
