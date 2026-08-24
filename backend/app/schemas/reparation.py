@@ -8,6 +8,7 @@ from pydantic import BaseModel
 # =========================================================
 # BASE
 # =========================================================
+
 class ReparationBase(BaseModel):
 
     client_id: int
@@ -46,6 +47,7 @@ class ReparationBase(BaseModel):
 
     resolu: bool = False
 
+
 # =========================================================
 # CRÉATION
 # =========================================================
@@ -61,6 +63,42 @@ class ReparationCreate(ReparationBase):
 
 class ReparationUpdate(BaseModel):
 
+    # -----------------------------------------------------
+    # CLIENT
+    # -----------------------------------------------------
+
+    client_nom: Optional[str] = None
+
+    client_telephone: Optional[str] = None
+
+    client_email: Optional[str] = None
+
+    # -----------------------------------------------------
+    # MATÉRIEL
+    # -----------------------------------------------------
+
+    type_materiel: Optional[str] = None
+
+    marque: Optional[str] = None
+
+    modele: Optional[str] = None
+
+    numero_serie: Optional[str] = None
+
+    systeme_exploitation: Optional[str] = None
+
+    version_office: Optional[str] = None
+
+    mot_de_passe_pc: Optional[str] = None
+
+    origine_probleme: Optional[str] = None
+
+    # -----------------------------------------------------
+    # RÉPARATION
+    # -----------------------------------------------------
+
+    probleme: Optional[str] = None
+
     diagnostic: Optional[str] = None
 
     intervention: Optional[str] = None
@@ -71,7 +109,21 @@ class ReparationUpdate(BaseModel):
 
     remarques: Optional[str] = None
 
-    cout_reel: Optional[Decimal] = None
+    # -----------------------------------------------------
+    # STATUT
+    # -----------------------------------------------------
+
+    statut: Optional[str] = None
+
+    resolu: Optional[bool] = None
+
+    urgent: Optional[bool] = None
+
+    # -----------------------------------------------------
+    # FINANCES
+    # -----------------------------------------------------
+
+    cout_reel: Optional[float] = None
 
     date_fin: Optional[datetime] = None
 
@@ -104,13 +156,13 @@ class ClientInfo(BaseModel):
     adresse: Optional[str] = None
 
     class Config:
-
         from_attributes = True
 
 
 # =========================================================
 # RÉPONSE
 # =========================================================
+
 class ReparationResponse(BaseModel):
 
     id: int

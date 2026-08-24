@@ -1,6 +1,3 @@
-
-
-
 from fastapi import (
     APIRouter,
     Depends,
@@ -27,20 +24,25 @@ from app.models.reparation import (
 )
 
 
+from app.models.reparation_piece import (
+    ReparationPiece
+)
+
+
 from app.schemas.reparation import (
     ReparationCreate,
     ReparationResponse,
+    ReparationUpdate,
     StatutUpdate
 )
-
 
 from app.crud.reparation import (
     create_reparation,
     get_reparations,
     get_reparation,
-    get_reparation_by_numero
+    update_reparation,
+    delete_reparation
 )
-
 
 from app.services.statut import (
     changer_statut
@@ -174,7 +176,6 @@ def read_one(
 
     return reparation
 
-
 # =====================================================
 # MODIFIER STATUT
 # =====================================================
@@ -212,10 +213,6 @@ def modifier_statut(
             detail="Réparation introuvable"
         )
 
-    # =================================================
-    # RECHARGER LE CLIENT
-    # =================================================
-
     reparation = (
         db.query(Reparation)
         .options(
@@ -248,7 +245,7 @@ def ajouter_piece(
 
     try:
 
-        return utiliser_piece(
+        piece = utiliser_piece(
             db=db,
             reparation_id=reparation_id,
             piece_id=data.piece_id,
@@ -261,6 +258,70 @@ def ajouter_piece(
             status_code=400,
             detail=str(error)
         )
+
+    # Recharger la pièce avec ses informations
+    piece = (
+        db.query(ReparationPiece)
+        .options(
+            joinedload(
+                ReparationPiece.piece
+            )
+        )
+        .filter(
+            ReparationPiece.id == piece.id
+        )
+        .first()
+    )
+
+    return piece
+
+
+# =====================================================
+# LIRE LES PIÈCES UTILISÉES
+# =====================================================
+
+@router.get(
+    "/{reparation_id}/pieces",
+    response_model=list[ReparationPieceResponse]
+)
+def lire_pieces(
+    reparation_id: int,
+    db: Session = Depends(get_db)
+):
+
+    reparation = (
+        db.query(Reparation)
+        .filter(
+            Reparation.id == reparation_id
+        )
+        .first()
+    )
+
+    if not reparation:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Réparation introuvable"
+        )
+
+    pieces = (
+        db.query(ReparationPiece)
+        .options(
+            joinedload(
+                ReparationPiece.piece
+            )
+        )
+        .filter(
+            ReparationPiece.reparation_id
+            == reparation_id
+        )
+        .order_by(
+            ReparationPiece.id.asc()
+        )
+        .all()
+    )
+
+    return pieces
 
 
 # =====================================================
@@ -327,3 +388,82 @@ def generer_fiche(
             f"{reparation.numero_dossier}.pdf"
         )
     )
+
+# =====================================================
+# MODIFIER LE DOSSIER
+# =====================================================
+
+@router.patch(
+    "/{reparation_id}",
+    response_model=ReparationResponse
+)
+def modifier_dossier(
+    reparation_id: int,
+    data: ReparationUpdate,
+    db: Session = Depends(get_db)
+):
+
+    reparation = update_reparation(
+        db=db,
+        id=reparation_id,
+        data=data
+    )
+
+    if not reparation:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Réparation introuvable"
+        )
+
+    return reparation
+
+
+# =====================================================
+# SUPPRIMER LE DOSSIER
+# =====================================================
+
+@router.delete(
+    "/{reparation_id}"
+)
+def supprimer_dossier(
+    reparation_id: int,
+    db: Session = Depends(get_db)
+):
+
+    try:
+
+        reparation = delete_reparation(
+            db=db,
+            id=reparation_id
+        )
+
+        if not reparation:
+
+            raise HTTPException(
+                status_code=404,
+                detail="Dossier de réparation introuvable."
+            )
+
+        return {
+            "message": "Dossier supprimé avec succès.",
+            "id": reparation_id
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as error:
+
+        print(
+            f"ERREUR SUPPRESSION DOSSIER {reparation_id}: "
+            f"{error}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Impossible de supprimer le dossier."
+            )
+        )
+    

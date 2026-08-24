@@ -1,7 +1,13 @@
 from decimal import Decimal
 
+from typing import Optional
+
 from pydantic import BaseModel
 
+
+# =========================================================
+# CREATION
+# =========================================================
 
 class ReparationPieceCreate(BaseModel):
 
@@ -9,6 +15,33 @@ class ReparationPieceCreate(BaseModel):
 
     quantite: int
 
+
+# =========================================================
+# INFORMATIONS PIECE
+# =========================================================
+
+class PieceInfo(BaseModel):
+
+    id: int
+
+    nom_piece: str
+
+    reference: Optional[str] = None
+
+    categorie: Optional[str] = None
+
+    quantite: int
+
+    prix_unitaire: Optional[Decimal] = None
+
+    class Config:
+
+        from_attributes = True
+
+
+# =========================================================
+# REPONSE
+# =========================================================
 
 class ReparationPieceResponse(BaseModel):
 
@@ -22,6 +55,9 @@ class ReparationPieceResponse(BaseModel):
 
     prix_utilise: Decimal
 
+    piece: Optional[PieceInfo] = None
+
     class Config:
 
         from_attributes = True
+        

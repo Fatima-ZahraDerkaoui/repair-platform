@@ -9,6 +9,10 @@ from app.crud.historique_statut import (
 )
 
 
+# =========================================================
+# STATUTS OFFICIELS
+# =========================================================
+
 STATUTS_AUTORISES = [
 
     "En attente",
@@ -22,6 +26,10 @@ STATUTS_AUTORISES = [
 ]
 
 
+# =========================================================
+# CHANGER STATUT
+# =========================================================
+
 def changer_statut(
 
     db: Session,
@@ -34,43 +42,72 @@ def changer_statut(
 
 ):
 
+    # -----------------------------------------------------
+    # Vérification
+    # -----------------------------------------------------
+
+    nouveau_statut = (
+        nouveau_statut
+        or ""
+    ).strip()
+
     if nouveau_statut not in STATUTS_AUTORISES:
 
         raise ValueError(
-
-            "Statut invalide"
-
+            "Statut invalide. "
+            "Valeurs autorisées : "
+            + ", ".join(
+                STATUTS_AUTORISES
+            )
         )
 
+    # -----------------------------------------------------
+    # Récupérer réparation
+    # -----------------------------------------------------
 
     reparation = get_reparation(
-
         db,
-
         reparation_id
-
     )
-
 
     if not reparation:
 
         return None
 
+    ancien_statut = (
+        reparation.statut
+        or "En attente"
+    )
 
-    ancien_statut = reparation.statut
-
+    # -----------------------------------------------------
+    # Même statut
+    # -----------------------------------------------------
 
     if ancien_statut == nouveau_statut:
 
         raise ValueError(
-
             "Le nouveau statut est identique à l'ancien"
-
         )
 
+    # -----------------------------------------------------
+    # Modifier
+    # -----------------------------------------------------
 
-    reparation.statut = nouveau_statut
+    reparation.statut = (
+        nouveau_statut
+    )
 
+    # -----------------------------------------------------
+    # Synchroniser resolu
+    # -----------------------------------------------------
+
+    reparation.resolu = (
+        nouveau_statut == "Terminé"
+    )
+
+    # -----------------------------------------------------
+    # Historique
+    # -----------------------------------------------------
 
     create_historique(
 
@@ -86,10 +123,14 @@ def changer_statut(
 
     )
 
+    # -----------------------------------------------------
+    # Commit
+    # -----------------------------------------------------
 
     db.commit()
 
-    db.refresh(reparation)
-
+    db.refresh(
+        reparation
+    )
 
     return reparation

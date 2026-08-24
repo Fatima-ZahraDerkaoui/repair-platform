@@ -50,3 +50,4 @@ class ReparationPiece(Base):
         "Stock",
         back_populates="reparations"
     )
+    
