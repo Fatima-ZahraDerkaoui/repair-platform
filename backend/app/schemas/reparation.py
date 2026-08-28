@@ -122,6 +122,7 @@ class ReparationUpdate(BaseModel):
     # -----------------------------------------------------
     # FINANCES
     # -----------------------------------------------------
+    cout_estime: Optional[float] = None
 
     cout_reel: Optional[float] = None
 

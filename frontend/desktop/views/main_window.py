@@ -23,6 +23,7 @@ class MainWindow(QMainWindow):
             1400,
             850
         )
+        self.showMaximized()
 
         self.init_ui()
 

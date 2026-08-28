@@ -9,668 +9,266 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSizePolicy
 )
-
-from PySide6.QtCore import Qt
-
-import requests
+from PySide6.QtCore import Qt, QThread, Signal
 import os
 import tempfile
+from services.backend_api import BackendAPI
 
+
+# ============================================================
+# WORKER ASYNCHRONE DÉLIVRANCE PDF
+# ============================================================
+
+class DownloadPDFWorker(QThread):
+    finished_success = Signal(str)
+    error_occurred = Signal(str)
+
+    def __init__(self, reparation_id, numero_dossier, parent=None):
+        super().__init__(parent)
+        self.reparation_id = reparation_id
+        self.numero_dossier = numero_dossier
+
+    def run(self):
+        try:
+            import requests
+
+            url = f"{BackendAPI.BASE_URL}/reparations/{self.reparation_id}/fiche"
+            response = requests.get(url, timeout=30)
+
+            if response.status_code != 200:
+                self.error_occurred.emit(f"Impossible de générer la fiche PDF. Code HTTP : {response.status_code}")
+                return
+
+            dossier_temp = tempfile.gettempdir()
+            nom_fichier = self.numero_dossier if self.numero_dossier else f"reparation_{self.reparation_id}"
+            chemin_pdf = os.path.join(dossier_temp, f"{nom_fichier}.pdf")
+
+            with open(chemin_pdf, "wb") as f:
+                f.write(response.content)
+
+            self.finished_success.emit(chemin_pdf)
+
+        except Exception as e:
+            self.error_occurred.emit(str(e))
+
+
+# ============================================================
+# FENÊTRE DE CONFIRMATION DU DOSSIER
+# ============================================================
 
 class ConfirmationReparation(QWidget):
 
-    def __init__(
-        self,
-        data,
-        parent=None
-    ):
-
+    def __init__(self, data, parent=None):
         super().__init__(parent)
-
-        self.data = data
+        self.data = data or {}
         self.parent_window = parent
+        self.pdf_worker = None
 
-        self.setWindowTitle(
-            "Dossier de réparation créé"
-        )
-
-        # =====================================================
-        # FENÊTRE
-        # =====================================================
-
-        self.setMinimumSize(
-            650,
-            650
-        )
-
-        self.resize(
-            800,
-            750
-        )
-
-        self.setSizePolicy(
-            QSizePolicy.Expanding,
-            QSizePolicy.Expanding
-        )
+        self.setWindowTitle("Dossier de réparation créé avec succès")
+        self.setMinimumSize(680, 680)
+        self.resize(850, 750)
 
         self.init_ui()
-
-        # Adapter la fenêtre à l'écran disponible
         self.ajuster_fenetre()
 
-    # =========================================================
-    # ADAPTATION DE LA FENÊTRE
-    # =========================================================
-
     def ajuster_fenetre(self):
-
         try:
-
             screen = self.screen()
-
             if screen:
-
                 available = screen.availableGeometry()
-
-                largeur = min(
-                    850,
-                    available.width() - 80
-                )
-
-                hauteur = min(
-                    800,
-                    available.height() - 80
-                )
-
-                self.resize(
-                    largeur,
-                    hauteur
-                )
-
-                self.move(
-                    available.center()
-                    - self.rect().center()
-                )
-
+                largeur = min(850, available.width() - 80)
+                hauteur = min(780, available.height() - 80)
+                self.resize(largeur, hauteur)
+                self.move(available.center() - self.rect().center())
         except Exception:
             pass
 
-    # =========================================================
-    # INTERFACE
-    # =========================================================
-
     def init_ui(self):
-
-        layout_principal = QVBoxLayout(self)
-
-        layout_principal.setContentsMargins(
-            0,
-            0,
-            0,
-            0
-        )
-
-        # =====================================================
-        # SCROLL
-        # =====================================================
-
-        scroll = QScrollArea()
-
-        scroll.setWidgetResizable(
-            True
-        )
-
-        scroll.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarAlwaysOff
-        )
-
-        scroll.setVerticalScrollBarPolicy(
-            Qt.ScrollBarAsNeeded
-        )
-
-        # =====================================================
-        # CONTENU
-        # =====================================================
-
-        contenu = QWidget()
-
-        layout = QVBoxLayout(
-            contenu
-        )
-
-        layout.setContentsMargins(
-            30,
-            25,
-            30,
-            25
-        )
-
-        layout.setSpacing(
-            15
-        )
-
-        # =====================================================
-        # EN-TÊTE
-        # =====================================================
-
-        titre = QLabel(
-            "✓ DOSSIER CRÉÉ AVEC SUCCÈS"
-        )
-
-        titre.setAlignment(
-            Qt.AlignCenter
-        )
-
-        titre.setStyleSheet(
-            """
-            QLabel {
-                font-size: 22px;
-                font-weight: bold;
-                color: #166534;
-                padding: 10px;
-            }
-            """
-        )
-
-        layout.addWidget(
-            titre
-        )
-
-        sous_titre = QLabel(
-            "La réception a été enregistrée dans le système."
-        )
-
-        sous_titre.setAlignment(
-            Qt.AlignCenter
-        )
-
-        sous_titre.setWordWrap(
-            True
-        )
-
-        sous_titre.setStyleSheet(
-            """
-            QLabel {
-                color: #64748b;
-                font-size: 14px;
-            }
-            """
-        )
-
-        layout.addWidget(
-            sous_titre
-        )
-
-        # =====================================================
-        # NUMÉRO DOSSIER
-        # =====================================================
-
-        numero_frame = QFrame()
-
-        numero_frame.setSizePolicy(
-            QSizePolicy.Expanding,
-            QSizePolicy.Minimum
-        )
-
-        numero_frame.setStyleSheet(
-            """
-            QFrame {
-                background-color: #f1f5f9;
-                border: 1px solid #cbd5e1;
-                border-radius: 10px;
-            }
-            """
-        )
-
-        numero_layout = QVBoxLayout(
-            numero_frame
-        )
-
-        numero_label = QLabel(
-            "NUMÉRO DU DOSSIER"
-        )
-
-        numero_label.setAlignment(
-            Qt.AlignCenter
-        )
-
-        numero_label.setStyleSheet(
-            """
-            QLabel {
-                color: #64748b;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            """
-        )
-
-        numero_layout.addWidget(
-            numero_label
-        )
-
-        numero = QLabel(
-            self.valeur(
-                "numero_dossier",
-                "-"
-            )
-        )
-
-        numero.setAlignment(
-            Qt.AlignCenter
-        )
-
-        numero.setWordWrap(
-            True
-        )
-
-        numero.setStyleSheet(
-            """
-            QLabel {
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #f8fafc;
+                font-family: 'Segoe UI', Arial, sans-serif;
                 color: #0f172a;
-                font-size: 24px;
-                font-weight: bold;
-                padding: 5px;
             }
-            """
-        )
-
-        numero_layout.addWidget(
-            numero
-        )
-
-        layout.addWidget(
-            numero_frame
-        )
-
-        # =====================================================
-        # INFORMATIONS
-        # =====================================================
-
-        informations = QFrame()
-
-        informations.setSizePolicy(
-            QSizePolicy.Expanding,
-            QSizePolicy.Minimum
-        )
-
-        informations.setStyleSheet(
-            """
-            QFrame {
+            QFrame#card {
                 background-color: white;
                 border: 1px solid #e2e8f0;
-                border-radius: 10px;
+                border-radius: 12px;
             }
-            """
-        )
+        """)
 
-        infos_layout = QVBoxLayout(
-            informations
-        )
+        layout_principal = QVBoxLayout(self)
+        layout_principal.setContentsMargins(0, 0, 0, 0)
 
-        infos_layout.setContentsMargins(
-            20,
-            15,
-            20,
-            15
-        )
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
 
-        infos_layout.setSpacing(
-            12
-        )
+        contenu = QWidget()
+        layout = QVBoxLayout(contenu)
+        layout.setContentsMargins(30, 30, 30, 30)
+        layout.setSpacing(20)
 
-        # Client
-        infos_layout.addWidget(
-            QLabel(
-                self.creer_ligne(
-                    "CLIENT",
-                    self.valeur(
-                        "client_nom"
-                    )
-                )
-            )
-        )
+        # -----------------------------------------------------
+        # EN-TÊTE
+        # -----------------------------------------------------
+        titre = QLabel("✓ DOSSIER CRÉÉ AVEC SUCCÈS")
+        titre.setAlignment(Qt.AlignCenter)
+        titre.setStyleSheet("font-size: 22px; font-weight: 800; color: #166534; padding-top: 5px;")
+        layout.addWidget(titre)
 
-        infos_layout.addWidget(
-            QLabel(
-                self.creer_ligne(
-                    "TÉLÉPHONE",
-                    self.valeur(
-                        "client_telephone"
-                    )
-                )
-            )
-        )
+        sous_titre = QLabel("La fiche de réception informatique a été enregistrée dans la base de données.")
+        sous_titre.setAlignment(Qt.AlignCenter)
+        sous_titre.setStyleSheet("color: #64748b; font-size: 14px;")
+        layout.addWidget(sous_titre)
 
-        # Matériel
-        infos_layout.addWidget(
-            QLabel(
-                self.creer_ligne(
-                    "MATÉRIEL",
-                    self.valeur(
-                        "type_materiel"
-                    )
-                )
-            )
-        )
+        # -----------------------------------------------------
+        # BADGE NUMÉRO DOSSIER
+        # -----------------------------------------------------
+        numero_frame = QFrame()
+        numero_frame.setStyleSheet("""
+            QFrame {
+                background-color: #f1f5f9;
+                border: 2px dashed #cbd5e1;
+                border-radius: 12px;
+                padding: 15px;
+            }
+        """)
+        numero_layout = QVBoxLayout(numero_frame)
+        
+        numero_label = QLabel("NUMÉRO DE DOSSIER GENERÉ")
+        numero_label.setAlignment(Qt.AlignCenter)
+        numero_label.setStyleSheet("color: #64748b; font-size: 12px; font-weight: 700; border: none;")
+        numero_layout.addWidget(numero_label)
 
-        infos_layout.addWidget(
-            QLabel(
-                self.creer_ligne(
-                    "MARQUE",
-                    self.valeur(
-                        "marque"
-                    )
-                )
-            )
+        num_valeur = self.valeur("numero_dossier", f"REP-{self.valeur('id', '-')}")
+        numero = QLabel(num_valeur)
+        numero.setAlignment(Qt.AlignCenter)
+        numero.setStyleSheet("color: #1e293b; font-size: 28px; font-weight: 800; border: none;")
+        numero_layout.addWidget(numero)
 
-        )
+        layout.addWidget(numero_frame)
 
-        infos_layout.addWidget(
-            QLabel(
-                self.creer_ligne(
-                    "MODÈLE",
-                    self.valeur(
-                        "modele"
-                    )
-                )
-            )
-        )
+        # -----------------------------------------------------
+        # RÉCAPITULATIF DES DÉTAILS
+        # -----------------------------------------------------
+        info_frame = QFrame()
+        info_frame.setObjectName("card")
+        info_layout = QVBoxLayout(info_frame)
+        info_layout.setContentsMargins(25, 20, 25, 20)
+        info_layout.setSpacing(14)
 
-        infos_layout.addWidget(
-            QLabel(
-                self.creer_ligne(
-                    "NUMÉRO DE SÉRIE",
-                    self.valeur(
-                        "numero_serie"
-                    )
-                )
-            )
-        )
+        info_layout.addWidget(self.creer_widget_ligne("Client", self.valeur("client_nom")))
+        info_layout.addWidget(self.creer_widget_ligne("Téléphone", self.valeur("client_telephone")))
+        info_layout.addWidget(self.creer_widget_ligne("Matériel", self.valeur("type_materiel")))
+        info_layout.addWidget(self.creer_widget_ligne("Marque / Modèle", f"{self.valeur('marque', '-')} / {self.valeur('modele', '-')}"))
+        info_layout.addWidget(self.creer_widget_ligne("Numéro de Série", self.valeur("numero_serie", "N/A")))
+        
+        urgent_txt = "URGENTE ⚠️" if self.data.get("urgent") else "Normale"
+        info_layout.addWidget(self.creer_widget_ligne("Priorité", urgent_txt))
 
-        # Statut
-        infos_layout.addWidget(
-            QLabel(
-                self.creer_ligne(
-                    "STATUT",
-                    self.valeur(
-                        "statut",
-                        "En attente"
-                    )
-                )
-            )
-        )
-
-        layout.addWidget(
-            informations
-        )
-
-        # =====================================================
-        # ESPACE
-        # =====================================================
-
+        layout.addWidget(info_frame)
         layout.addStretch()
 
-        # =====================================================
+        # -----------------------------------------------------
         # ACTIONS
-        # =====================================================
-
+        # -----------------------------------------------------
         actions = QHBoxLayout()
+        actions.setSpacing(15)
 
-        actions.setSpacing(
-            12
-        )
-
-        bouton_imprimer = QPushButton(
-            "Ouvrir la fiche PDF"
-        )
-
-        bouton_imprimer.setMinimumHeight(
-            48
-        )
-
-        bouton_imprimer.setSizePolicy(
-            QSizePolicy.Expanding,
-            QSizePolicy.Fixed
-        )
-
-        bouton_imprimer.setStyleSheet(
-            """
+        self.btn_imprimer = QPushButton("📄 Ouvrir la Fiche PDF")
+        self.btn_imprimer.setMinimumHeight(48)
+        self.btn_imprimer.setCursor(Qt.PointingHandCursor)
+        self.btn_imprimer.setStyleSheet("""
             QPushButton {
                 background-color: #2563eb;
                 color: white;
                 border: none;
-                border-radius: 7px;
+                border-radius: 8px;
                 font-size: 14px;
-                font-weight: bold;
-                padding: 10px 20px;
+                font-weight: 700;
             }
+            QPushButton:hover { background-color: #1d4ed8; }
+            QPushButton:disabled { background-color: #94a3b8; }
+        """)
+        self.btn_imprimer.clicked.connect(self.imprimer_fiche)
+        actions.addWidget(self.btn_imprimer)
 
-            QPushButton:hover {
-                background-color: #1d4ed8;
-            }
-            """
-        )
-
-        bouton_imprimer.clicked.connect(
-            self.imprimer_fiche
-        )
-
-        actions.addWidget(
-            bouton_imprimer
-        )
-
-        bouton_fermer = QPushButton(
-            "Fermer"
-        )
-
-        bouton_fermer.setMinimumHeight(
-            48
-        )
-
-        bouton_fermer.setSizePolicy(
-            QSizePolicy.Expanding,
-            QSizePolicy.Fixed
-        )
-
-        bouton_fermer.setStyleSheet(
-            """
+        self.btn_fermer = QPushButton("Fermer")
+        self.btn_fermer.setMinimumHeight(48)
+        self.btn_fermer.setCursor(Qt.PointingHandCursor)
+        self.btn_fermer.setStyleSheet("""
             QPushButton {
-                background-color: #64748b;
+                background-color: #475569;
                 color: white;
                 border: none;
-                border-radius: 7px;
+                border-radius: 8px;
                 font-size: 14px;
-                font-weight: bold;
-                padding: 10px 20px;
+                font-weight: 700;
             }
+            QPushButton:hover { background-color: #334155; }
+        """)
+        self.btn_fermer.clicked.connect(self.retour_page)
+        actions.addWidget(self.btn_fermer)
 
-            QPushButton:hover {
-                background-color: #475569;
-            }
-            """
-        )
+        layout.addLayout(actions)
 
-        bouton_fermer.clicked.connect(
-            self.retour_page
-        )
+        scroll.setWidget(contenu)
+        layout_principal.addWidget(scroll)
 
-        actions.addWidget(
-            bouton_fermer
-        )
+    def creer_widget_ligne(self, titre, valeur):
+        w = QWidget()
+        l = QHBoxLayout(w)
+        l.setContentsMargins(0, 0, 0, 0)
+        
+        lbl_titre = QLabel(titre)
+        lbl_titre.setStyleSheet("color: #64748b; font-weight: 600; font-size: 13px;")
+        
+        lbl_val = QLabel(str(valeur))
+        lbl_val.setStyleSheet("color: #0f172a; font-weight: 700; font-size: 14px;")
+        lbl_val.setAlignment(Qt.AlignRight)
 
-        layout.addLayout(
-            actions
-        )
+        l.addWidget(lbl_titre)
+        l.addStretch()
+        l.addWidget(lbl_val)
+        return w
 
-        # =====================================================
-        # INSTALLATION
-        # =====================================================
-
-        scroll.setWidget(
-            contenu
-        )
-
-        layout_principal.addWidget(
-            scroll
-        )
-
-    # =========================================================
-    # VALEUR
-    # =========================================================
-
-    def valeur(
-        self,
-        cle,
-        valeur_defaut=""
-    ):
-
-        valeur = self.data.get(
-            cle,
-            valeur_defaut
-        )
-
-        if valeur is None:
-            return valeur_defaut
-
-        valeur = str(
-            valeur
-        ).strip()
-
-        return (
-            valeur
-            if valeur
-            else valeur_defaut
-        )
-
-    # =========================================================
-    # FORMATAGE
-    # =========================================================
-
-    def creer_ligne(
-        self,
-        titre,
-        valeur
-    ):
-
-        return (
-            f"<b>{titre}</b>"
-            f"<br>"
-            f"<span style='font-size:14px;'>"
-            f"{valeur}"
-            f"</span>"
-        )
-
-    # =========================================================
-    # RETOUR
-    # =========================================================
+    def valeur(self, cle, defaut="-"):
+        val = self.data.get(cle)
+        return str(val).strip() if val is not None and str(val).strip() != "" else defaut
 
     def retour_page(self):
-
-        try:
-
-            if self.parent_window:
-
-                self.parent_window.show()
-
-                self.parent_window.raise_()
-
-                self.parent_window.activateWindow()
-
-        except Exception:
-            pass
-
+        if self.parent_window:
+            self.parent_window.show()
+            self.parent_window.raise_()
+            self.parent_window.activateWindow()
         self.close()
 
-    # =========================================================
-    # PDF
-    # =========================================================
-
     def imprimer_fiche(self):
-
-        reparation_id = self.data.get(
-            "id"
-        )
-
+        reparation_id = self.data.get("id")
         if not reparation_id:
-
-            QMessageBox.critical(
-                self,
-                "Erreur",
-                "Identifiant du dossier introuvable."
-            )
-
+            QMessageBox.critical(self, "Erreur", "Identifiant du dossier introuvable.")
             return
 
-        url = (
-            "http://127.0.0.1:8000"
-            f"/reparations/{reparation_id}"
-            "/fiche"
-        )
+        self.btn_imprimer.setEnabled(False)
+        self.btn_imprimer.setText("Génération du PDF...")
 
+        num_dossier = self.valeur("numero_dossier", f"reparation_{reparation_id}")
+
+        self.pdf_worker = DownloadPDFWorker(reparation_id, num_dossier)
+        self.pdf_worker.finished_success.connect(self.on_pdf_success)
+        self.pdf_worker.error_occurred.connect(self.on_pdf_error)
+        self.pdf_worker.start()
+
+    def on_pdf_success(self, chemin_pdf):
+        self.btn_imprimer.setEnabled(True)
+        self.btn_imprimer.setText("📄 Ouvrir la Fiche PDF")
         try:
+            os.startfile(chemin_pdf)
+        except Exception as e:
+            QMessageBox.warning(self, "Erreur d'ouverture", f"Fichier généré dans : {chemin_pdf}\nMais impossible de l'ouvrir automatiquement : {e}")
 
-            response = requests.get(
-                url,
-                timeout=30
-            )
-
-            if response.status_code != 200:
-
-                QMessageBox.critical(
-                    self,
-                    "Erreur",
-                    (
-                        "Impossible de générer "
-                        "la fiche PDF.\n\n"
-                        f"Code HTTP : "
-                        f"{response.status_code}"
-                    )
-                )
-
-                return
-
-            dossier_temp = tempfile.gettempdir()
-
-            numero_dossier = self.valeur(
-                "numero_dossier",
-                f"reparation_{reparation_id}"
-            )
-
-            chemin_pdf = os.path.join(
-                dossier_temp,
-                f"{numero_dossier}.pdf"
-            )
-
-            with open(
-                chemin_pdf,
-                "wb"
-            ) as fichier:
-
-                fichier.write(
-                    response.content
-                )
-
-            os.startfile(
-                chemin_pdf
-            )
-
-        except requests.exceptions.RequestException as erreur:
-
-            QMessageBox.critical(
-                self,
-                "Erreur serveur",
-                (
-                    "Impossible de contacter "
-                    "le serveur FastAPI.\n\n"
-                    f"{erreur}"
-                )
-            )
-
-        except Exception as erreur:
-
-            QMessageBox.critical(
-                self,
-                "Erreur",
-                str(erreur)
-            )
-            
+    def on_pdf_error(self, message):
+        self.btn_imprimer.setEnabled(True)
+        self.btn_imprimer.setText("📄 Ouvrir la Fiche PDF")
+        QMessageBox.critical(self, "Erreur PDF", f"Échec de la génération :\n{message}")

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -60,16 +62,16 @@ from app.schemas.reparation_piece import (
 )
 
 
-from app.services.fiche_pdf import (
-    generer_fiche_pdf
-)
-
+from app.services.fiche_pdf import ( generer_fiche_pdf )
+from app.services.ml.cout.cost_predictor import CostPredictor
+from app.models.stock import Stock
 
 router = APIRouter(
     prefix="/reparations",
     tags=["Réparations"]
 )
 
+cost_predictor = CostPredictor()
 
 # =====================================================
 # CRÉER
@@ -392,7 +394,6 @@ def generer_fiche(
 # =====================================================
 # MODIFIER LE DOSSIER
 # =====================================================
-
 @router.patch(
     "/{reparation_id}",
     response_model=ReparationResponse
@@ -410,22 +411,29 @@ def modifier_dossier(
     )
 
     if not reparation:
-
         raise HTTPException(
             status_code=404,
             detail="Réparation introuvable"
         )
 
-    return reparation
+    reparation = (
+        db.query(Reparation)
+        .options(
+            joinedload(Reparation.client)
+        )
+        .filter(
+            Reparation.id == reparation_id
+        )
+        .first()
+    )
 
+    return reparation
 
 # =====================================================
 # SUPPRIMER LE DOSSIER
 # =====================================================
 
-@router.delete(
-    "/{reparation_id}"
-)
+@router.delete("/{reparation_id}")
 def supprimer_dossier(
     reparation_id: int,
     db: Session = Depends(get_db)
@@ -465,5 +473,139 @@ def supprimer_dossier(
             detail=(
                 "Impossible de supprimer le dossier."
             )
+        )
+
+# =====================================================
+# SUPPRIMER UNE PIÈCE UTILISÉE
+# =====================================================
+
+@router.delete("/{dossier_id}/pieces/{piece_utilisee_id}")
+def supprimer_piece_utilisee(
+    dossier_id: int,
+    piece_utilisee_id: int,
+    db: Session = Depends(get_db)
+):
+    # -------------------------------------------------
+    # Vérifier que le dossier existe
+    # -------------------------------------------------
+
+    reparation = (
+        db.query(Reparation)
+        .filter(
+            Reparation.id == dossier_id
+        )
+        .first()
+    )
+
+    if not reparation:
+        raise HTTPException(
+            status_code=404,
+            detail="Dossier de réparation introuvable."
+        )
+
+    # -------------------------------------------------
+    # Rechercher la ligne ReparationPiece
+    #
+    # IMPORTANT :
+    # piece_utilisee_id = reparation_piece.id
+    # et NON stock.id
+    # -------------------------------------------------
+
+    piece_utilisee = (
+        db.query(ReparationPiece)
+        .filter(
+            ReparationPiece.id == piece_utilisee_id,
+            ReparationPiece.reparation_id == dossier_id
+        )
+        .first()
+    )
+
+    if not piece_utilisee:
+        raise HTTPException(
+            status_code=404,
+            detail="Pièce utilisée introuvable pour ce dossier."
+        )
+
+    # -------------------------------------------------
+    # Informations nécessaires avant suppression
+    # -------------------------------------------------
+
+    piece_id = piece_utilisee.piece_id
+    quantite = piece_utilisee.quantite
+
+    # -------------------------------------------------
+    # Récupérer la pièce dans le stock
+    # -------------------------------------------------
+
+    stock = (
+        db.query(Stock)
+        .filter(
+            Stock.id == piece_id
+        )
+        .first()
+    )
+
+    if stock:
+        stock.quantite += quantite
+
+    # -------------------------------------------------
+    # Supprimer la relation ReparationPiece
+    # -------------------------------------------------
+
+    db.delete(piece_utilisee)
+
+    # -------------------------------------------------
+    # Sauvegarder
+    # -------------------------------------------------
+
+    db.commit()
+
+    return {
+        "message": "Pièce supprimée avec succès.",
+        "piece_utilisee_id": piece_utilisee_id,
+        "piece_id": piece_id,
+        "quantite_restituee": quantite
+    }
+
+# =====================================================
+# PRÉDICTION DU COÛT & DÉLAI (ML)
+# =====================================================
+
+@router.post("/cout/predire")
+def predire_cout(payload: dict):
+    # 1. Extraction des paramètres (supporte 'type_materiel' et 'materiel')
+    materiel = payload.get("type_materiel") or payload.get("materiel") or ""
+    probleme = payload.get("probleme") or ""
+
+    if not materiel or not probleme:
+        raise HTTPException(
+            status_code=400,
+            detail="Le type de matériel et la description du problème sont requis."
+        )
+
+    try:
+        # 2. Appel avec les 2 seuls arguments acceptés par votre CostPredictor
+        prediction = cost_predictor.predict(
+            materiel=materiel,
+            probleme=probleme
+        )
+
+        # 3. Traitement du résultat (selon si predict() retourne un dict ou une valeur float/int)
+        if isinstance(prediction, dict):
+            cout_estime = prediction.get("cout_estime") or prediction.get("predicted_cost") or 0.0
+            delai_estime = prediction.get("delai_estime") or prediction.get("delai") or 1
+        else:
+            cout_estime = prediction
+            delai_estime = 1
+
+        return {
+            "cout_estime": float(cout_estime),
+            "delai_estime": int(delai_estime)
+        }
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors du calcul de la prédiction ML : {str(error)}"
         )
     

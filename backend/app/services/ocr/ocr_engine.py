@@ -1,14 +1,14 @@
 from pathlib import Path
-
+import os
 import cv2
 import time
+
 from paddleocr import PaddleOCR
 
 from app.services.ocr.image_preprocessor import ImagePreprocessor
 
 
 class OCREngine:
-    """Moteur OCR basé sur PaddleOCR."""
 
     TEMP_DIRECTORY = Path("temp")
     TEMP_IMAGE_NAME = "preprocessed.png"
@@ -21,54 +21,52 @@ class OCREngine:
         print("INITIALISATION OCR ENGINE")
         print("=" * 80)
 
-        # ------------------------------------------------------
-        # INITIALISATION PADDLE OCR
-        # ------------------------------------------------------
+        print(
+            "[CPU] Cores disponibles :",
+            os.cpu_count()
+        )
 
         try:
 
             self.ocr = PaddleOCR(
+
+                # ==================================================
+                # LANGUE
+                # ==================================================
+
                 lang="fr",
 
-                # --------------------------------------------------
-                # Désactivation des traitements non nécessaires
-                # pour les factures.
-                # --------------------------------------------------
+                # ==================================================
+                # MODULES INUTILES POUR FACTURE
+                # ==================================================
 
                 use_doc_orientation_classify=False,
                 use_doc_unwarping=False,
                 use_textline_orientation=False,
 
-                # --------------------------------------------------
-                # LIMITATION DE LA TAILLE DE L'IMAGE
-                # --------------------------------------------------
-                #
-                # Les images mobiles peuvent être très grandes
-                # (exemple : 3468 x 4624).
-                #
-                # Le preprocessing réduit déjà l'image.
-                # Cette limite évite à PaddleOCR de retravailler
-                # inutilement une image trop grande.
-                #
-                # 1800 conserve suffisamment de résolution pour
-                # les références, désignations et prix.
-                # --------------------------------------------------
+                # ==================================================
+                # DETECTION
+                # ==================================================
 
-                text_det_limit_side_len=1800,
+                text_det_limit_side_len=1400,
                 text_det_limit_type="max",
 
-                # --------------------------------------------------
+                # ==================================================
                 # CPU
-                # --------------------------------------------------
-                #
-                # On conserve False pour éviter l'erreur MKLDNN
-                # rencontrée précédemment dans ton environnement.
-                #
-                # IMPORTANT :
-                # On ne change pas cette valeur à l'aveugle.
-                # --------------------------------------------------
+                # ==================================================
 
+                device="cpu",
+
+                # IMPORTANT :
+                # False = évite le crash oneDNN/PIR
+                # rencontré avec PaddlePaddle 3.x
                 enable_mkldnn=False,
+
+                # Nombre de threads CPU
+                cpu_threads=min(
+                    os.cpu_count() or 4,
+                    8
+                ),
             )
 
         except Exception as e:
@@ -83,9 +81,17 @@ class OCREngine:
 
             raise
 
-        print("OCR Engine prêt.")
+        print("[OCR] PaddleOCR initialisé.")
+        print("[OCR] Mode : CPU")
+        print("[OCR] Device : cpu")
+        print("[OCR] Orientation document : OFF")
+        print("[OCR] Dewarping : OFF")
+        print("[OCR] Orientation ligne : OFF")
+        print("[OCR] MKLDNN : OFF")
+        print("[OCR] CPU threads :", min(os.cpu_count() or 4, 8))
+        print("[OCR] Limite détection : 1400")
         print("=" * 80)
-
+        
     # ==========================================================
     # SAUVEGARDE IMAGE TEMPORAIRE
     # ==========================================================
@@ -143,10 +149,9 @@ class OCREngine:
             f"{image.shape[1]}x{image.shape[0]}"
         )
 
-        print(
-            f"[OCR] Dimensions avant sauvegarde : "
-            f"{image.shape[1]}x{image.shape[0]}"
-        )
+        # ------------------------------------------------------
+        # Sauvegarde
+        # ------------------------------------------------------
 
         start = time.perf_counter()
 
@@ -176,19 +181,28 @@ class OCREngine:
             "[PADDLE OCR] Analyse de l'image..."
         )
 
+        start = time.perf_counter()
+
         # ------------------------------------------------------
-        # Un seul appel OCR.
-        #
-        # Aucune deuxième reconnaissance.
-        # Aucune boucle sur différentes tailles.
+        # UN SEUL APPEL OCR
         # ------------------------------------------------------
 
         results = self.ocr.predict(
             image_path
         )
 
+        elapsed = (
+            time.perf_counter()
+            - start
+        )
+
         print(
             "[PADDLE OCR] Analyse terminée."
+        )
+
+        print(
+            f"[TIME] PaddleOCR interne : "
+            f"{elapsed:.2f}s"
         )
 
         return results
@@ -199,6 +213,9 @@ class OCREngine:
 
     @staticmethod
     def normalize_box(points):
+
+        if points is None:
+            return [0, 0, 0, 0]
 
         xs = [
             point[0]
@@ -227,7 +244,10 @@ class OCREngine:
 
         for result in results:
 
-            data = result.json
+            try:
+                data = result.json
+            except Exception:
+                continue
 
             if not isinstance(data, dict):
                 continue
@@ -236,6 +256,9 @@ class OCREngine:
                 "res",
                 data,
             )
+
+            if not isinstance(result_data, dict):
+                continue
 
             texts = result_data.get(
                 "rec_texts",
@@ -368,6 +391,9 @@ class OCREngine:
             f"{len(elements)}"
         )
 
+        # ------------------------------------------------------
+        # TOTAL
+        # ------------------------------------------------------
 
         total_time = (
             time.perf_counter()
@@ -399,9 +425,7 @@ class OCREngine:
             if element.get("text")
         ]
 
-        return "\n".join(
-            lines
-        )
+        return "\n".join(lines)
 
     # ==========================================================
     # TEXTE COMPLET DEPUIS IMAGE
@@ -453,4 +477,3 @@ class OCREngine:
             )
 
         return blocks
-    

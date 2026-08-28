@@ -2,70 +2,114 @@
 <html lang="fr">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Dossier de réparation</title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dossier de Réparation - Fiche Technicien</title>
     <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
         body {
-            background: #f4f6f8;
+            background-color: var(--bg);
+            color: var(--text-dark);
             min-height: 100vh;
-            padding: 20px;
+            padding: 16px;
         }
 
         .container {
-            max-width: 650px;
-            margin: auto;
+            max-width: 600px;
+            margin: 0 auto;
         }
 
+        /* BANDEAU D'URGENCE */
+        .banner-urgent {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* HEADER */
         .header {
-            background: #1f2937;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
             color: white;
-            padding: 20px;
-            border-radius: 16px;
-            margin-bottom: 20px;
+            padding: 24px 20px;
+            border-radius: 18px;
+            margin-bottom: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
         .header h1 {
-            font-size: 22px;
-            margin-bottom: 8px;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
         }
 
         .numero-dossier {
             font-size: 14px;
-            opacity: 0.8;
+            color: #94a3b8;
+            font-weight: 600;
         }
 
+        .numero-badge {
+            color: #38bdf8;
+            font-family: monospace;
+            font-size: 16px;
+        }
+
+        /* CARDS */
         .card {
-            background: white;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
             border-radius: 16px;
-            padding: 20px;
+            padding: 18px;
             margin-bottom: 16px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
         }
 
         .card h2 {
-            font-size: 18px;
-            margin-bottom: 16px;
-            color: #1f2937;
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 14px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
         }
 
         .info {
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
 
         .info:last-child {
@@ -73,54 +117,67 @@
         }
 
         .label {
-            font-size: 12px;
-            color: #6b7280;
-            margin-bottom: 4px;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 3px;
         }
 
         .value {
-            font-size: 16px;
-            color: #111827;
-            font-weight: 500;
-            white-space: pre-wrap;
+            font-size: 14px;
+            color: var(--text-dark);
+            font-weight: 600;
             word-break: break-word;
+            white-space: pre-line;
         }
 
-        .statut {
+        .value-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* BADGES DE STATUT */
+        .statut-badge {
             display: inline-block;
-            padding: 10px 16px;
-            border-radius: 20px;
-            background: #fef3c7;
-            color: #92400e;
-            font-weight: bold;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #6b7280;
-        }
-
-        .error {
-            background: #fee2e2;
-            color: #991b1b;
-            padding: 16px;
-            border-radius: 12px;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 700;
             text-align: center;
         }
 
-        .hidden {
-            display: none;
-        }
+        .statut-attente { background: #fef3c7; color: #b45309; }
+        .statut-diagnostic { background: #e0f2fe; color: #0369a1; }
+        .statut-reparation { background: #fae8ff; color: #86198f; }
+        .statut-termine { background: #dcfce7; color: #15803d; }
+        .statut-default { background: #f1f5f9; color: #475569; }
 
-        select {
+        /* FORMULAIRES ET BOUTONS */
+        select, textarea, input[type="number"] {
             width: 100%;
-            padding: 14px;
-            border: 1px solid #d1d5db;
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
             border-radius: 10px;
-            font-size: 16px;
+            font-size: 14px;
+            background: #f8fafc;
+            color: var(--text-dark);
             margin-bottom: 12px;
-            background: white;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        select:focus, textarea:focus, input[type="number"]:focus {
+            border-color: var(--primary);
+            background: #ffffff;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
         }
 
         button {
@@ -128,1142 +185,280 @@
             padding: 14px;
             border: none;
             border-radius: 10px;
-            background: #2563eb;
+            background: var(--primary);
             color: white;
-            font-size: 16px;
-            font-weight: bold;
+            font-size: 15px;
+            font-weight: 700;
             cursor: pointer;
+            transition: background 0.2s;
         }
 
-        button:active {
-            transform: scale(0.98);
-        }
+        button:hover { background: var(--primary-hover); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
 
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .message {
-            margin-top: 12px;
-            padding: 10px;
-            border-radius: 8px;
+        .loading, .error {
             text-align: center;
+            padding: 40px 20px;
+            border-radius: 16px;
+            background: white;
+            margin-top: 20px;
+            font-weight: 600;
         }
 
+        .error { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+        .hidden { display: none !important; }
+        .message { margin-top: 10px; padding: 10px; border-radius: 8px; text-align: center; font-size: 13px; font-weight: 600; }
     </style>
-
 </head>
 
 <body>
 
 <div class="container">
 
-    <!-- CHARGEMENT -->
+    <!-- CHARGEMENT & ERREUR -->
+    <div id="loading" class="loading">⌛ Chargement du dossier...</div>
+    <div id="error" class="error hidden"></div>
 
-    <div
-        id="loading"
-        class="loading"
-    >
-        Chargement du dossier...
-    </div>
+    <!-- CONTENU PRINCIPAL -->
+    <div id="content" class="hidden">
 
+        <!-- URGENT ALERTE -->
+        <div id="urgentBanner" class="banner-urgent hidden">
+            <span>⚠️ PRIORTÉ URGENTE POUR CE DOSSIER</span>
+        </div>
 
-    <!-- ERREUR -->
-
-    <div
-        id="error"
-        class="error hidden"
-    >
-    </div>
-
-
-    <!-- CONTENU -->
-
-    <div
-        id="content"
-        class="hidden"
-    >
-
-        <!-- ========================================= -->
         <!-- EN-TÊTE -->
-        <!-- ========================================= -->
-
         <div class="header">
-
-            <h1>
-                Dossier de réparation
-            </h1>
-
-            <div class="numero-dossier">
-
-                N° :
-                
-                <span id="numeroDossier"></span>
-
-            </div>
-
+            <h1>Dossier de Réparation</h1>
+            <div class="numero-dossier">N° : <span id="numeroDossier" class="numero-badge"></span></div>
         </div>
 
+        <!-- STATUT ACTUEL -->
+        <div class="card">
+            <h2>Statut du Dossier</h2>
+            <div id="statut" class="statut-badge statut-default">Non spécifié</div>
+        </div>
 
-        <!-- ========================================= -->
         <!-- CLIENT -->
-        <!-- ========================================= -->
-
         <div class="card">
-
-            <h2>
-                Informations client
-            </h2>
-
+            <h2>👤 Client</h2>
             <div class="info">
-
-                <div class="label">
-                    Nom du client
-                </div>
-
-                <div
-                    class="value"
-                    id="clientNom"
-                ></div>
-
+                <div class="label">Nom complet</div>
+                <div class="value" id="clientNom"></div>
             </div>
-
-            <div class="info">
-
-                <div class="label">
-                    Téléphone
+            <div class="grid-2">
+                <div class="info">
+                    <div class="label">Téléphone</div>
+                    <div id="clientTelephone"></div>
                 </div>
-
-                <div
-                    class="value"
-                    id="clientTelephone"
-                ></div>
-
-            </div>
-
-            <div class="info">
-
-                <div class="label">
-                    Email
+                <div class="info">
+                    <div class="label">Email</div>
+                    <div id="clientEmail"></div>
                 </div>
-
-                <div
-                    class="value"
-                    id="clientEmail"
-                ></div>
-
             </div>
-
-            <div class="info">
-
-                <div class="label">
-                    Adresse
-                </div>
-
-                <div
-                    class="value"
-                    id="clientAdresse"
-                ></div>
-
-            </div>
-
         </div>
 
-
-        <!-- ========================================= -->
         <!-- MATÉRIEL -->
-        <!-- ========================================= -->
-
         <div class="card">
-
-            <h2>
-                Informations matériel
-            </h2>
-
-            <div class="info">
-
-                <div class="label">
-                    Type de matériel
+            <h2>💻 Matériel</h2>
+            <div class="grid-2">
+                <div class="info">
+                    <div class="label">Type</div>
+                    <div class="value" id="materiel"></div>
                 </div>
-
-                <div
-                    class="value"
-                    id="materiel"
-                ></div>
-
-            </div>
-
-            <div class="info">
-
-                <div class="label">
-                    Marque
+                <div class="info">
+                    <div class="label">Marque / Modèle</div>
+                    <div class="value" id="marqueModele"></div>
                 </div>
-
-                <div
-                    class="value"
-                    id="marque"
-                ></div>
-
             </div>
-
-            <div class="info">
-
-                <div class="label">
-                    Modèle
+            <div class="grid-2" style="margin-top: 10px;">
+                <div class="info">
+                    <div class="label">N° de Série</div>
+                    <div class="value" id="numeroSerie"></div>
                 </div>
-
-                <div
-                    class="value"
-                    id="modele"
-                ></div>
-
-            </div>
-
-            <div class="info">
-
-                <div class="label">
-                    Numéro de série
+                <div class="info">
+                    <div class="label">Système / Office</div>
+                    <div class="value" id="systemeOffice"></div>
                 </div>
-
-                <div
-                    class="value"
-                    id="numeroSerie"
-                ></div>
-
             </div>
-
-            <div class="info">
-
-                <div class="label">
-                    Système d'exploitation
-                </div>
-
-                <div
-                    class="value"
-                    id="systeme"
-                ></div>
-
-            </div>
-
-            <div class="info">
-
-                <div class="label">
-                    Version Office
-                </div>
-
-                <div
-                    class="value"
-                    id="office"
-                ></div>
-
-            </div>
-
         </div>
 
-
-        <!-- ========================================= -->
-        <!-- PROBLÈME -->
-        <!-- ========================================= -->
-
+        <!-- PANNE & DEMANDE -->
         <div class="card">
-
-            <h2>
-                Problème
-            </h2>
-
+            <h2>🛠️ Diagnostic & Demande</h2>
             <div class="info">
-
-                <div class="label">
-                    Origine du problème
-                </div>
-
-                <div
-                    class="value"
-                    id="origineProbleme"
-                ></div>
-
+                <div class="label">Problème signalé</div>
+                <div class="value" id="probleme"></div>
             </div>
-
             <div class="info">
-
-                <div class="label">
-                    Problème signalé
-                </div>
-
-                <div
-                    class="value"
-                    id="probleme"
-                ></div>
-
+                <div class="label">Intervention souhaitée</div>
+                <div class="value" id="intervention"></div>
             </div>
-
             <div class="info">
-
-                <div class="label">
-                    Intervention demandée
-                </div>
-
-                <div
-                    class="value"
-                    id="intervention"
-                ></div>
-
+                <div class="label">Accessoires déposés</div>
+                <div class="value" id="accessoires"></div>
             </div>
-
         </div>
 
-
-        <!-- ========================================= -->
-        <!-- DÉPÔT -->
-        <!-- ========================================= -->
-
+        <!-- MISE À JOUR TECHNICIEN -->
         <div class="card">
+            <h2>✏️ Mettre à jour la fiche</h2>
 
-            <h2>
-                Dépôt
-            </h2>
-
-            <div class="info">
-
-                <div class="label">
-                    Pièces défectueuses
-                </div>
-
-                <div
-                    class="value"
-                    id="piecesDefectueuses"
-                ></div>
-
-            </div>
-
-            <div class="info">
-
-                <div class="label">
-                    Accessoires déposés
-                </div>
-
-                <div
-                    class="value"
-                    id="accessoires"
-                ></div>
-
-            </div>
-
-            <div class="info">
-
-                <div class="label">
-                    Remarques
-                </div>
-
-                <div
-                    class="value"
-                    id="remarques"
-                ></div>
-
-            </div>
-
-        </div>
-
-
-        <!-- ========================================= -->
-        <!-- DIAGNOSTIC -->
-        <!-- ========================================= -->
-
-        <div class="card">
-
-            <h2>
-                Diagnostic
-            </h2>
-
-            <div
-                class="value"
-                id="diagnostic"
-            ></div>
-
-        </div>
-
-
-        <!-- ========================================= -->
-        <!-- INFORMATIONS DOSSIER -->
-        <!-- ========================================= -->
-
-        <div class="card">
-
-            <h2>
-                Informations du dossier
-            </h2>
-
-            <div class="info">
-
-                <div class="label">
-                    Date de réception
-                </div>
-
-                <div
-                    class="value"
-                    id="dateReception"
-                ></div>
-
-            </div>
-
-            <div class="info">
-
-                <div class="label">
-                    Réparation urgente
-                </div>
-
-                <div
-                    class="value"
-                    id="urgent"
-                ></div>
-
-            </div>
-
-            <div class="info">
-
-                <div class="label">
-                    Délai estimé
-                </div>
-
-                <div
-                    class="value"
-                    id="delaiEstime"
-                ></div>
-
-            </div>
-
-            <div class="info">
-
-                <div class="label">
-                    Coût estimé
-                </div>
-
-                <div
-                    class="value"
-                    id="coutEstime"
-                ></div>
-
-            </div>
-
-        </div>
-
-
-        <!-- ========================================= -->
-        <!-- STATUT -->
-        <!-- ========================================= -->
-
-        <div class="card">
-
-            <h2>
-                Statut actuel
-            </h2>
-
-            <div
-                class="statut"
-                id="statut"
-            ></div>
-
-        </div>
-
-
-        <!-- ========================================= -->
-        <!-- MODIFICATION STATUT -->
-        <!-- ========================================= -->
-
-        <div class="card">
-
-            <h2>
-                Modifier le statut
-            </h2>
-
+            <div class="label">Statut</div>
             <select id="nouveauStatut">
-
-                <option value="En attente">
-                    En attente
-                </option>
-
-                <option value="En diagnostic">
-                    En diagnostic
-                </option>
-
-                <option value="En réparation">
-                    En réparation
-                </option>
-
-                <option value="Terminé">
-                    Terminé
-                </option>
-
+                <option value="En attente">En attente</option>
+                <option value="En diagnostic">En diagnostic</option>
+                <option value="En réparation">En réparation</option>
+                <option value="Terminé">Terminé</option>
             </select>
 
-            <button
-                id="boutonStatut"
-                onclick="modifierStatut()"
-            >
-                Mettre à jour le statut
-            </button>
+            <div class="label">Rapport / Diagnostic du technicien</div>
+            <textarea id="nouveauDiagnostic" placeholder="Notes techniques, composants remplacés..."></textarea>
 
-            <div
-                id="messageStatut"
-                class="message"
-            ></div>
-
+            <button id="boutonStatut" onclick="modifierStatut()">Enregistrer les modifications</button>
+            <div id="messageStatut" class="message hidden"></div>
         </div>
 
     </div>
-
 </div>
 
-
 <script>
-
-    // =====================================================
-    // URL
-    // =====================================================
-
-    const params = new URLSearchParams(
-        window.location.search
-    );
-
+    const params = new URLSearchParams(window.location.search);
     let reparationActuelle = null;
+    const numeroDossier = params.get("numero");
+    const API_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
 
-    const numeroDossier = params.get(
-        "numero"
-    );
-
-    const API_URL =
-        `${window.location.protocol}//`
-        + `${window.location.hostname}:8000`;
-
-
-    // =====================================================
-    // OUTILS
-    // =====================================================
-
-    function valeurOuVide(
-        valeur
-    ) {
-
-        if (
-            valeur === null
-            || valeur === undefined
-            || String(valeur).trim() === ""
-        ) {
-
-            return "";
-
-        }
-
-        return String(
-            valeur
-        );
-
+    function mettreValeur(id, valeur, defaut = "-") {
+        const el = document.getElementById(id);
+        if (el) el.textContent = (valeur !== null && valeur !== undefined && String(valeur).trim() !== "") ? String(valeur) : defaut;
     }
 
+    function appliquerBadgeStatut(statutText) {
+        const el = document.getElementById("statut");
+        el.textContent = statutText || "En attente";
+        el.className = "statut-badge ";
 
-    function mettreValeur(
-        id,
-        valeur
-    ) {
-
-        const element =
-            document.getElementById(id);
-
-        if (!element) {
-
-            console.warn(
-                `Élément HTML introuvable : ${id}`
-            );
-
-            return;
-
+        switch ((statutText || "").toLowerCase()) {
+            case "en attente": el.classList.add("statut-attente"); break;
+            case "en diagnostic": el.classList.add("statut-diagnostic"); break;
+            case "en réparation": el.classList.add("statut-reparation"); break;
+            case "terminé": el.classList.add("statut-termine"); break;
+            default: el.classList.add("statut-default"); break;
         }
-
-        element.textContent =
-            valeurOuVide(
-                valeur
-            );
-
     }
-
-
-    function formaterDate(
-        date
-    ) {
-
-        if (!date) {
-            return "";
-        }
-
-        try {
-
-            const d =
-                new Date(date);
-
-            if (isNaN(d.getTime())) {
-                return date;
-            }
-
-            return d.toLocaleString(
-                "fr-FR"
-            );
-
-        }
-        catch (_) {
-
-            return date;
-
-        }
-
-    }
-
-
-    function formaterBooléen(
-        valeur
-    ) {
-
-        if (
-            valeur === null
-            || valeur === undefined
-        ) {
-
-            return "";
-
-        }
-
-        return valeur
-            ? "Oui"
-            : "Non";
-
-    }
-
-
-    // =====================================================
-    // CHARGEMENT
-    // =====================================================
 
     async function chargerReparation() {
-
         try {
+            const response = await fetch(`${API_URL}/reparations/numero/${encodeURIComponent(numeroDossier)}`);
+            if (!response.ok) throw new Error("Dossier introuvable.");
 
-            const response =
-                await fetch(
-                    `${API_URL}/reparations/numero/`
-                    + `${encodeURIComponent(numeroDossier)}`
-                );
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    "Dossier introuvable."
-                );
-
-            }
-
-
-            const data =
-                await response.json();
-
-
-            afficherReparation(
-                data
-            );
-
+            const data = await response.json();
+            afficherReparation(data);
+        } catch (error) {
+            afficherErreur(error.message);
         }
-
-        catch (error) {
-
-            afficherErreur(
-                error.message
-            );
-
-        }
-
     }
 
+    function afficherReparation(rep) {
+        reparationActuelle = rep;
+        document.getElementById("loading").classList.add("hidden");
+        document.getElementById("content").classList.remove("hidden");
 
-    // =====================================================
-    // AFFICHAGE
-    // =====================================================
-
-    function afficherReparation(
-        reparation
-    ) {
-
-        reparationActuelle =
-            reparation;
-
-
-        document
-            .getElementById("loading")
-            .classList
-            .add("hidden");
-
-
-        document
-            .getElementById("content")
-            .classList
-            .remove("hidden");
-
-
-        // =================================================
-        // DOSSIER
-        // =================================================
-
-        mettreValeur(
-            "numeroDossier",
-            reparation.numero_dossier
-        );
-
-
-        // =================================================
-        // CLIENT
-        // =================================================
-
-        const client =
-            reparation.client;
-
-
-        if (client) {
-
-            mettreValeur(
-                "clientNom",
-                client.nom
-            );
-
-            mettreValeur(
-                "clientTelephone",
-                client.telephone
-            );
-
-            mettreValeur(
-                "clientEmail",
-                client.email
-            );
-
-            mettreValeur(
-                "clientAdresse",
-                client.adresse
-            );
-
-        }
-        else {
-
-            mettreValeur(
-                "clientNom",
-                ""
-            );
-
-            mettreValeur(
-                "clientTelephone",
-                ""
-            );
-
-            mettreValeur(
-                "clientEmail",
-                ""
-            );
-
-            mettreValeur(
-                "clientAdresse",
-                ""
-            );
-
+        // Urgent
+        if (rep.urgent) {
+            document.getElementById("urgentBanner").classList.remove("hidden");
         }
 
+        // Header & Statut
+        mettreValeur("numeroDossier", rep.numero_dossier);
+        appliquerBadgeStatut(rep.statut);
 
-        // =================================================
-        // MATÉRIEL
-        // =================================================
+        // Client & Liens d'action rapide
+        if (rep.client) {
+            mettreValeur("clientNom", rep.client.nom);
+            
+            const telEl = document.getElementById("clientTelephone");
+            telEl.innerHTML = rep.client.telephone 
+                ? `<a href="tel:${rep.client.telephone}" class="value-action">📞 ${rep.client.telephone}</a>`
+                : "-";
 
-        mettreValeur(
-            "materiel",
-            reparation.type_materiel
-        );
-
-        mettreValeur(
-            "marque",
-            reparation.marque
-        );
-
-        mettreValeur(
-            "modele",
-            reparation.modele
-        );
-
-        mettreValeur(
-            "numeroSerie",
-            reparation.numero_serie
-        );
-
-        mettreValeur(
-            "systeme",
-            reparation.systeme_exploitation
-        );
-
-        mettreValeur(
-            "office",
-            reparation.version_office
-        );
-
-
-        // =================================================
-        // PROBLÈME
-        // =================================================
-
-        mettreValeur(
-            "origineProbleme",
-            reparation.origine_probleme
-        );
-
-        mettreValeur(
-            "probleme",
-            reparation.probleme
-        );
-
-        mettreValeur(
-            "intervention",
-            reparation.intervention
-        );
-
-
-        // =================================================
-        // DÉPÔT
-        // =================================================
-
-        mettreValeur(
-            "piecesDefectueuses",
-            reparation.pieces_defectueuses
-        );
-
-        mettreValeur(
-            "accessoires",
-            reparation.accessoires
-        );
-
-        mettreValeur(
-            "remarques",
-            reparation.remarques
-        );
-
-
-        // =================================================
-        // DIAGNOSTIC
-        // =================================================
-
-        mettreValeur(
-            "diagnostic",
-            reparation.diagnostic
-        );
-
-
-        // =================================================
-        // INFORMATIONS
-        // =================================================
-
-        mettreValeur(
-            "dateReception",
-            formaterDate(
-                reparation.date_reception
-            )
-        );
-
-        mettreValeur(
-            "urgent",
-            formaterBooléen(
-                reparation.urgent
-            )
-        );
-
-        mettreValeur(
-            "delaiEstime",
-            reparation.delai_estime
-                ? `${reparation.delai_estime} jour(s)`
-                : ""
-        );
-
-        mettreValeur(
-            "coutEstime",
-            reparation.cout_estime !== null
-                && reparation.cout_estime !== undefined
-                ? `${reparation.cout_estime} DH`
-                : ""
-        );
-
-
-        // =================================================
-        // STATUT
-        // =================================================
-
-        mettreValeur(
-            "statut",
-            reparation.statut
-        );
-
-
-        // =================================================
-        // SYNCHRONISER LE SELECT
-        // =================================================
-
-        const select =
-            document.getElementById(
-                "nouveauStatut"
-            );
-
-
-        if (
-            select
-            && reparation.statut
-        ) {
-
-            const optionExiste =
-                Array.from(
-                    select.options
-                ).some(
-                    option =>
-                        option.value
-                        === reparation.statut
-                );
-
-
-            if (optionExiste) {
-
-                select.value =
-                    reparation.statut;
-
-            }
-
+            const emailEl = document.getElementById("clientEmail");
+            emailEl.innerHTML = rep.client.email 
+                ? `<a href="mailto:${rep.client.email}" class="value-action">✉️ Mail</a>`
+                : "-";
         }
 
+        // Matériel
+        mettreValeur("materiel", rep.type_materiel);
+        mettreValeur("marqueModele", `${rep.marque || ''} ${rep.modele || ''}`.trim());
+        mettreValeur("numeroSerie", rep.numero_serie);
+        mettreValeur("systemeOffice", `${rep.systeme_exploitation || ''} / ${rep.version_office || ''}`.trim().replace(/^\/|\/$/g, ''));
+
+        // Problème
+        mettreValeur("probleme", rep.probleme);
+        mettreValeur("intervention", rep.intervention);
+        mettreValeur("accessoires", rep.accessoires);
+
+        // Pre-remplir les champs de modification
+        document.getElementById("nouveauStatut").value = rep.statut || "En attente";
+        document.getElementById("nouveauDiagnostic").value = rep.diagnostic || "";
     }
-
-
-    // =====================================================
-    // MODIFIER STATUT
-    // =====================================================
 
     async function modifierStatut() {
+        if (!reparationActuelle) return;
 
-        if (!reparationActuelle) {
+        const select = document.getElementById("nouveauStatut");
+        const diagnosticInput = document.getElementById("nouveauDiagnostic");
+        const message = document.getElementById("messageStatut");
+        const bouton = document.getElementById("boutonStatut");
 
-            return;
-
-        }
-
-
-        const select =
-            document.getElementById(
-                "nouveauStatut"
-            );
-
-
-        const message =
-            document.getElementById(
-                "messageStatut"
-            );
-
-
-        const bouton =
-            document.getElementById(
-                "boutonStatut"
-            );
-
-
-        if (!select || !message) {
-
-            return;
-
-        }
-
-
-        const nouveauStatut =
-            select.value;
-
-
-        message.textContent =
-            "Mise à jour en cours...";
-
-        message.style.background =
-            "#f3f4f6";
-
-        message.style.color =
-            "#374151";
-
-
-        if (bouton) {
-
-            bouton.disabled =
-                true;
-
-        }
-
+        bouton.disabled = true;
+        message.classList.remove("hidden");
+        message.textContent = "Mise à jour en cours...";
+        message.style.background = "#f1f5f9";
+        message.style.color = "#475569";
 
         try {
+            const response = await fetch(`${API_URL}/reparations/${reparationActuelle.id}/statut`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    nouveau_statut: select.value,
+                    diagnostic: diagnosticInput.value.trim(),
+                    utilisateur_id: 1
+                })
+            });
 
-            const response =
-                await fetch(
+            if (!response.ok) throw new Error("Erreur lors de la mise à jour.");
 
-                    `${API_URL}/reparations/`
-                    + `${reparationActuelle.id}/statut`,
+            const data = await response.json();
+            afficherReparation(data);
 
-                    {
-
-                        method: "PATCH",
-
-                        headers: {
-
-                            "Content-Type":
-                                "application/json"
-
-                        },
-
-                        body: JSON.stringify({
-
-                            nouveau_statut:
-                                nouveauStatut,
-
-                            utilisateur_id:
-                                1
-
-                        })
-
-                    }
-
-                );
-
-
-            if (!response.ok) {
-
-                let erreur =
-                    "Erreur lors de la mise à jour.";
-
-
-                try {
-
-                    const error =
-                        await response.json();
-
-                    erreur =
-                        error.detail
-                        || erreur;
-
-                }
-                catch (_) {
-                }
-
-
-                throw new Error(
-                    erreur
-                );
-
-            }
-
-
-            const data =
-                await response.json();
-
-
-            reparationActuelle =
-                data;
-
-
-            // Réafficher toutes les données
-            // avec la nouvelle réponse backend
-
-            afficherReparation(
-                data
-            );
-
-
-            message.textContent =
-                "Statut mis à jour avec succès.";
-
-            message.style.background =
-                "#dcfce7";
-
-            message.style.color =
-                "#166534";
-
+            message.textContent = "✓ Modifications enregistrées !";
+            message.style.background = "#dcfce7";
+            message.style.color = "#166534";
+        } catch (error) {
+            message.textContent = error.message;
+            message.style.background = "#fee2e2";
+            message.style.color = "#991b1b";
+        } finally {
+            bouton.disabled = false;
         }
-
-        catch (error) {
-
-            message.textContent =
-                error.message;
-
-            message.style.background =
-                "#fee2e2";
-
-            message.style.color =
-                "#991b1b";
-
-        }
-
-        finally {
-
-            if (bouton) {
-
-                bouton.disabled =
-                    false;
-
-            }
-
-        }
-
     }
 
-
-    // =====================================================
-    // ERREUR
-    // =====================================================
-
-    function afficherErreur(
-        message
-    ) {
-
-        document
-            .getElementById("loading")
-            .classList
-            .add("hidden");
-
-
-        const error =
-            document.getElementById(
-                "error"
-            );
-
-
-        error.textContent =
-            message;
-
-
-        error.classList
-            .remove("hidden");
-
+    function afficherErreur(msg) {
+        document.getElementById("loading").classList.add("hidden");
+        const error = document.getElementById("error");
+        error.textContent = msg;
+        error.classList.remove("hidden");
     }
-
-
-    // =====================================================
-    // DÉMARRAGE
-    // =====================================================
 
     if (!numeroDossier) {
-
-        afficherErreur(
-            "Numéro de dossier absent de l'URL."
-        );
-
-    }
-    else {
-
+        afficherErreur("Numéro de dossier absent de l'URL.");
+    } else {
         chargerReparation();
-
     }
-
 </script>
 
 </body>
-
 </html>

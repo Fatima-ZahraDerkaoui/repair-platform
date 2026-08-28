@@ -671,77 +671,53 @@ class DossierDetailMixin:
         )
 
         # ============================================================
-        # ESTIMATION
+        # ESTIMATION & PRÉDICTION & COÛT RÉEL (MODIFIABLES)
         # ============================================================
 
-        estimation_group = QGroupBox(
-            "06  •  Estimation financière et délai"
-        )
+        estimation_group = QGroupBox("06  •  Estimation financière et coût réel")
+        estimation_layout = QGridLayout(estimation_group)
+        estimation_layout.setContentsMargins(18, 22, 18, 18)
+        estimation_layout.setHorizontalSpacing(18)
+        estimation_layout.setVerticalSpacing(12)
+        estimation_layout.setColumnMinimumWidth(0, 150)
 
-        estimation_layout = QGridLayout(
-            estimation_group
-        )
-
-        estimation_layout.setContentsMargins(
-            18, 22, 18, 18
-        )
-
-        estimation_layout.setHorizontalSpacing(
-            18
-        )
-
-        estimation_layout.setVerticalSpacing(
-            10
-        )
-
-        estimation_layout.setColumnMinimumWidth(
-            0,
-            150
-        )
-
+        # 1. Délai
         self.delai_label = self.create_info_label()
+
+        # 2. Coût Estimé (View + Edit)
         self.cout_estime_label = self.create_info_label()
+        self.edit_cout_estime = QLineEdit()
+        self.edit_cout_estime.setPlaceholderText("Coût estimé (ex: 150.00)")
+
+        # 3. Coût Réel (View + Edit)
         self.cout_reel_label = self.create_info_label()
+        self.edit_cout_reel = QLineEdit()
+        self.edit_cout_reel.setPlaceholderText("Coût réel payé (ex: 200.00)")
 
         estimation_fields = [
-            (
-                "Délai estimé",
-                self.delai_label
-            ),
-            (
-                "Coût estimé",
-                self.cout_estime_label
-            ),
-            (
-                "Coût réel",
-                self.cout_reel_label
-            )
+            ("Délai estimé", self.delai_label, None),
+            ("Coût estimé (IA/Est.)", self.cout_estime_label, self.edit_cout_estime),
+            ("Coût réel", self.cout_reel_label, self.edit_cout_reel),
         ]
 
-        for row, (label, widget) in enumerate(
-            estimation_fields
-        ):
-
+        for row, (label, view_widget, edit_widget) in enumerate(estimation_fields):
             field_label = QLabel(label)
-            field_label.setObjectName(
-                "fieldLabel"
-            )
+            field_label.setObjectName("fieldLabel")
+            estimation_layout.addWidget(field_label, row, 0)
+            estimation_layout.addWidget(view_widget, row, 1)
 
-            estimation_layout.addWidget(
-                field_label,
-                row,
-                0
-            )
+            if edit_widget:
+                estimation_layout.addWidget(edit_widget, row, 1)
 
-            estimation_layout.addWidget(
-                widget,
-                row,
-                1
-            )
+        # Bouton d'estimation prédictive intégrée
+        self.btn_predict_cost = QPushButton("⚡ Estimer le coût (IA)")
+        self.btn_predict_cost.setObjectName("primaryButton")
+        self.btn_predict_cost.setToolTip("Prédire automatiquement le coût estimé via l'API ML")
+        self.btn_predict_cost.clicked.connect(self.predict_and_apply_cost)
 
-        content.addWidget(
-            estimation_group
-        )
+        estimation_layout.addWidget(self.btn_predict_cost, 3, 0, 1, 2)
+
+        content.addWidget(estimation_group)
 
         # ============================================================
         # ACTIONS
@@ -1145,16 +1121,28 @@ class DossierDetailMixin:
                 background: #CBD5E1;
                 border-radius: 4px;
             }
+
+            #deletePieceButton {
+                background: #FEF2F2;
+                color: #DC2626;
+                border: 1px solid #FECACA;
+                padding: 5px 10px;
+                min-height: 28px;
+            }
+
+            #deletePieceButton:hover {
+                background: #FEE2E2;
+                border-color: #FCA5A5;
+                color: #B91C1C;
+            }
+
         """)
 
     def set_edit_mode(self, enabled):
 
         self.edit_mode = enabled
 
-        # ========================================================
         # CLIENT
-        # ========================================================
-
         self.client_nom.setVisible(not enabled)
         self.client_tel.setVisible(not enabled)
         self.client_email.setVisible(not enabled)
@@ -1163,10 +1151,7 @@ class DossierDetailMixin:
         self.edit_client_tel.setVisible(enabled)
         self.edit_client_email.setVisible(enabled)
 
-        # ========================================================
         # MATÉRIEL
-        # ========================================================
-
         self.machine_type.setVisible(not enabled)
         self.machine_marque.setVisible(not enabled)
         self.machine_modele.setVisible(not enabled)
@@ -1177,10 +1162,7 @@ class DossierDetailMixin:
         self.edit_machine_modele.setVisible(enabled)
         self.edit_machine_serie.setVisible(enabled)
 
-        # ========================================================
         # DIAGNOSTIC
-        # ========================================================
-
         self.probleme_view.setVisible(not enabled)
         self.diagnostic_view.setVisible(not enabled)
         self.intervention_view.setVisible(not enabled)
@@ -1193,44 +1175,33 @@ class DossierDetailMixin:
         self.pieces_defectueuses_edit.setVisible(enabled)
         self.remarques_edit.setVisible(enabled)
 
-        # ========================================================
-        # STATUT
-        # ========================================================
+        # ESTIMATION ET COÛT RÉEL
+        self.cout_estime_label.setVisible(not enabled)
+        self.edit_cout_estime.setVisible(enabled)
 
+        self.cout_reel_label.setVisible(not enabled)
+        self.edit_cout_reel.setVisible(enabled)
+
+        # STATUT
         self.status_combo.setVisible(enabled)
 
-        # ========================================================
-        # PIÈCES UTILISÉES
-        # ========================================================
-
+        # PIÈCES
         self.pieces_edit_controls.setVisible(enabled)
+        
+        # Cacher la colonne Action en consultation
+        self.pieces_table.setColumnHidden(
+            5,
+            not enabled
+        )
 
-        # ========================================================
         # BOUTONS
-        # ========================================================
-
         self.edit_detail_button.setVisible(not enabled)
-
         self.cancel_edit_button.setVisible(enabled)
         self.save_detail_button.setVisible(enabled)
 
-        # ========================================================
-        # TITRE DU MODE
-        # ========================================================
-
-        if enabled:
-
-            self.edit_detail_button.setText(
-                "✏ Modifier"
-            )
-
-            self.save_detail_button.setText(
-                "Enregistrer"
-            )
-
-            self.cancel_edit_button.setText(
-                "Annuler"
-            )
+        # Actualiser la colonne Action
+        if hasattr(self, "pieces_utilisees"):
+            self.display_pieces()
 
     def enter_edit_mode(self):
 
@@ -1362,6 +1333,16 @@ class DossierDetailMixin:
         )
 
         # ========================================================
+        # ESTIMATION ET COÛT RÉEL
+        # ========================================================
+
+        c_estime = dossier.get("cout_estime")
+        self.edit_cout_estime.setText(str(c_estime) if c_estime is not None else "")
+
+        c_reel = dossier.get("cout_reel")
+        self.edit_cout_reel.setText(str(c_reel) if c_reel is not None else "")
+
+        # ========================================================
         # STATUT
         # ========================================================
 
@@ -1391,14 +1372,9 @@ class DossierDetailMixin:
         if not self.current_dossier:
             return
 
-        # Recharger les valeurs originales du dossier
+        self.edit_mode = False
         self.load_detail_data()
 
-        # Revenir au mode consultation
-        self.set_edit_mode(False)
-
-        # ========================================================
-    
     def load_detail_data(self):
 
         dossier = self.current_dossier
@@ -1688,7 +1664,7 @@ class DossierDetailMixin:
             )
 
         # ========================================================
-        # ESTIMATION
+        # ESTIMATION ET COÛTS
         # ========================================================
 
         delai = dossier.get(
@@ -1707,21 +1683,16 @@ class DossierDetailMixin:
                 "-"
             )
 
-        self.cout_estime_label.setText(
-            format_money(
-                dossier.get(
-                    "cout_estime"
-                )
-            )
-        )
+        cout_estime_val = dossier.get("cout_estime")
+        cout_reel_val = dossier.get("cout_reel")
 
-        self.cout_reel_label.setText(
-            format_money(
-                dossier.get(
-                    "cout_reel"
-                )
-            )
-        )
+        # Consultation labels
+        self.cout_estime_label.setText(format_money(cout_estime_val))
+        self.cout_reel_label.setText(format_money(cout_reel_val))
+
+        # Modification lineedits
+        self.edit_cout_estime.setText(str(cout_estime_val) if cout_estime_val is not None else "")
+        self.edit_cout_reel.setText(str(cout_reel_val) if cout_reel_val is not None else "")
 
         # ========================================================
         # PIÈCES UTILISÉES
@@ -1776,8 +1747,6 @@ class DossierDetailMixin:
                 f"{error}"
             )
 
-        # ========================================================
-   
     def back_to_list(self):
 
         self.stack.setCurrentWidget(
@@ -1787,126 +1756,140 @@ class DossierDetailMixin:
         self.load_dossiers()
 
     def save_dossier(self):
-    
-            if not self.current_dossier:
-                return
-    
-            dossier_id = self.current_dossier.get("id")
-    
-            if not dossier_id:
-                return
-    
-            payload = {
-                "client_nom":
-                    self.edit_client_nom.text().strip(),
-    
-                "client_telephone":
-                    self.edit_client_tel.text().strip(),
-    
-                "client_email":
-                    self.edit_client_email.text().strip(),
-    
-                "type_materiel":
-                    self.edit_machine_type.text().strip(),
-    
-                "marque":
-                    self.edit_machine_marque.text().strip(),
-    
-                "modele":
-                    self.edit_machine_modele.text().strip(),
-    
-                "numero_serie":
-                    self.edit_machine_serie.text().strip(),
-    
-                "probleme":
-                    self.probleme_edit.toPlainText().strip()
-                    or None,
-    
-                "diagnostic":
-                    self.diagnostic_edit.toPlainText().strip()
-                    or None,
-    
-                "intervention":
-                    self.intervention_edit.toPlainText().strip()
-                    or None,
-    
-                "pieces_defectueuses":
-                    self.pieces_defectueuses_edit
-                    .toPlainText()
-                    .strip()
-                    or None,
-    
-                "remarques":
-                    self.remarques_edit
-                    .toPlainText()
-                    .strip()
-                    or None,
-    
-                "statut":
-                    self.status_combo.currentText()
-            }
-    
-            try:
-    
-                response = requests.patch(
-                    f"{API_URL}/reparations/{dossier_id}",
-                    json=payload,
-                    timeout=15
-                )
-    
-                if not response.ok:
-    
-                    try:
-                        detail = response.json().get(
-                            "detail",
-                            response.text
-                        )
-    
-                    except Exception:
-                        detail = response.text
-    
-                    QMessageBox.warning(
-                        self,
-                        "Erreur",
-                        "Impossible d'enregistrer les modifications.\n\n"
-                        f"{detail}"
+
+        if not self.current_dossier:
+            return
+
+        dossier_id = self.current_dossier.get("id")
+
+        if not dossier_id:
+            return
+
+        # Parsing sécurisé des coûts (estimé et réel)
+        try:
+            cout_estime_str = self.edit_cout_estime.text().replace("DH", "").strip()
+            cout_estime_val = float(cout_estime_str) if cout_estime_str else None
+        except ValueError:
+            cout_estime_val = None
+
+        try:
+            cout_reel_str = self.edit_cout_reel.text().replace("DH", "").strip()
+            cout_reel_val = float(cout_reel_str) if cout_reel_str else None
+        except ValueError:
+            cout_reel_val = None
+
+        payload = {
+            "client_nom":
+                self.edit_client_nom.text().strip(),
+
+            "client_telephone":
+                self.edit_client_tel.text().strip(),
+
+            "client_email":
+                self.edit_client_email.text().strip(),
+
+            "type_materiel":
+                self.edit_machine_type.text().strip(),
+
+            "marque":
+                self.edit_machine_marque.text().strip(),
+
+            "modele":
+                self.edit_machine_modele.text().strip(),
+
+            "numero_serie":
+                self.edit_machine_serie.text().strip(),
+
+            "probleme":
+                self.probleme_edit.toPlainText().strip()
+                or None,
+
+            "diagnostic":
+                self.diagnostic_edit.toPlainText().strip()
+                or None,
+
+            "intervention":
+                self.intervention_edit.toPlainText().strip()
+                or None,
+
+            "pieces_defectueuses":
+                self.pieces_defectueuses_edit
+                .toPlainText()
+                .strip()
+                or None,
+
+            "remarques":
+                self.remarques_edit
+                .toPlainText()
+                .strip()
+                or None,
+
+            "statut":
+                self.status_combo.currentText(),
+
+            "cout_estime": cout_estime_val,
+            "cout_reel": cout_reel_val
+        }
+
+        try:
+
+            response = requests.patch(
+                f"{API_URL}/reparations/{dossier_id}",
+                json=payload,
+                timeout=15
+            )
+
+            if not response.ok:
+
+                try:
+                    detail = response.json().get(
+                        "detail",
+                        response.text
                     )
-    
-                    return
-    
-                data = response.json()
-    
-                if isinstance(data, dict):
-                    self.current_dossier = data
-                else:
-                    self.refresh_current_dossier()
-                    return
-    
-                self.set_edit_mode(False)
-    
-                self.load_detail_data()
-    
-                self.load_dossiers()
-    
-                self.status_changed.emit()
-    
-                QMessageBox.information(
+
+                except Exception:
+                    detail = response.text
+
+                QMessageBox.warning(
                     self,
-                    "Modification enregistrée",
-                    "Les modifications ont été enregistrées."
-                )
-    
-            except requests.RequestException as error:
-    
-                QMessageBox.critical(
-                    self,
-                    "Erreur API",
-                    "Impossible de communiquer avec le serveur.\n\n"
-                    f"{error}"
+                    "Erreur",
+                    "Impossible d'enregistrer les modifications.\n\n"
+                    f"{detail}"
                 )
 
-        # ========================================================
- 
+                return
+
+            data = response.json()
+
+            if isinstance(data, dict):
+                self.current_dossier = data
+            else:
+                self.refresh_current_dossier()
+                return
+
+            self.set_edit_mode(False)
+
+            self.load_detail_data()
+
+            self.load_dossiers()
+
+            self.status_changed.emit()
+
+            QMessageBox.information(
+                self,
+                "Modification enregistrée",
+                "Les modifications ont été enregistrées avec succès."
+            )
+
+        except requests.RequestException as error:
+
+            QMessageBox.critical(
+                self,
+                "Erreur API",
+                "Impossible de communiquer avec le serveur.\n\n"
+                f"{error}"
+            )
+
     def download_pdf(self):
 
         if not self.current_dossier:
@@ -1979,152 +1962,152 @@ class DossierDetailMixin:
                 f"Impossible de générer le PDF.\n\n{error}"
             )
 
-    def set_status_label(self, statut ):
-    
-            statut = str(
-                statut or "-"
+    def set_status_label(self, statut):
+
+        statut = str(
+            statut or "-"
+        )
+
+        self.detail_status_label.setText(
+            statut
+        )
+
+        colors = {
+            "En attente": (
+                "#FEF3C7",
+                "#92400E"
+            ),
+            "En diagnostic": (
+                "#DBEAFE",
+                "#1D4ED8"
+            ),
+            "En réparation": (
+                "#E0E7FF",
+                "#4338CA"
+            ),
+            "Terminé": (
+                "#DCFCE7",
+                "#15803D"
             )
-    
-            self.detail_status_label.setText(
-                statut
+        }
+
+        background, foreground = colors.get(
+            statut,
+            (
+                "#F3F4F6",
+                "#374151"
             )
-    
-            colors = {
-                "En attente": (
-                    "#FEF3C7",
-                    "#92400E"
-                ),
-                "En diagnostic": (
-                    "#DBEAFE",
-                    "#1D4ED8"
-                ),
-                "En réparation": (
-                    "#E0E7FF",
-                    "#4338CA"
-                ),
-                "Terminé": (
-                    "#DCFCE7",
-                    "#15803D"
-                )
-            }
-    
-            background, foreground = colors.get(
-                statut,
-                (
-                    "#F3F4F6",
-                    "#374151"
-                )
-            )
-    
-            self.detail_status_label.setStyleSheet(
-                f"""
-                QLabel {{
-                    background: {background};
-                    color: {foreground};
-                    border-radius: 8px;
-                    padding: 9px 15px;
-                    font-weight: bold;
-                }}
-                """
-            )
-    
+        )
+
+        self.detail_status_label.setStyleSheet(
+            f"""
+            QLabel {{
+                background: {background};
+                color: {foreground};
+                border-radius: 8px;
+                padding: 9px 15px;
+                font-weight: bold;
+            }}
+            """
+        )
+
     def change_status(self):
-    
-            if not self.current_dossier:
-                return
-    
-            dossier_id = self.current_dossier.get(
-                "id"
-            )
-    
-            ancien = self.current_dossier.get(
-                "statut"
-            )
-    
-            nouveau = self.status_combo.currentText()
-    
-            if ancien == nouveau:
-    
-                QMessageBox.information(
-                    self,
-                    "Statut",
-                    "Le dossier possède déjà ce statut."
-                )
-    
-                return
-    
-            reply = QMessageBox.question(
+
+        if not self.current_dossier:
+            return
+
+        dossier_id = self.current_dossier.get(
+            "id"
+        )
+
+        ancien = self.current_dossier.get(
+            "statut"
+        )
+
+        nouveau = self.status_combo.currentText()
+
+        if ancien == nouveau:
+
+            QMessageBox.information(
                 self,
-                "Confirmation",
-                "Voulez-vous changer le statut du dossier ?\n\n"
-                f"De : {ancien}\n"
-                f"Vers : {nouveau}",
-                QMessageBox.Yes |
-                QMessageBox.No,
-                QMessageBox.No
+                "Statut",
+                "Le dossier possède déjà ce statut."
             )
-    
-            if reply != QMessageBox.Yes:
-                return
-    
-            payload = {
-                "nouveau_statut": nouveau,
-                "utilisateur_id": DEFAULT_UTILISATEUR_ID
-            }
-    
-            try:
-    
-                response = requests.patch(
-                    f"{API_URL}/reparations/"
-                    f"{dossier_id}/statut",
-                    json=payload,
-                    timeout=15
-                )
-    
-                if not response.ok:
-    
-                    try:
-    
-                        detail = response.json().get(
-                            "detail",
-                            response.text
-                        )
-    
-                    except Exception:
-    
-                        detail = response.text
-    
-                    QMessageBox.warning(
-                        self,
-                        "Erreur",
-                        f"Impossible de changer le statut.\n\n"
-                        f"{detail}"
+
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Confirmation",
+            "Voulez-vous changer le statut du dossier ?\n\n"
+            f"De : {ancien}\n"
+            f"Vers : {nouveau}",
+            QMessageBox.Yes |
+            QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply != QMessageBox.Yes:
+            return
+
+        payload = {
+            "nouveau_statut": nouveau,
+            "utilisateur_id": DEFAULT_UTILISATEUR_ID
+        }
+
+        try:
+
+            response = requests.patch(
+                f"{API_URL}/reparations/"
+                f"{dossier_id}/statut",
+                json=payload,
+                timeout=15
+            )
+
+            if not response.ok:
+
+                try:
+
+                    detail = response.json().get(
+                        "detail",
+                        response.text
                     )
-    
-                    return
-    
-                self.current_dossier = response.json()
-    
-                self.load_detail_data()
-    
-                self.load_dossiers()
-    
-                self.status_changed.emit()
-    
-                QMessageBox.information(
+
+                except Exception:
+
+                    detail = response.text
+
+                QMessageBox.warning(
                     self,
-                    "Statut mis à jour",
-                    f"Le dossier est maintenant :\n\n{nouveau}"
+                    "Erreur",
+                    f"Impossible de changer le statut.\n\n"
+                    f"{detail}"
                 )
-    
-            except requests.RequestException as error:
-    
-                QMessageBox.critical(
-                    self,
-                    "Erreur API",
-                    f"Impossible de communiquer avec le serveur.\n\n{error}"
-                )
-  
+
+                return
+
+            self.current_dossier = response.json()
+
+            self.load_detail_data()
+
+            self.load_dossiers()
+
+            self.status_changed.emit()
+
+            QMessageBox.information(
+                self,
+                "Statut mis à jour",
+                f"Le dossier est maintenant :\n\n{nouveau}"
+            )
+
+        except requests.RequestException as error:
+
+            QMessageBox.critical(
+                self,
+                "Erreur API",
+                f"Impossible de communiquer avec le serveur.\n\n{error}"
+            )
+
     def fill_piece_combo(self):
 
         self.piece_combo.blockSignals(True)
@@ -2141,10 +2124,6 @@ class DossierDetailMixin:
             quantite = safe_int(
                 stock.get("quantite")
             )
-
-            # Ne jamais afficher une pièce épuisée
-            #if quantite <= 0:
-            #    continue
 
             nom = (
                 stock.get("nom_piece")
@@ -2191,73 +2170,70 @@ class DossierDetailMixin:
         )
 
         self.on_piece_selected()
-   
+
     def filter_stock(
         self,
         text=""
     ):
-    
-            search = (
-                text
-                .strip()
-                .lower()
+
+        search = (
+            text
+            .strip()
+            .lower()
+        )
+
+        for index in range(
+            self.piece_combo.count()
+        ):
+
+            stock = self.piece_combo.itemData(
+                index
             )
-    
-            for index in range(
-                self.piece_combo.count()
-            ):
-    
-                stock = self.piece_combo.itemData(
-                    index
-                )
-    
-                if not stock:
-    
-                    self.piece_combo.view().setRowHidden(
-                        index,
-                        False
-                    )
-    
-                    continue
-    
-                searchable = " ".join([
-                    str(
-                        stock.get(
-                            "nom_piece",
-                            ""
-                        )
-                    ),
-                    str(
-                        stock.get(
-                            "reference",
-                            ""
-                        )
-                    ),
-                    str(
-                        stock.get(
-                            "categorie",
-                            ""
-                        )
-                    )
-                ]).lower()
-    
-                hidden = (
-                    search not in searchable
-                )
-    
+
+            if not stock:
+
                 self.piece_combo.view().setRowHidden(
                     index,
-                    hidden
+                    False
                 )
-    
+
+                continue
+
+            searchable = " ".join([
+                str(
+                    stock.get(
+                        "nom_piece",
+                        ""
+                    )
+                ),
+                str(
+                    stock.get(
+                        "reference",
+                        ""
+                    )
+                ),
+                str(
+                    stock.get(
+                        "categorie",
+                        ""
+                    )
+                )
+            ]).lower()
+
+            hidden = (
+                search not in searchable
+            )
+
+            self.piece_combo.view().setRowHidden(
+                index,
+                hidden
+            )
+
     def on_piece_selected(self):
 
         stock = self.piece_combo.currentData()
 
-        # ========================================================
         # AUCUNE PIÈCE SÉLECTIONNÉE
-        # ========================================================
-
         if not isinstance(stock, dict):
 
             self.piece_info_label.setText(
@@ -2274,15 +2250,11 @@ class DossierDetailMixin:
             self.piece_quantity.setMaximum(999999)
             self.piece_quantity.setValue(1)
 
-            # IMPORTANT
             self.add_piece_button.setEnabled(False)
 
             return
 
-        # ========================================================
         # PIÈCE VALIDE
-        # ========================================================
-
         disponible = safe_int(
             stock.get("quantite")
         )
@@ -2291,8 +2263,6 @@ class DossierDetailMixin:
             stock.get("prix_unitaire")
         )
 
-        # La quantité utilisée n'est pas limitée
-        # par le stock disponible.
         self.piece_quantity.setEnabled(True)
 
         self.piece_quantity.setMinimum(1)
@@ -2301,8 +2271,6 @@ class DossierDetailMixin:
         if self.piece_quantity.value() < 1:
             self.piece_quantity.setValue(1)
 
-        # IMPORTANT :
-        # activer le bouton Ajouter
         self.add_piece_button.setEnabled(True)
 
         self.piece_info_label.setText(
@@ -2319,10 +2287,6 @@ class DossierDetailMixin:
 
         if not self.current_dossier:
             return
-
-        # ========================================================
-        # VÉRIFIER LA PIÈCE SÉLECTIONNÉE
-        # ========================================================
 
         stock = self.piece_combo.currentData()
 
@@ -2348,10 +2312,6 @@ class DossierDetailMixin:
 
             return
 
-        # ========================================================
-        # QUANTITÉ DEMANDÉE
-        # ========================================================
-
         quantite = self.piece_quantity.value()
 
         if quantite < 1:
@@ -2363,10 +2323,6 @@ class DossierDetailMixin:
             )
 
             return
-
-        # ========================================================
-        # RÉCUPÉRER LE STOCK ACTUEL
-        # ========================================================
 
         try:
 
@@ -2409,10 +2365,6 @@ class DossierDetailMixin:
                     stock_actuel = item
                     break
 
-            # ====================================================
-            # PIÈCE INTROUVABLE
-            # ====================================================
-
             if not stock_actuel:
 
                 QMessageBox.warning(
@@ -2426,10 +2378,6 @@ class DossierDetailMixin:
 
                 return
 
-            # ====================================================
-            # INFORMATIONS STOCK
-            # ====================================================
-
             disponible = safe_int(
                 stock_actuel.get("quantite")
             )
@@ -2438,26 +2386,7 @@ class DossierDetailMixin:
                 stock_actuel.get("prix_unitaire")
             )
 
-            # Mettre à jour les données locales
             stock.update(stock_actuel)
-
-            # ====================================================
-            # IMPORTANT :
-            # ON NE BLOQUE PAS LA QUANTITÉ SELON LE STOCK
-            # ====================================================
-            #
-            # Exemple :
-            #
-            # Stock actuel = 3
-            # Quantité utilisée = 4
-            #
-            # => AUTORISÉ
-            #
-            # La quantité de la réparation représente la quantité
-            # réellement utilisée dans cette réparation.
-            # Elle n'est pas limitée par le stock actuel.
-            #
-            # ====================================================
 
             dossier_id = self.current_dossier.get(
                 "id"
@@ -2474,10 +2403,6 @@ class DossierDetailMixin:
                 json=payload,
                 timeout=15
             )
-
-            # ====================================================
-            # ERREUR BACKEND
-            # ====================================================
 
             if not response.ok:
 
@@ -2541,10 +2466,6 @@ class DossierDetailMixin:
 
                 return
 
-            # ====================================================
-            # SUCCÈS
-            # ====================================================
-
             self.load_stock()
             self.load_pieces_utilisees()
             self.fill_piece_combo()
@@ -2567,239 +2488,356 @@ class DossierDetailMixin:
             )
 
     def load_pieces_utilisees(self):
-    
-            if not self.current_dossier:
-    
-                return
-    
-            dossier_id = self.current_dossier.get(
-                "id"
+
+        if not self.current_dossier:
+            return
+
+        dossier_id = self.current_dossier.get(
+            "id"
+        )
+
+        try:
+
+            response = requests.get(
+                f"{API_URL}/reparations/"
+                f"{dossier_id}/pieces",
+                timeout=15
             )
-    
-            try:
-    
-                response = requests.get(
-                    f"{API_URL}/reparations/"
-                    f"{dossier_id}/pieces",
-                    timeout=15
+
+            response.raise_for_status()
+
+            data = response.json()
+
+            self.pieces_utilisees = (
+                data
+                if isinstance(
+                    data,
+                    list
                 )
-    
-                response.raise_for_status()
-    
-                data = response.json()
-    
-                self.pieces_utilisees = (
-                    data
-                    if isinstance(
-                        data,
-                        list
-                    )
-                    else []
-                )
-    
-                self.display_pieces()
-    
-            except requests.RequestException as error:
-    
-                print(
-                    "[DOSSIERS] Impossible de charger les pièces :",
-                    error
-                )
-    
-                self.pieces_utilisees = []
-    
-                self.pieces_table.setRowCount(
-                    0
-                )
-    
-                self.pieces_total_label.setText(
-                    "Total pièces : 0.00 DH"
-                )
-    
-        # ========================================================
-        # AFFICHER PIECES
-        # ========================================================
-    
-    def display_pieces(self):
-    
+                else []
+            )
+
+            self.display_pieces()
+
+        except requests.RequestException as error:
+
+            print(
+                "[DOSSIERS] Impossible de charger les pièces :",
+                error
+            )
+
+            self.pieces_utilisees = []
+
             self.pieces_table.setRowCount(
                 0
             )
-    
-            total_general = 0.0
-    
-            for piece in self.pieces_utilisees:
-    
-                row = self.pieces_table.rowCount()
-    
-                self.pieces_table.insertRow(
-                    row
-                )
-    
-                # ------------------------------------------------
-                # NOM PIECE
-                # ------------------------------------------------
-    
-                piece_info = piece.get(
-                    "piece"
-                )
-    
-                if isinstance(
-                    piece_info,
-                    dict
-                ):
-    
-                    nom = (
-                        piece_info.get(
-                            "nom_piece"
-                        )
-                        or f"Pièce #{piece.get('piece_id')}"
-                    )
-    
-                    reference = (
-                        piece_info.get(
-                            "reference"
-                        )
-                        or "-"
-                    )
-    
-                else:
-    
-                    stock = self.find_stock(
-                        piece.get(
-                            "piece_id"
-                        )
-                    )
-    
-                    if stock:
-    
-                        nom = (
-                            stock.get(
-                                "nom_piece"
-                            )
-                            or f"Pièce #{piece.get('piece_id')}"
-                        )
-    
-                        reference = (
-                            stock.get(
-                                "reference"
-                            )
-                            or "-"
-                        )
-    
-                    else:
-    
-                        nom = (
-                            f"Pièce #{piece.get('piece_id')}"
-                        )
-    
-                        reference = "-"
-    
-                quantite = safe_int(
-                    piece.get(
-                        "quantite"
-                    )
-                )
-    
-                prix = safe_float(
-                    piece.get(
-                        "prix_utilise"
-                    )
-                )
-    
-                total = (
-                    quantite
-                    * prix
-                )
-    
-                total_general += total
-    
-                values = [
-                    nom,
-                    reference,
-                    str(quantite),
-                    format_money(prix),
-                    format_money(total)
-                ]
-    
-                for col, value in enumerate(
-                    values
-                ):
-    
-                    item = QTableWidgetItem(
-                        str(value)
-                    )
-    
-                    item.setTextAlignment(
-                        Qt.AlignVCenter
-                        | (
-                            Qt.AlignCenter
-                            if col in [2, 3, 4]
-                            else Qt.AlignLeft
-                        )
-                    )
-    
-                    self.pieces_table.setItem(
-                        row,
-                        col,
-                        item
-                    )
-    
+
             self.pieces_total_label.setText(
-                f"Total pièces : "
-                f"{format_money(total_general)}"
+                "Total pièces : 0.00 DH"
             )
-    
-        # ========================================================
-        # FIND STOCK
-        # ========================================================
-    
+
+    def display_pieces(self):
+        self.pieces_table.setRowCount(0)
+
+        total_general = 0.0
+
+        for piece_utilisee in self.pieces_utilisees:
+
+            piece_utilisee_id = piece_utilisee.get("id")
+
+            if not piece_utilisee_id:
+                print(
+                    "[DOSSIERS] ID ReparationPiece manquant :",
+                    piece_utilisee
+                )
+                continue
+
+            piece_info = piece_utilisee.get("piece") or {}
+
+            nom_piece = piece_info.get(
+                "nom_piece",
+                "Pièce inconnue"
+            )
+
+            reference = piece_info.get(
+                "reference",
+                "-"
+            )
+
+            quantite = piece_utilisee.get(
+                "quantite",
+                0
+            )
+
+            prix_unitaire = piece_utilisee.get(
+                "prix_utilise",
+                0
+            )
+
+            try:
+                quantite = float(quantite)
+            except (TypeError, ValueError):
+                quantite = 0.0
+
+            try:
+                prix_unitaire = float(prix_unitaire)
+            except (TypeError, ValueError):
+                prix_unitaire = 0.0
+
+            total_piece = quantite * prix_unitaire
+
+            total_general += total_piece
+
+            row = self.pieces_table.rowCount()
+
+            self.pieces_table.insertRow(row)
+
+            # NOM
+            self.pieces_table.setItem(
+                row,
+                0,
+                QTableWidgetItem(
+                    str(nom_piece)
+                )
+            )
+
+            # REFERENCE
+            self.pieces_table.setItem(
+                row,
+                1,
+                QTableWidgetItem(
+                    str(reference)
+                )
+            )
+
+            # QUANTITE
+            self.pieces_table.setItem(
+                row,
+                2,
+                QTableWidgetItem(
+                    str(int(quantite))
+                    if quantite.is_integer()
+                    else str(quantite)
+                )
+            )
+
+            # PRIX UNITAIRE
+            self.pieces_table.setItem(
+                row,
+                3,
+                QTableWidgetItem(
+                    f"{prix_unitaire:.2f} DH"
+                )
+            )
+
+            # TOTAL
+            self.pieces_table.setItem(
+                row,
+                4,
+                QTableWidgetItem(
+                    f"{total_piece:.2f} DH"
+                )
+            )
+
+            # BOUTON SUPPRIMER
+            delete_button = QPushButton("Supprimer")
+            delete_button.setObjectName("deletePieceButton")
+            delete_button.setVisible(self.edit_mode)
+
+            delete_button.clicked.connect(
+                lambda checked=False,
+                    piece_id=piece_utilisee_id:
+                    self.remove_piece_from_edit(piece_id)
+            )
+
+            self.pieces_table.setCellWidget(
+                row,
+                5,
+                delete_button
+            )
+
+        # TOTAL GENERAL
+        self.pieces_total_label.setText(
+            f"Total pièces : {total_general:.2f} DH"
+        )
+
     def find_stock(
             self,
             piece_id
     ):
-    
-            for stock in self.stocks:
-    
-                if stock.get(
-                    "id"
-                ) == piece_id:
-    
-                    return stock
-    
-            return None
-    
-    def remove_piece_from_edit(self, row):
-            """
-            Supprime une pièce de la liste locale des pièces utilisées.
-    
-            La suppression définitive côté backend sera effectuée
-            lors de l'enregistrement du dossier.
-            """
-    
-            if row < 0 or row >= len(self.pieces_utilisees):
-                return
-    
-            piece = self.pieces_utilisees[row]
-    
-            nom = (
-                piece.get("nom")
-                or piece.get("designation")
-                or "Cette pièce"
-            )
-    
-            reply = QMessageBox.question(
+
+        for stock in self.stocks:
+
+            if stock.get(
+                "id"
+            ) == piece_id:
+
+                return stock
+
+        return None
+
+    def remove_piece_from_edit(self, piece_utilisee_id):
+        if not self.current_dossier:
+            return
+
+        dossier_id = self.current_dossier.get("id")
+
+        if not dossier_id:
+            QMessageBox.warning(
                 self,
-                "Supprimer la pièce",
-                f"Voulez-vous retirer « {nom} » du dossier ?",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
+                "Erreur",
+                "Dossier de réparation introuvable."
             )
-    
-            if reply != QMessageBox.Yes:
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Supprimer la pièce",
+            "Voulez-vous vraiment supprimer cette pièce "
+            "du dossier ?\n\n"
+            "La quantité sera automatiquement remise en stock.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply != QMessageBox.Yes:
+            return
+
+        url = (
+            f"{API_URL}/reparations/"
+            f"{dossier_id}/pieces/"
+            f"{piece_utilisee_id}"
+        )
+
+        print(
+            "[DOSSIERS] Suppression pièce :",
+            url
+        )
+
+        try:
+
+            response = requests.delete(
+                url,
+                timeout=15
+            )
+
+            if response.status_code != 200:
+                try:
+                    detail = response.json().get(
+                        "detail",
+                        response.text
+                    )
+                except Exception:
+                    detail = response.text
+
+                QMessageBox.warning(
+                    self,
+                    "Erreur",
+                    f"Impossible de supprimer la pièce.\n\n"
+                    f"{detail}"
+                )
+
+                print(
+                    "[DOSSIERS] Erreur suppression :",
+                    response.status_code,
+                    response.text
+                )
+
                 return
-    
-            self.pieces_utilisees.pop(row)
-    
-            self.display_pieces()
-    
+
+            print(
+                "[DOSSIERS] Pièce supprimée :",
+                piece_utilisee_id
+            )
+
+            self.load_pieces_utilisees()
+            self.load_stock()
+
+        except requests.RequestException as error:
+
+            print(
+                "[DOSSIERS] Erreur réseau suppression pièce :",
+                error
+            )
+
+            QMessageBox.critical(
+                self,
+                "Erreur réseau",
+                "Impossible de contacter le serveur."
+            )
+
+    def predict_and_apply_cost(self):
+        """
+        Interroge l'API de prédiction IA.
+        Si l'utilisateur est en Mode Édition, on lit les valeurs depuis les champs de saisie.
+        Sinon, on lit depuis l'objet current_dossier.
+        """
+        if getattr(self, "edit_mode", False):
+            materiel = self.edit_machine_type.text().strip() if hasattr(self, "edit_machine_type") else ""
+            probleme = self.probleme_edit.toPlainText().strip() if hasattr(self, "probleme_edit") else ""
+        else:
+            dossier = self.current_dossier or {}
+            materiel = str(dossier.get("type_materiel") or "").strip()
+            probleme = str(dossier.get("probleme") or "").strip()
+
+        if not materiel or not probleme:
+            QMessageBox.warning(
+                self,
+                "Données manquantes",
+                "Le type de matériel et la description du problème sont requis pour estimer le coût."
+            )
+            return
+
+        if hasattr(self, "predict_cost"):
+            result = self.predict_cost(materiel, probleme)
+        else:
+            result = None
+
+        if not result or not isinstance(result, dict):
+            QMessageBox.warning(
+                self,
+                "Échec de l'estimation",
+                "Impossible d'obtenir une prédiction de coût depuis le service IA."
+            )
+            return
+
+        predicted_cost = (
+            result.get("cout_estime") 
+            or result.get("predicted_cost") 
+            or result.get("prediction") 
+            or result.get("cost")
+        )
+        predicted_delay = (
+            result.get("delai_estime") 
+            or result.get("predicted_delay") 
+            or result.get("delai")
+        )
+
+        if predicted_cost is None:
+            QMessageBox.warning(
+                self,
+                "Format invalide",
+                f"La réponse de prédiction n'a pas pu être lue : {result}"
+            )
+            return
+
+        if self.current_dossier is not None:
+            self.current_dossier["cout_estime"] = predicted_cost
+            if predicted_delay is not None:
+                self.current_dossier["delai_estime"] = predicted_delay
+
+        if hasattr(self, "cout_estime_label"):
+            self.cout_estime_label.setText(format_money(predicted_cost))
+
+        if hasattr(self, "edit_cout_estime"):
+            self.edit_cout_estime.setText(str(predicted_cost))
+        
+        if hasattr(self, "delai_label") and predicted_delay is not None:
+            self.delai_label.setText(f"{predicted_delay} jour(s)")
+
+        msg = f"Coût estimé calculé : {format_money(predicted_cost)}"
+        if predicted_delay is not None:
+            msg += f"\nDélai estimé : {predicted_delay} jour(s)"
+            
+        QMessageBox.information(self, "Estimation IA Réussie", msg)
+        

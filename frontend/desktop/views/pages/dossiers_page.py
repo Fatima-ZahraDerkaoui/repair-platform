@@ -1,3 +1,5 @@
+from tkinter import dialog
+
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -1102,17 +1104,9 @@ class DossiersPage(
         dossiers
     ):
 
-        self.table.setRowCount(
-            0
-        )
+        self.table.setRowCount(len(dossiers))
 
-        for dossier in dossiers:
-
-            row = self.table.rowCount()
-
-            self.table.insertRow(
-                row
-            )
+        for row, dossier in enumerate(dossiers):
 
             client = dossier.get(
                 "client"
@@ -1476,671 +1470,46 @@ class DossiersPage(
     # ========================================================
 
     def open_edit_dialog(self, dossier):
-
+        """Redirige vers la page de détail et active le mode édition."""
         dossier_id = dossier.get("id")
 
         if not dossier_id:
-
             QMessageBox.warning(
                 self,
                 "Erreur",
                 "Identifiant du dossier introuvable."
             )
-
             return
 
-        # ----------------------------------------------------
-        # Récupérer la version complète
-        # ----------------------------------------------------
-
+        # 1. Récupérer la version complète du dossier depuis l'API
         try:
-
             response = requests.get(
                 f"{API_URL}/reparations/{dossier_id}",
                 timeout=15
             )
-
             response.raise_for_status()
+            full_dossier = response.json()
 
-            dossier_complet = response.json()
-
-            if isinstance(
-                dossier_complet,
-                dict
-            ):
-                dossier = dossier_complet
-
+            self.current_dossier = (
+                full_dossier if isinstance(full_dossier, dict) else dossier
+            )
         except requests.RequestException as error:
-
             QMessageBox.warning(
                 self,
                 "Erreur",
-                "Impossible de récupérer les données du dossier.\n\n"
+                "Impossible de récupérer les données complètes du dossier.\n\n"
                 f"{error}"
             )
+            self.current_dossier = dossier
 
-            return
+        # 2. Charger les données dans l'interface de détail
+        self.load_detail_data()
 
-        # ----------------------------------------------------
-        # DIALOG
-        # ----------------------------------------------------
+        # 3. Basculer la vue vers la page de détail
+        self.stack.setCurrentWidget(self.detail_page)
 
-        dialog = QDialog(self)
-
-        dialog.setWindowTitle(
-            f"Modifier le dossier "
-            f"{dossier.get('numero_dossier', '')}"
-        )
-
-        dialog.setMinimumSize(
-            650,
-            700
-        )
-
-        dialog.setStyleSheet(
-            PAGE_STYLE
-        )
-
-        main_layout = QVBoxLayout(
-            dialog
-        )
-
-        main_layout.setContentsMargins(
-            25,
-            20,
-            25,
-            20
-        )
-
-        main_layout.setSpacing(15)
-
-        # ----------------------------------------------------
-        # TITRE
-        # ----------------------------------------------------
-
-        title = QLabel(
-            "Modifier les données du dossier"
-        )
-
-        title.setStyleSheet("""
-            font-size: 24px;
-            font-weight: bold;
-            color: #111827;
-        """)
-
-        main_layout.addWidget(
-            title
-        )
-
-        subtitle = QLabel(
-            f"Dossier : "
-            f"{dossier.get('numero_dossier', '-')}"
-        )
-
-        subtitle.setStyleSheet("""
-            color: #6B7280;
-            font-size: 13px;
-        """)
-
-        main_layout.addWidget(
-            subtitle
-        )
-
-        # ----------------------------------------------------
-        # SCROLL
-        # ----------------------------------------------------
-
-        scroll = QScrollArea()
-
-        scroll.setWidgetResizable(
-            True
-        )
-
-        container = QWidget()
-
-        form_layout = QVBoxLayout(
-            container
-        )
-
-        form_layout.setSpacing(15)
-
-        # ====================================================
-        # CLIENT
-        # ====================================================
-
-        client_group = QGroupBox(
-            "Informations client"
-        )
-
-        client_layout = QGridLayout(
-            client_group
-        )
-
-        client = dossier.get(
-            "client"
-        )
-
-        if not isinstance(
-            client,
-            dict
-        ):
-            client = {}
-
-        client_nom_edit = QLineEdit(
-            str(
-                client.get(
-                    "nom",
-                    dossier.get(
-                        "client_nom",
-                        ""
-                    )
-                ) or ""
-            )
-        )
-
-        client_tel_edit = QLineEdit(
-            str(
-                client.get(
-                    "telephone",
-                    dossier.get(
-                        "client_telephone",
-                        ""
-                    )
-                ) or ""
-            )
-        )
-
-        client_email_edit = QLineEdit(
-            str(
-                client.get(
-                    "email",
-                    ""
-                ) or ""
-            )
-        )
-
-        client_layout.addWidget(
-            QLabel("Nom"),
-            0,
-            0
-        )
-
-        client_layout.addWidget(
-            client_nom_edit,
-            0,
-            1
-        )
-
-        client_layout.addWidget(
-            QLabel("Téléphone"),
-            1,
-            0
-        )
-
-        client_layout.addWidget(
-            client_tel_edit,
-            1,
-            1
-        )
-
-        client_layout.addWidget(
-            QLabel("Email"),
-            2,
-            0
-        )
-
-        client_layout.addWidget(
-            client_email_edit,
-            2,
-            1
-        )
-
-        form_layout.addWidget(
-            client_group
-        )
-
-        # ====================================================
-        # MATÉRIEL
-        # ====================================================
-
-        machine_group = QGroupBox(
-            "Informations matériel"
-        )
-
-        machine_layout = QGridLayout(
-            machine_group
-        )
-
-        type_edit = QLineEdit(
-            str(
-                dossier.get(
-                    "type_materiel",
-                    ""
-                ) or ""
-            )
-        )
-
-        marque_edit = QLineEdit(
-            str(
-                dossier.get(
-                    "marque",
-                    ""
-                ) or ""
-            )
-        )
-
-        modele_edit = QLineEdit(
-            str(
-                dossier.get(
-                    "modele",
-                    ""
-                ) or ""
-            )
-        )
-
-        serie_edit = QLineEdit(
-            str(
-                dossier.get(
-                    "numero_serie",
-                    ""
-                ) or ""
-            )
-        )
-
-        machine_layout.addWidget(
-            QLabel("Type de matériel"),
-            0,
-            0
-        )
-
-        machine_layout.addWidget(
-            type_edit,
-            0,
-            1
-        )
-
-        machine_layout.addWidget(
-            QLabel("Marque"),
-            1,
-            0
-        )
-
-        machine_layout.addWidget(
-            marque_edit,
-            1,
-            1
-        )
-
-        machine_layout.addWidget(
-            QLabel("Modèle"),
-            2,
-            0
-        )
-
-        machine_layout.addWidget(
-            modele_edit,
-            2,
-            1
-        )
-
-        machine_layout.addWidget(
-            QLabel("N° série"),
-            3,
-            0
-        )
-
-        machine_layout.addWidget(
-            serie_edit,
-            3,
-            1
-        )
-
-        form_layout.addWidget(
-            machine_group
-        )
-
-        # ====================================================
-        # DIAGNOSTIC
-        # ====================================================
-
-        problem_group = QGroupBox(
-            "Diagnostic et intervention"
-        )
-
-        problem_layout = QGridLayout(
-            problem_group
-        )
-
-        probleme_edit = QTextEdit(
-            str(
-                dossier.get(
-                    "probleme",
-                    ""
-                ) or ""
-            )
-        )
-
-        probleme_edit.setMaximumHeight(
-            80
-        )
-
-        diagnostic_edit = QTextEdit(
-            str(
-                dossier.get(
-                    "diagnostic",
-                    ""
-                ) or ""
-            )
-        )
-
-        diagnostic_edit.setMaximumHeight(
-            80
-        )
-
-        intervention_edit = QTextEdit(
-            str(
-                dossier.get(
-                    "intervention",
-                    ""
-                ) or ""
-            )
-        )
-
-        intervention_edit.setMaximumHeight(
-            80
-        )
-
-        pieces_edit = QTextEdit(
-            str(
-                dossier.get(
-                    "pieces_defectueuses",
-                    ""
-                ) or ""
-            )
-        )
-
-        pieces_edit.setMaximumHeight(
-            80
-        )
-
-        remarques_edit = QTextEdit(
-            str(
-                dossier.get(
-                    "remarques",
-                    ""
-                ) or ""
-            )
-        )
-
-        remarques_edit.setMaximumHeight(
-            80
-        )
-
-        problem_layout.addWidget(
-            QLabel("Problème signalé"),
-            0,
-            0
-        )
-
-        problem_layout.addWidget(
-            probleme_edit,
-            0,
-            1
-        )
-
-        problem_layout.addWidget(
-            QLabel("Diagnostic"),
-            1,
-            0
-        )
-
-        problem_layout.addWidget(
-            diagnostic_edit,
-            1,
-            1
-        )
-
-        problem_layout.addWidget(
-            QLabel("Intervention"),
-            2,
-            0
-        )
-
-        problem_layout.addWidget(
-            intervention_edit,
-            2,
-            1
-        )
-
-        problem_layout.addWidget(
-            QLabel("Pièces défectueuses"),
-            3,
-            0
-        )
-
-        problem_layout.addWidget(
-            pieces_edit,
-            3,
-            1
-        )
-
-        problem_layout.addWidget(
-            QLabel("Remarques"),
-            4,
-            0
-        )
-
-        problem_layout.addWidget(
-            remarques_edit,
-            4,
-            1
-        )
-
-        form_layout.addWidget(
-            problem_group
-        )
-
-        # ====================================================
-        # STATUT
-        # ====================================================
-
-        status_group = QGroupBox(
-            "Statut"
-        )
-
-        status_layout = QHBoxLayout(
-            status_group
-        )
-
-        status_layout.addWidget(
-            QLabel("Statut :")
-        )
-
-        status_edit = QComboBox()
-
-        status_edit.addItems([
-            "En attente",
-            "En diagnostic",
-            "En réparation",
-            "Terminé"
-        ])
-
-        current_status = str(
-            dossier.get(
-                "statut",
-                ""
-            )
-        )
-
-        index = status_edit.findText(
-            current_status
-        )
-
-        if index >= 0:
-            status_edit.setCurrentIndex(
-                index
-            )
-
-        status_layout.addWidget(
-            status_edit
-        )
-
-        status_layout.addStretch()
-
-        form_layout.addWidget(
-            status_group
-        )
-
-        form_layout.addStretch()
-
-        scroll.setWidget(
-            container
-        )
-
-        main_layout.addWidget(
-            scroll,
-            1
-        )
-
-        # ====================================================
-        # BOUTONS
-        # ====================================================
-
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.Save
-            | QDialogButtonBox.Cancel
-        )
-
-        buttons.button(
-            QDialogButtonBox.Save
-        ).setText(
-            "Enregistrer"
-        )
-
-        buttons.button(
-            QDialogButtonBox.Cancel
-        ).setText(
-            "Annuler"
-        )
-
-        main_layout.addWidget(
-            buttons
-        )
-
-        buttons.rejected.connect(
-            dialog.reject
-        )
-
-        # ----------------------------------------------------
-        # SAUVEGARDE
-        # ----------------------------------------------------
-
-        def save_changes():
-
-            payload = {
-                "client_nom":
-                    client_nom_edit.text().strip(),
-
-                "client_telephone":
-                    client_tel_edit.text().strip(),
-
-                "client_email":
-                    client_email_edit.text().strip(),
-
-                "type_materiel":
-                    type_edit.text().strip(),
-
-                "marque":
-                    marque_edit.text().strip(),
-
-                "modele":
-                    modele_edit.text().strip(),
-
-                "numero_serie":
-                    serie_edit.text().strip(),
-
-                "probleme":
-                    probleme_edit.toPlainText().strip(),
-
-                "diagnostic":
-                    diagnostic_edit.toPlainText().strip(),
-
-                "intervention":
-                    intervention_edit.toPlainText().strip(),
-
-                "pieces_defectueuses":
-                    pieces_edit.toPlainText().strip(),
-
-                "remarques":
-                    remarques_edit.toPlainText().strip(),
-
-                "statut":
-                    status_edit.currentText()
-            }
-
-            try:
-
-                response = requests.patch(
-                    f"{API_URL}/reparations/{dossier_id}",
-                    json=payload,
-                    timeout=15
-                )
-
-                if not response.ok:
-
-                    try:
-
-                        detail = response.json().get(
-                            "detail",
-                            response.text
-                        )
-
-                    except Exception:
-
-                        detail = response.text
-
-                    QMessageBox.warning(
-                        dialog,
-                        "Erreur",
-                        "Impossible d'enregistrer les modifications.\n\n"
-                        f"{detail}"
-                    )
-
-                    return
-
-                QMessageBox.information(
-                    dialog,
-                    "Modification réussie",
-                    "Les données du dossier ont été modifiées."
-                )
-
-                dialog.accept()
-
-                self.load_dossiers()
-
-                # Si ce dossier est actuellement ouvert
-                if (
-                    self.current_dossier
-                    and self.current_dossier.get("id")
-                    == dossier_id
-                ):
-                    self.current_dossier = response.json()
-                    self.load_detail_data()
-
-            except requests.RequestException as error:
-
-                QMessageBox.critical(
-                    dialog,
-                    "Erreur API",
-                    "Impossible de communiquer avec le serveur.\n\n"
-                    f"{error}"
-                )
-
-        buttons.accepted.connect(
-            save_changes
-        )
-
-        dialog.exec()
+        # 4. Activer directement le mode édition sur la page
+        self.enter_edit_mode()
 
     # ========================================================
     # SUPPRIMER DOSSIER
@@ -2244,4 +1613,30 @@ class DossiersPage(
                 f"{error}"
             )
         
+    def predict_cost(self, materiel, probleme):
+
+        try:
+
+            response = requests.post(
+                f"{API_URL}/reparations/cout/predire",
+                json={
+                    "materiel": materiel,
+                    "probleme": probleme
+                },
+                timeout=15
+            )
+
+            response.raise_for_status()
+
+            return response.json()
+
+        except requests.RequestException as error:
+
+            print(
+                "[COUT ML] Erreur :",
+                error
+            )
+
+            return None
+
     

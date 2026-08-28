@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import (
     APIRouter,
     UploadFile,
@@ -99,7 +101,11 @@ async def create_session():
     sessions[session_id] = {
         "status": "WAITING",
         "image_path": None,
-        "result": None
+        "result": None,
+        "documents_processed": 0,
+        "current_document": 0,
+        "created_at": datetime.now(),
+        "last_activity": datetime.now()
     }
 
     print()
@@ -278,7 +284,6 @@ Cette session de scan n'existe plus.
 # =========================================================
 # UPLOAD FACTURE
 # =========================================================
-
 @router.post(
     "/upload/{session_id}"
 )
@@ -291,18 +296,33 @@ async def upload_facture(
     # 1. SESSION
     # =====================================================
 
-    session = sessions.get(
-        session_id
-    )
+    session = sessions.get(session_id)
 
     if session is None:
-
         raise HTTPException(
             status_code=404,
             detail="Session introuvable."
         )
 
-    if session["status"] != "WAITING":
+    # =====================================================
+    # 2. VERIFIER L'ETAT
+    # =====================================================
+
+    if session["status"] == "PROCESSING":
+
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Une facture est actuellement "
+                "en cours d'analyse OCR."
+            )
+        )
+
+    if session["status"] not in {
+        "WAITING",
+        "READY",
+        "ERROR"
+    }:
 
         raise HTTPException(
             status_code=400,
@@ -313,7 +333,7 @@ async def upload_facture(
         )
 
     # =====================================================
-    # 2. FICHIER
+    # 3. FICHIER
     # =====================================================
 
     if not image.filename:
@@ -345,7 +365,7 @@ async def upload_facture(
         )
 
     # =====================================================
-    # 3. LIRE IMAGE
+    # 4. LIRE IMAGE
     # =====================================================
 
     try:
@@ -360,7 +380,6 @@ async def upload_facture(
             )
 
     except HTTPException:
-
         raise
 
     except Exception as e:
@@ -376,11 +395,24 @@ async def upload_facture(
         )
 
     # =====================================================
-    # 4. SAUVEGARDER
+    # 5. NUMERO DOCUMENT
+    # =====================================================
+
+    document_number = (
+        session.get(
+            "documents_processed",
+            0
+        )
+        + 1
+    )
+
+    # =====================================================
+    # 6. NOM UNIQUE
     # =====================================================
 
     nom_fichier = (
-        f"{session_id}"
+        f"{session_id}_"
+        f"{document_number}"
         f"{extension}"
     )
 
@@ -389,6 +421,10 @@ async def upload_facture(
         / nom_fichier
     )
 
+    # =====================================================
+    # 7. SAUVEGARDE
+    # =====================================================
+
     try:
 
         with open(
@@ -396,9 +432,7 @@ async def upload_facture(
             "wb"
         ) as f:
 
-            f.write(
-                contenu
-            )
+            f.write(contenu)
 
     except Exception as e:
 
@@ -413,7 +447,7 @@ async def upload_facture(
         )
 
     # =====================================================
-    # 5. SESSION PROCESSING
+    # 8. MISE A JOUR SESSION
     # =====================================================
 
     session["status"] = "PROCESSING"
@@ -424,6 +458,14 @@ async def upload_facture(
 
     session["result"] = None
 
+    session["current_document"] = (
+        document_number
+    )
+
+    session["last_activity"] = (
+        datetime.now()
+    )
+
     print()
     print("=" * 80)
     print("FACTURE RECUE DEPUIS TELEPHONE")
@@ -432,6 +474,11 @@ async def upload_facture(
     print(
         "SESSION :",
         session_id
+    )
+
+    print(
+        "DOCUMENT :",
+        document_number
     )
 
     print(
@@ -446,7 +493,7 @@ async def upload_facture(
     print("=" * 80)
 
     # =====================================================
-    # 6. OCR THREAD
+    # 9. LANCER OCR
     # =====================================================
 
     OCR_EXECUTOR.submit(
@@ -456,7 +503,7 @@ async def upload_facture(
     )
 
     # =====================================================
-    # 7. REPONSE IMMEDIATE
+    # 10. REPONSE
     # =====================================================
 
     return {
@@ -464,12 +511,10 @@ async def upload_facture(
             "Facture reçue. "
             "Analyse OCR démarrée."
         ),
-
         "session_id": session_id,
-
+        "document_number": document_number,
         "status": "PROCESSING"
     }
-
 
 # =========================================================
 # RESULTAT FACTURE
@@ -657,7 +702,16 @@ def executer_pipeline_ocr(
 
         session["result"] = resultat
 
+        session["documents_processed"] = (
+            session.get(
+                "documents_processed",
+                0
+            ) + 1
+        )
+
         session["status"] = "READY"
+
+        session["last_activity"] = datetime.now()
 
 
         print()
@@ -692,7 +746,7 @@ def executer_pipeline_ocr(
         session["result"] = {
             "error": str(e)
         }
-
+        session["last_activity"] = datetime.now()
 
         print()
         print("=" * 80)

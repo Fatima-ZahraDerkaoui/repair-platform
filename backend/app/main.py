@@ -12,6 +12,7 @@ from app.routers.ocr import router as ocr_router
 from app.routers.document import router as document_router
 from app.routers import facture
 from app.routers.dashboard import router as dashboard_router
+from app.routers.prediction import router as prediction_router
 
 app = FastAPI(
     title="Repair Platform API"
@@ -70,4 +71,8 @@ app.include_router(
 
 app.include_router(
     dashboard_router
+)
+
+app.include_router(
+    prediction_router
 )

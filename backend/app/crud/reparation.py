@@ -189,19 +189,20 @@ def update_reparation(
 
     client = reparation.client
 
-    client_modified = False
+    if client:
+        if "client_nom" in values and values["client_nom"]:
+            client.nom = values["client_nom"]
 
-    if "client_nom" in values:
-        client.nom = values["client_nom"]
-        client_modified = True
+        if "client_telephone" in values and values["client_telephone"]:
+            client.telephone = values["client_telephone"]
 
-    if "client_telephone" in values:
-        client.telephone = values["client_telephone"]
-        client_modified = True
-
-    if "client_email" in values:
-        client.email = values["client_email"]
-        client_modified = True
+        if "client_email" in values:
+            raw_email = values["client_email"]
+            # Si l'email est vide, "None", ou juste des espaces, on enregistre None (NULL en BDD)
+            if not raw_email or str(raw_email).strip().lower() in ["none", "null", ""]:
+                client.email = None
+            else:
+                client.email = str(raw_email).strip()
 
     # =================================================
     # DONNÉES RÉPARATION
@@ -218,6 +219,7 @@ def update_reparation(
         "pieces_defectueuses",
         "accessoires",
         "remarques",
+        "cout_estime",
         "cout_reel",
         "date_fin"
     ]
