@@ -24,11 +24,14 @@ from PySide6.QtCore import Qt
 API_URL = "http://127.0.0.1:8000"
 
 
+# =========================================================
+# BOÎTE DE DIALOGUE : MODIFICATION UTILISATEUR
+# =========================================================
 class EditUserDialog(QDialog):
     def __init__(self, user_data, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Modifier l'utilisateur")
-        self.setFixedWidth(400)
+        self.setFixedWidth(420)
         self.setStyleSheet("""
             QDialog { background-color: #FFFFFF; }
             QLabel { font-weight: 600; color: #334155; font-size: 13px; }
@@ -36,6 +39,7 @@ class EditUserDialog(QDialog):
                 background-color: #FFFFFF; border: 1px solid #CBD5E1; 
                 border-radius: 6px; padding: 8px; font-size: 13px; color: #0F172A; 
             }
+            QLineEdit:focus, QComboBox:focus { border: 1px solid #4F46E5; }
         """)
 
         layout = QVBoxLayout(self)
@@ -48,6 +52,12 @@ class EditUserDialog(QDialog):
         self.input_nom = QLineEdit(str(user_data.get("nom", "")))
         self.input_email = QLineEdit(str(user_data.get("email", "")))
         self.input_tel = QLineEdit(str(user_data.get("telephone") or ""))
+        
+        # Nouveau mot de passe (laisser vide pour ne pas changer)
+        self.input_password = QLineEdit()
+        self.input_password.setPlaceholderText("Laisser vide si inchangé")
+        self.input_password.setEchoMode(QLineEdit.Password)
+
         self.combo_role = QComboBox()
         self.combo_role.addItems(["Technicien", "Administrateur", "Réceptionniste"])
         
@@ -61,8 +71,10 @@ class EditUserDialog(QDialog):
         grid.addWidget(self.input_email, 1, 1)
         grid.addWidget(QLabel("Téléphone :"), 2, 0)
         grid.addWidget(self.input_tel, 2, 1)
-        grid.addWidget(QLabel("Rôle :"), 3, 0)
-        grid.addWidget(self.combo_role, 3, 1)
+        grid.addWidget(QLabel("Nouveau MDP :"), 3, 0)
+        grid.addWidget(self.input_password, 3, 1)
+        grid.addWidget(QLabel("Rôle :"), 4, 0)
+        grid.addWidget(self.combo_role, 4, 1)
 
         layout.addLayout(grid)
 
@@ -72,14 +84,22 @@ class EditUserDialog(QDialog):
         layout.addWidget(buttons)
 
     def get_data(self):
-        return {
+        data = {
             "nom": self.input_nom.text().strip(),
             "email": self.input_email.text().strip(),
             "telephone": self.input_tel.text().strip() or None,
             "role": self.combo_role.currentText()
         }
+        # Inclure le mot de passe seulement s'il a été saisi
+        pwd = self.input_password.text().strip()
+        if pwd:
+            data["password"] = pwd
+        return data
 
 
+# =========================================================
+# BOÎTE DE DIALOGUE : MODIFICATION CLIENT
+# =========================================================
 class EditClientDialog(QDialog):
     def __init__(self, client_data, parent=None):
         super().__init__(parent)
@@ -131,6 +151,9 @@ class EditClientDialog(QDialog):
         }
 
 
+# =========================================================
+# PAGE ADMINISTRATION PRINCIPALE
+# =========================================================
 class AdministrationPage(QWidget):
 
     def __init__(self, parent=None):
@@ -173,7 +196,7 @@ class AdministrationPage(QWidget):
 
         form_u_frame = QFrame()
         form_u_frame.setObjectName("subCardFrame")
-        form_u_layout = QHBoxLayout(form_u_frame)
+        form_u_layout = QGridLayout(form_u_frame)
         form_u_layout.setContentsMargins(12, 12, 12, 12)
 
         self.u_nom = QLineEdit()
@@ -181,6 +204,13 @@ class AdministrationPage(QWidget):
 
         self.u_email = QLineEdit()
         self.u_email.setPlaceholderText("Email...")
+
+        self.u_tel = QLineEdit()
+        self.u_tel.setPlaceholderText("Téléphone...")
+
+        self.u_password = QLineEdit()
+        self.u_password.setPlaceholderText("Mot de passe...")
+        self.u_password.setEchoMode(QLineEdit.Password)
 
         self.u_role = QComboBox()
         self.u_role.addItems(["Technicien", "Administrateur", "Réceptionniste"])
@@ -190,19 +220,24 @@ class AdministrationPage(QWidget):
         self.btn_add_user.setCursor(Qt.PointingHandCursor)
         self.btn_add_user.clicked.connect(self.create_user_api)
 
-        form_u_layout.addWidget(QLabel("Nom :"))
-        form_u_layout.addWidget(self.u_nom, 2)
-        form_u_layout.addWidget(QLabel("Email :"))
-        form_u_layout.addWidget(self.u_email, 2)
-        form_u_layout.addWidget(QLabel("Rôle :"))
-        form_u_layout.addWidget(self.u_role, 1)
-        form_u_layout.addWidget(self.btn_add_user)
+        # Formulaire utilisateurs sur 2 lignes pour intégrer tous les champs
+        form_u_layout.addWidget(QLabel("Nom :"), 0, 0)
+        form_u_layout.addWidget(self.u_nom, 0, 1)
+        form_u_layout.addWidget(QLabel("Email :"), 0, 2)
+        form_u_layout.addWidget(self.u_email, 0, 3)
+        form_u_layout.addWidget(QLabel("Tél :"), 1, 0)
+        form_u_layout.addWidget(self.u_tel, 1, 1)
+        form_u_layout.addWidget(QLabel("Mot de passe :"), 1, 2)
+        form_u_layout.addWidget(self.u_password, 1, 3)
+        form_u_layout.addWidget(QLabel("Rôle :"), 0, 4)
+        form_u_layout.addWidget(self.u_role, 0, 5)
+        form_u_layout.addWidget(self.btn_add_user, 1, 4, 1, 2)
 
         users_layout.addWidget(form_u_frame)
 
         self.users_table = QTableWidget()
-        self.users_table.setColumnCount(5)
-        self.users_table.setHorizontalHeaderLabels(["ID", "Nom", "Email", "Rôle", "Actions"])
+        self.users_table.setColumnCount(6)
+        self.users_table.setHorizontalHeaderLabels(["ID", "Nom", "Email", "Téléphone", "Rôle", "Actions"])
         self.configure_table(self.users_table)
 
         hdr_u = self.users_table.horizontalHeader()
@@ -211,6 +246,7 @@ class AdministrationPage(QWidget):
         hdr_u.setSectionResizeMode(2, QHeaderView.Stretch)
         hdr_u.setSectionResizeMode(3, QHeaderView.ResizeToContents)
         hdr_u.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        hdr_u.setSectionResizeMode(5, QHeaderView.ResizeToContents)
 
         users_layout.addWidget(self.users_table)
         content_layout.addWidget(users_group)
@@ -300,44 +336,39 @@ class AdministrationPage(QWidget):
                 background-color: #FFFFFF; border: 1px solid #CBD5E1; 
                 border-radius: 6px; padding: 6px 10px; font-size: 13px; color: #0F172A;
             }
+            QLineEdit:focus, QComboBox:focus { border: 1px solid #2563EB; }
             
-           /* BOUTON BLEU PROFESSIONNEL (Texte Blanc) */
+            QComboBox QAbstractItemView {
+                background-color: #FFFFFF; color: #0F172A;
+                selection-background-color: #2563EB; selection-color: #FFFFFF;
+            }
+
+            /* BOUTON D'AJOUT BLEU */
             QPushButton#btnPrimary { 
-                background-color: #80b0fc; 
+                background-color: #2563EB; 
                 color: #000b00; 
                 font-size: 13px;
                 font-weight: 700; 
-                border: 1px solid #000b00; 
-                border-radius: 8px; 
-                padding: 10px 22px; 
-                min-width: 120px;
+                border: 1px solid black; 
+                border-radius: 6px; 
+                padding: 8px 16px; 
             }
             QPushButton#btnPrimary:hover { 
-                background-color: #1D4ED8; 
-                border-color: #1E40AF;
-                color: #1D4ED8
-            }
-            QPushButton#btnPrimary:pressed { 
-                background-color: #1E40AF; 
+                background-color: #0000FF; 
             }
             
-            /* BOUTON VERT ÉMERAUDE (Texte Blanc) */
+            /* BOUTON D'AJOUT VERT */
             QPushButton#btnSuccess { 
+                background-color: #16A34A; 
                 color: #000b00; 
                 font-size: 13px;
                 font-weight: 700; 
-                border: 1px solid #000b00; 
-                border-radius: 8px; 
-                padding: 10px 22px; 
-                min-width: 120px;
+                border: 1px solid black; 
+                border-radius: 6px; 
+                padding: 8px 16px; 
             }
             QPushButton#btnSuccess:hover { 
-                background-color: #1D4ED8; 
-                border-color: #1D4ED8;
-                color: #1D4ED8;
-            }
-            QPushButton#btnSuccess:pressed { 
-                background-color: #1D4ED8; 
+                background-color: #0000FF; 
             }
         """)
 
@@ -367,7 +398,8 @@ class AdministrationPage(QWidget):
             self.users_table.setItem(row, 0, QTableWidgetItem(str(u_id)))
             self.users_table.setItem(row, 1, QTableWidgetItem(str(u.get("nom", "-"))))
             self.users_table.setItem(row, 2, QTableWidgetItem(str(u.get("email", "-"))))
-            self.users_table.setItem(row, 3, QTableWidgetItem(str(u.get("role", "-"))))
+            self.users_table.setItem(row, 3, QTableWidgetItem(str(u.get("telephone") or "-")))
+            self.users_table.setItem(row, 4, QTableWidgetItem(str(u.get("role", "-"))))
 
             # Boutons Icônes (Modifier / Supprimer)
             action_widget = QWidget()
@@ -376,32 +408,44 @@ class AdministrationPage(QWidget):
             act_layout.setSpacing(4)
 
             btn_edit = QPushButton("✎")
-            btn_edit.setStyleSheet("background: #E0F2FE; color: #0284C7; border: 1px solid #BAE6FD; border-radius: 4px; font-weight: bold;")
+            btn_edit.setCursor(Qt.PointingHandCursor)
+            btn_edit.setStyleSheet("background: #E0F2FE; color: #0284C7; border: 1px solid #BAE6FD; border-radius: 4px; font-weight: bold; padding: 4px 8px;")
             btn_edit.clicked.connect(lambda checked=False, user=u: self.edit_user_api(user))
 
             btn_del = QPushButton("🗑")
-            btn_del.setStyleSheet("background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: bold;")
+            btn_del.setCursor(Qt.PointingHandCursor)
+            btn_del.setStyleSheet("background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: bold; padding: 4px 8px;")
             btn_del.clicked.connect(lambda checked=False, uid=u_id: self.delete_user_api(uid))
 
             act_layout.addWidget(btn_edit)
             act_layout.addWidget(btn_del)
-            self.users_table.setCellWidget(row, 4, action_widget)
+            self.users_table.setCellWidget(row, 5, action_widget)
 
     def create_user_api(self):
         nom = self.u_nom.text().strip()
         email = self.u_email.text().strip()
+        tel = self.u_tel.text().strip() or None
+        pwd = self.u_password.text().strip()
         role = self.u_role.currentText()
 
-        if not nom or not email:
-            QMessageBox.warning(self, "Champs requis", "Le nom et l'email sont obligatoires.")
+        if not nom or not email or not pwd:
+            QMessageBox.warning(self, "Champs requis", "Le nom, l'email et le mot de passe sont obligatoires.")
             return
 
-        payload = {"nom": nom, "email": email, "role": role, "password": "123"}
+        payload = {
+            "nom": nom,
+            "email": email,
+            "telephone": tel,
+            "password": pwd,
+            "role": role
+        }
         try:
             res = requests.post(f"{API_URL}/utilisateurs/", json=payload, timeout=10)
             if res.ok:
                 self.u_nom.clear()
                 self.u_email.clear()
+                self.u_tel.clear()
+                self.u_password.clear()
                 self.load_users()
                 QMessageBox.information(self, "Succès", "Utilisateur créé.")
             else:
@@ -465,10 +509,17 @@ class AdministrationPage(QWidget):
             act_layout.setSpacing(4)
 
             btn_edit = QPushButton("✎")
-            btn_edit.setStyleSheet("background: #E0F2FE; color: #0284C7; border: 1px solid #BAE6FD; border-radius: 4px; font-weight: bold;")
+            btn_edit.setCursor(Qt.PointingHandCursor)
+            btn_edit.setStyleSheet("background: #E0F2FE; color: #0284C7; border: 1px solid #BAE6FD; border-radius: 4px; font-weight: bold; padding: 4px 8px;")
             btn_edit.clicked.connect(lambda checked=False, client=c: self.edit_client_api(client))
 
+            btn_del = QPushButton("🗑")
+            btn_del.setCursor(Qt.PointingHandCursor)
+            btn_del.setStyleSheet("background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: bold; padding: 4px 8px;")
+            btn_del.clicked.connect(lambda checked=False, cid=c_id: self.delete_client_api(cid))
+
             act_layout.addWidget(btn_edit)
+            act_layout.addWidget(btn_del)
             self.clients_table.setCellWidget(row, 5, action_widget)
 
     def create_client_api(self):
@@ -510,4 +561,13 @@ class AdministrationPage(QWidget):
                     QMessageBox.warning(self, "Erreur", res.text)
             except Exception as err:
                 QMessageBox.critical(self, "Erreur Réseau", str(err))
-       
+
+    def delete_client_api(self, client_id):
+        if QMessageBox.question(self, "Confirmation", "Supprimer ce client ?", QMessageBox.Yes | QMessageBox.No) != QMessageBox.Yes:
+            return
+        try:
+            res = requests.delete(f"{API_URL}/clients/{client_id}", timeout=10)
+            if res.ok:
+                self.load_clients()
+        except Exception as err:
+            QMessageBox.critical(self, "Erreur Réseau", str(err))

@@ -1,26 +1,52 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from app.database.database import get_db
-
 from app.schemas.utilisateur import (
     UtilisateurCreate,
     UtilisateurUpdate,
     UtilisateurResponse
 )
-
 from app.crud.utilisateur import (
     create_utilisateur,
     get_utilisateurs,
     get_utilisateur,
     update_utilisateur,
-    delete_utilisateur
+    delete_utilisateur,
+    authenticate_utilisateur
 )
 
 router = APIRouter(
     prefix="/utilisateurs",
     tags=["Utilisateurs"]
 )
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+@router.post("/login")
+def login(data: LoginRequest, db: Session = Depends(get_db)):
+    user = authenticate_utilisateur(db, email=data.email, password=data.password)
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Email ou mot de passe incorrect."
+        )
+
+    return {
+        "message": "Connexion réussie",
+        "user": {
+            "id": user.id,
+            "nom": user.nom,
+            "email": user.email,
+            "role": user.role,
+            "telephone": user.telephone
+        }
+    }
 
 
 @router.post("/", response_model=UtilisateurResponse)
@@ -41,15 +67,12 @@ def read_one(
     utilisateur_id: int,
     db: Session = Depends(get_db)
 ):
-
     utilisateur = get_utilisateur(db, utilisateur_id)
-
     if not utilisateur:
         raise HTTPException(
             status_code=404,
             detail="Utilisateur introuvable"
         )
-
     return utilisateur
 
 
@@ -59,19 +82,12 @@ def update(
     data: UtilisateurUpdate,
     db: Session = Depends(get_db)
 ):
-
-    utilisateur = update_utilisateur(
-        db,
-        utilisateur_id,
-        data
-    )
-
+    utilisateur = update_utilisateur(db, utilisateur_id, data)
     if not utilisateur:
         raise HTTPException(
             status_code=404,
             detail="Utilisateur introuvable"
         )
-
     return utilisateur
 
 
@@ -80,16 +96,10 @@ def delete(
     utilisateur_id: int,
     db: Session = Depends(get_db)
 ):
-
-    utilisateur = delete_utilisateur(
-        db,
-        utilisateur_id
-    )
-
+    utilisateur = delete_utilisateur(db, utilisateur_id)
     if not utilisateur:
         raise HTTPException(
             status_code=404,
             detail="Utilisateur introuvable"
         )
-
     return {"message": "Utilisateur supprimé"}

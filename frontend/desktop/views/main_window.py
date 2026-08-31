@@ -7,270 +7,118 @@ from PySide6.QtWidgets import (
 )
 
 from views.widgets.sidebar import Sidebar
+from views.pages.login_page import LoginPage
 
 
 class MainWindow(QMainWindow):
 
     def __init__(self):
-
         super().__init__()
 
-        self.setWindowTitle(
-            "Repair Platform"
-        )
-
-        self.resize(
-            1400,
-            850
-        )
+        self.setWindowTitle("Repair Platform")
+        self.resize(1400, 850)
         self.showMaximized()
 
+        self.current_user = None
         self.init_ui()
 
-    # =========================================================
-    # UI
-    # =========================================================
-
     def init_ui(self):
+        # Stack global pour basculer entre Login et App Principale
+        self.root_stack = QStackedWidget()
+        self.setCentralWidget(self.root_stack)
 
-        central = QWidget()
+        # 1. ÉCRAN DE LOGIN
+        self.login_page = LoginPage()
+        self.login_page.login_successful.connect(self.on_login_success)
+        self.root_stack.addWidget(self.login_page)
 
-        self.setCentralWidget(
-            central
-        )
+        # 2. CONTENEUR PRINCIPAL DE L'APPLICATION
+        self.main_app_widget = QWidget()
+        app_layout = QHBoxLayout(self.main_app_widget)
+        app_layout.setContentsMargins(0, 0, 0, 0)
+        app_layout.setSpacing(0)
 
-        layout = QHBoxLayout(
-            central
-        )
-
-        layout.setContentsMargins(
-            0,
-            0,
-            0,
-            0
-        )
-
-        layout.setSpacing(0)
-
-        # -----------------------------------------------------
-        # SIDEBAR
-        # -----------------------------------------------------
-
+        # Sidebar
         self.sidebar = Sidebar()
+        self.sidebar.page_changed.connect(self.show_page)
+        self.sidebar.quit_requested.connect(self.logout)
+        app_layout.addWidget(self.sidebar)
 
-        self.sidebar.page_changed.connect(
-            self.show_page
-        )
-
-        self.sidebar.quit_requested.connect(
-            self.close
-        )
-
-        layout.addWidget(
-            self.sidebar
-        )
-
-        # -----------------------------------------------------
-        # STACKED CONTENT
-        # -----------------------------------------------------
-
+        # Vues empilées
         self.pages = QStackedWidget()
+        app_layout.addWidget(self.pages)
 
-        layout.addWidget(
-            self.pages
-        )
-
-        # -----------------------------------------------------
-        # PAGES
-        # -----------------------------------------------------
-
+        # Initialisation des vues
         self.create_pages()
+        self.root_stack.addWidget(self.main_app_widget)
 
-        self.show_page(
-            "dashboard"
-        )
+        # Démarrage obligatoire sur la page de connexion
+        self.root_stack.setCurrentWidget(self.login_page)
 
-    # =========================================================
-    # CREATE PAGES
-    # =========================================================
+    def on_login_success(self, user_info):
+        self.current_user = user_info
+        self.root_stack.setCurrentWidget(self.main_app_widget)
+        self.show_page("dashboard")
+
+    def logout(self):
+        self.current_user = None
+        self.root_stack.setCurrentWidget(self.login_page)
 
     def create_pages(self):
+        from views.pages.menu_principal import MenuPrincipal
+        from views.pages.nouvelle_reparation import NouvelleReparation
+        from views.pages.factures_page import FacturesPage
+        from views.pages.stock_page import StockPage
+        from views.pages.dossiers_page import DossiersPage
+        from views.pages.administration_page import AdministrationPage
 
-        from views.pages.menu_principal import (
-            MenuPrincipal
-        )
+        self.dashboard_page = MenuPrincipal(self)
+        self.pages.addWidget(self.dashboard_page)
 
-        from views.pages.nouvelle_reparation import (
-            NouvelleReparation
-        )
+        self.reparation_page = NouvelleReparation(self)
+        self.pages.addWidget(self.reparation_page)
 
-        from views.pages.factures_page import (
-            FacturesPage
-        )
+        self.factures_page = FacturesPage(self)
+        self.factures_page.facture_validated.connect(self.on_facture_validated)
+        self.pages.addWidget(self.factures_page)
 
-        from views.pages.stock_page import (
-            StockPage
-        )
+        self.stock_page = StockPage(self)
+        self.pages.addWidget(self.stock_page)
 
-        from views.pages.dossiers_page import (
-            DossiersPage
-        )
+        self.dossiers_page = DossiersPage(self)
+        self.pages.addWidget(self.dossiers_page)
 
-        from views.pages.administration_page import (
-            AdministrationPage
-        )
-
-        # -----------------------------------------------------
-        # DASHBOARD
-        # -----------------------------------------------------
-
-        self.dashboard_page = MenuPrincipal(
-            self
-        )
-
-        self.pages.addWidget(
-            self.dashboard_page
-        )
-
-        # -----------------------------------------------------
-        # REPARATION
-        # -----------------------------------------------------
-
-        self.reparation_page = NouvelleReparation(
-            self
-        )
-
-        self.pages.addWidget(
-            self.reparation_page
-        )
-
-        # -----------------------------------------------------
-        # FACTURES
-        # -----------------------------------------------------
-
-        self.factures_page = FacturesPage(
-            self
-        )
-
-        self.factures_page.facture_validated.connect(
-            self.on_facture_validated
-        )
-
-        self.pages.addWidget(
-            self.factures_page
-        )
-
-        # -----------------------------------------------------
-        # STOCK
-        # -----------------------------------------------------
-
-        self.stock_page = StockPage(
-            self
-        )
-
-        self.pages.addWidget(
-            self.stock_page
-        )
-
-        # -----------------------------------------------------
-        # DOSSIERS
-        # -----------------------------------------------------
-
-        self.dossiers_page = DossiersPage(
-            self
-        )
-
-        self.pages.addWidget(
-            self.dossiers_page
-        )
-
-        # -----------------------------------------------------
-        # ADMINISTRATION
-        # -----------------------------------------------------
-
-        self.administration_page = AdministrationPage(
-            self
-        )
-
-        self.pages.addWidget(
-            self.administration_page
-        )
-
-    # =========================================================
-    # NAVIGATION
-    # =========================================================
+        self.administration_page = AdministrationPage(self)
+        self.pages.addWidget(self.administration_page)
 
     def show_page(self, page_name):
-
         mapping = {
-
             "dashboard": self.dashboard_page,
-
-            "nouvelle_reparation":
-                self.reparation_page,
-
-            "factures":
-                self.factures_page,
-
-            "stock":
-                self.stock_page,
-
-            "dossiers":
-                self.dossiers_page,
-
-            "administration":
-                self.administration_page
+            "nouvelle_reparation": self.reparation_page,
+            "factures": self.factures_page,
+            "stock": self.stock_page,
+            "dossiers": self.dossiers_page,
+            "administration": self.administration_page
         }
 
-        page = mapping.get(
-            page_name
-        )
-
+        page = mapping.get(page_name)
         if page is not None:
+            self.pages.setCurrentWidget(page)
 
-            self.pages.setCurrentWidget(
-                page
-            )
+            if page_name == "dashboard" and hasattr(self.dashboard_page, "load_data"):
+                self.dashboard_page.load_data()
 
-            # Rafraîchir les données lorsqu'on ouvre
-            # les pages concernées.
+            elif page_name == "dossiers" and hasattr(self.dossiers_page, "load_dossiers"):
+                self.dossiers_page.load_dossiers()
 
-            if page_name == "dashboard":
+            elif page_name == "administration" and hasattr(self.administration_page, "load_users"):
+                self.administration_page.load_users()
 
-                if hasattr(
-                    self.dashboard_page,
-                    "load_data"
-                ):
-                    self.dashboard_page.load_data()
-
-            elif page_name == "dossiers":
-
-                if hasattr(
-                    self.dossiers_page,
-                    "load_dossiers"
-                ):
-                    self.dossiers_page.load_dossiers()
-
-            elif page_name == "administration":
-
-                if hasattr(
-                    self.administration_page,
-                    "load_users"
-                ):
-                    self.administration_page.load_users()
-
-    # =========================================================
-    # FACTURE VALIDEE
-    # =========================================================
-
-    def on_facture_validated(
-        self,
-        facture
-    ):
-
+    def on_facture_validated(self, facture):
         QMessageBox.information(
             self,
             "Facture validée",
             "La facture a été validée avec succès."
         )
-        
+
+    
