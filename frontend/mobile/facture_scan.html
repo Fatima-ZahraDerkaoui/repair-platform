@@ -1,399 +1,173 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scanner une facture</title>
 
+    <!-- CDN Cropper.js (Style + Script) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
     <style>
-
-        * {
-            box-sizing: border-box;
-        }
-
+        * { box-sizing: border-box; }
         body {
-            margin: 0;
-            padding: 20px;
-
-            font-family:
-                Arial,
-                sans-serif;
-
-            background: #f4f6f8;
-            color: #1f2937;
+            margin: 0; padding: 15px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #F8FAFC; color: #0F172A;
         }
-
         .container {
-            max-width: 500px;
-
-            margin: 0 auto;
-
-            background: white;
-
-            padding: 25px;
-
-            border-radius: 16px;
-
-            box-shadow:
-                0 4px 20px
-                rgba(0,0,0,0.08);
+            max-width: 480px; margin: 0 auto; background: #FFFFFF;
+            padding: 20px; border-radius: 16px; border: 1px solid #E2E8F0;
         }
-
-        h1 {
-            text-align: center;
-
-            font-size: 24px;
-
-            margin-bottom: 10px;
-        }
-
-        .description {
-            text-align: center;
-
-            color: #6b7280;
-
-            line-height: 1.5;
-
-            margin-bottom: 25px;
-        }
-
+        h1 { text-align: center; font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+        .description { text-align: center; color: #64748B; font-size: 13px; margin-bottom: 20px; }
+        
         .file-label {
-            display: block;
-
-            width: 100%;
-
-            padding: 16px;
-
-            margin-top: 15px;
-
-            border-radius: 10px;
-
-            text-align: center;
-
-            background: #2563eb;
-
-            color: white;
-
-            font-weight: bold;
-
-            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; padding: 14px; border-radius: 10px;
+            background: #2563EB; color: white; font-weight: 700; cursor: pointer;
         }
+        input[type="file"] { display: none; }
 
-        input[type="file"] {
-            display: none;
+        /* Zones d'aperçu et de rognage */
+        #cropper-container {
+            margin-top: 15px; max-height: 450px; display: none; overflow: hidden;
         }
-
-        #preview {
-            width: 100%;
-
-            max-height: 500px;
-
-            object-fit: contain;
-
-            margin-top: 20px;
-
-            border-radius: 10px;
-
-            display: none;
-        }
+        #image-to-crop { max-width: 100%; display: block; }
 
         button {
-            width: 100%;
-
-            padding: 16px;
-
-            margin-top: 20px;
-
-            border: none;
-
-            border-radius: 10px;
-
-            background: #16a34a;
-
-            color: white;
-
-            font-size: 16px;
-
-            font-weight: bold;
-
-            cursor: pointer;
+            width: 100%; padding: 15px; margin-top: 15px; border: none;
+            border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;
         }
+        #btn-crop-confirm { background: #2563EB; color: white; display: none; }
+        #uploadButton { background: #16A34A; color: white; }
+        button:disabled { background: #94A3B8; cursor: not-allowed; }
 
-        button:disabled {
-            background: #9ca3af;
-
-            cursor: not-allowed;
-        }
-
-        #message {
-            margin-top: 20px;
-
-            text-align: center;
-
-            font-weight: bold;
-
-            line-height: 1.5;
-        }
-
-        .success {
-            color: #15803d;
-        }
-
-        .error {
-            color: #dc2626;
-        }
-
-        .loading {
-            color: #2563eb;
-        }
-
+        #message { margin-top: 15px; text-align: center; font-weight: 600; font-size: 13px; }
+        .success { color: #15803D; } .error { color: #DC2626; } .loading { color: #2563EB; }
     </style>
-
 </head>
-
 
 <body>
 
 <div class="container">
+    <h1>📱 Scanner une facture</h1>
+    <div class="description">Prenez la photo puis ajustez le rectangle bleu exactement autour de la facture.</div>
 
-    <h1>
-        📱 Scanner une facture
-    </h1>
+    <label class="file-label" id="label-photo" for="fileInput">
+        📷 Prendre / Choisir une photo
+    </label>
+    <input id="fileInput" type="file" accept="image/*" capture="environment">
 
-    <div class="description">
-
-        Prenez une photo de votre facture
-        ou sélectionnez une image depuis
-        la galerie de votre téléphone.
-
+    <!-- Container d'ajustement/Rognage -->
+    <div id="cropper-container">
+        <img id="image-to-crop" alt="Facture à recadrer">
     </div>
 
+    <!-- Bouton pour valider le rectangle -->
+    <button id="btn-crop-confirm">📐 Valider le cadrage</button>
 
-    <label
-        class="file-label"
-        for="fileInput"
-    >
-        📷 Choisir / prendre une photo
-    </label>
-
-
-    <input
-        id="fileInput"
-        type="file"
-        accept="image/*"
-        capture="environment"
-    >
-
-
-    <img
-        id="preview"
-        alt="Aperçu de la facture"
-    >
-
-
-    <button
-        id="uploadButton"
-        disabled
-    >
-        Envoyer la facture
-    </button>
-
+    <!-- Bouton final pour envoyer -->
+    <button id="uploadButton" style="display: none;">🚀 Envoyer la facture recadrée</button>
 
     <div id="message"></div>
-
 </div>
 
-
 <script>
-
-    // =========================================================
-    // SESSION
-    // =========================================================
-
     const sessionId = "{{ session_id }}";
+    const fileInput = document.getElementById("fileInput");
+    const cropperContainer = document.getElementById("cropper-container");
+    const imageToCrop = document.getElementById("image-to-crop");
+    const btnCropConfirm = document.getElementById("btn-crop-confirm");
+    const uploadButton = document.getElementById("uploadButton");
+    const message = document.getElementById("message");
+    const labelPhoto = document.getElementById("label-photo");
 
+    let cropper = null;
+    let croppedBlob = null;
 
-    // =========================================================
-    // ELEMENTS
-    // =========================================================
+    // 1. Sélection de la photo
+    fileInput.addEventListener("change", function () {
+        const file = this.files[0];
+        if (!file) return;
 
-    const fileInput =
-        document.getElementById(
-            "fileInput"
-        );
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            imageToCrop.src = e.target.result;
+            cropperContainer.style.display = "block";
+            btnCropConfirm.style.display = "block";
+            labelPhoto.style.display = "none";
 
-    const preview =
-        document.getElementById(
-            "preview"
-        );
+            // Destruction de l'ancien cropper s'il existe
+            if (cropper) cropper.destroy();
 
-    const uploadButton =
-        document.getElementById(
-            "uploadButton"
-        );
+            // Initialisation du rectangle interactif
+            cropper = new Cropper(imageToCrop, {
+                viewMode: 1,
+                autoCropArea: 0.9, // Le cadre prend 90% par défaut
+                responsive: true,
+                background: false
+            });
+        };
+        reader.readAsDataURL(file);
+    });
 
-    const message =
-        document.getElementById(
-            "message"
-        );
+    // 2. Validation du cadrage (Découpage de l'image)
+    btnCropConfirm.addEventListener("click", function () {
+        if (!cropper) return;
 
+        // Récupère l'image rognée en haute qualité
+        cropper.getCroppedCanvas({
+            maxWidth: 2000,
+            maxHeight: 2000
+        }).toBlob((blob) => {
+            croppedBlob = blob;
+            
+            // Remplace l'aperçu par l'image parfaitement découpée
+            cropper.destroy();
+            cropper = null;
+            imageToCrop.src = URL.createObjectURL(blob);
+            
+            btnCropConfirm.style.display = "none";
+            uploadButton.style.display = "block";
+            message.textContent = "✓ Image recadrée avec succès !";
+            message.className = "success";
+        }, 'image/jpeg', 0.92);
+    });
 
-    let selectedFile = null;
+    // 3. Envoi de l'image découpée au serveur
+    uploadButton.addEventListener("click", async function () {
+        if (!croppedBlob) return;
 
+        uploadButton.disabled = true;
+        message.textContent = "⏳ Envoi de la facture cadrée vers le PC...";
+        message.className = "loading";
 
-    // =========================================================
-    // SELECTION IMAGE
-    // =========================================================
+        const formData = new FormData();
+        formData.append("image", croppedBlob, "facture_cadree.jpg");
 
-    fileInput.addEventListener(
-        "change",
-        function () {
+        try {
+            const response = await fetch(`/facture-scan/upload/${sessionId}`, {
+                method: "POST",
+                body: formData
+            });
 
-            selectedFile =
-                this.files[0];
+            const data = await response.json();
 
-            if (!selectedFile) {
+            if (!response.ok) throw new Error(data.detail || "Erreur d'envoi.");
 
-                uploadButton.disabled = true;
+            message.textContent = "✅ Facture envoyée ! Analyse OCR en cours...";
+            message.className = "success";
+            uploadButton.style.display = "none";
 
-                return;
-            }
-
-
-            const reader =
-                new FileReader();
-
-
-            reader.onload =
-                function (event) {
-
-                    preview.src =
-                        event.target.result;
-
-                    preview.style.display =
-                        "block";
-                };
-
-
-            reader.readAsDataURL(
-                selectedFile
-            );
-
-
-            uploadButton.disabled =
-                false;
-
-            message.textContent =
-                "Image sélectionnée.";
-
-            message.className = "";
-
+        } catch (error) {
+            message.textContent = "❌ " + error.message;
+            message.className = "error";
+            uploadButton.disabled = false;
         }
-    );
-
-
-    // =========================================================
-    // UPLOAD
-    // =========================================================
-
-    uploadButton.addEventListener(
-        "click",
-        async function () {
-
-            if (!selectedFile) {
-                return;
-            }
-
-
-            uploadButton.disabled =
-                true;
-
-
-            message.textContent =
-                "Envoi de la facture...";
-
-            message.className =
-                "loading";
-
-
-            const formData =
-                new FormData();
-
-
-            formData.append(
-                "image",
-                selectedFile
-            );
-
-
-            try {
-
-                const response =
-                    await fetch(
-                        `/facture-scan/upload/${sessionId}`,
-                        {
-                            method: "POST",
-                            body: formData
-                        }
-                    );
-
-
-                const data =
-                    await response.json();
-
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        data.detail ||
-                        "Erreur pendant l'envoi."
-                    );
-                }
-
-
-                message.textContent =
-                    "✅ Facture envoyée. " +
-                    "L'analyse OCR est en cours...";
-
-
-                message.className =
-                    "success";
-
-
-                uploadButton.disabled =
-                    true;
-
-
-            }
-            catch (error) {
-
-                console.error(error);
-
-
-                message.textContent =
-                    "❌ " +
-                    error.message;
-
-
-                message.className =
-                    "error";
-
-
-                uploadButton.disabled =
-                    false;
-            }
-
-        }
-    );
-
+    });
 </script>
 
 </body>
-
 </html>

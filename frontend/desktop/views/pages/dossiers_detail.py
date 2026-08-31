@@ -1,3 +1,4 @@
+import requests
 from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
@@ -16,143 +17,96 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QGroupBox,
     QTextEdit,
-    QWidget
+    QWidget,
+    QFileDialog,
 )
-
 from PySide6.QtCore import Qt
-
-import requests
+from PySide6.QtGui import QFont, QColor
 
 from views.pages.dossiers_utils import (
+    API_URL,
+    DEFAULT_UTILISATEUR_ID,
     safe_int,
     safe_float,
     format_date,
     format_money,
 )
 
-API_URL = "http://127.0.0.1:8000"
-
-DEFAULT_UTILISATEUR_ID = 1
-
 
 class DossierDetailMixin:
 
     def setup_detail_page(self):
-
         layout = QVBoxLayout(self.detail_page)
-        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(14)
 
-        # ============================================================
-        # BARRE SUPÉRIEURE
-        # ============================================================
-
+        # Barre supérieure
         header = QHBoxLayout()
-        header.setSpacing(8)
-
-        self.back_button = QPushButton("←  Retour aux dossiers")
-        self.back_button.setObjectName("backButton")
+        self.back_button = QPushButton("← Retour aux dossiers")
+        self.back_button.setCursor(Qt.PointingHandCursor)
         self.back_button.clicked.connect(self.back_to_list)
 
         header.addWidget(self.back_button)
         header.addStretch()
 
-        self.detail_refresh_button = QPushButton("↻  Actualiser")
-        self.detail_refresh_button.setObjectName("secondaryButton")
-        self.detail_refresh_button.clicked.connect(
-            self.refresh_current_dossier
-        )
-
-        header.addWidget(self.detail_refresh_button)
-
-        self.pdf_button = QPushButton("▣  PDF")
-        self.pdf_button.setObjectName("secondaryButton")
+        self.pdf_button = QPushButton("📄 Fiche PDF")
+        self.pdf_button.setCursor(Qt.PointingHandCursor)
         self.pdf_button.clicked.connect(self.download_pdf)
-
         header.addWidget(self.pdf_button)
 
         layout.addLayout(header)
 
-        # ============================================================
-        # SCROLL
-        # ============================================================
-
+        # Zone Scrollable
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarAlwaysOff
-        )
 
         container = QWidget()
-
         content = QVBoxLayout(container)
-        content.setContentsMargins(4, 4, 8, 25)
-        content.setSpacing(14)
+        content.setContentsMargins(4, 4, 8, 20)
+        content.setSpacing(16)
 
-        # ============================================================
-        # CARTE IDENTIFICATION
-        # ============================================================
-
+        # Card En-tête Dossier
         header_card = QFrame()
         header_card.setObjectName("detailHeaderCard")
-
         header_layout = QHBoxLayout(header_card)
-        header_layout.setContentsMargins(22, 18, 22, 18)
+        header_layout.setContentsMargins(20, 16, 20, 16)
 
         left = QVBoxLayout()
-        left.setSpacing(4)
-
-        dossier_title = QLabel("DOSSIER DE RÉPARATION")
-        dossier_title.setObjectName("detailOverline")
-
-        left.addWidget(dossier_title)
+        d_title = QLabel("DOSSIER DE RÉPARATION")
+        d_title.setObjectName("detailOverline")
+        left.addWidget(d_title)
 
         self.detail_numero = QLabel()
         self.detail_numero.setObjectName("detailNumero")
-
         left.addWidget(self.detail_numero)
 
         self.detail_date = QLabel()
         self.detail_date.setObjectName("detailDate")
-
         left.addWidget(self.detail_date)
-
         header_layout.addLayout(left)
         header_layout.addStretch()
 
         status_container = QVBoxLayout()
-        status_container.setSpacing(5)
-
-        status_title = QLabel("STATUT")
-        status_title.setObjectName("detailStatusTitle")
-        status_title.setAlignment(Qt.AlignCenter)
-
-        status_container.addWidget(status_title)
+        st_title = QLabel("STATUT ACTUEL")
+        st_title.setObjectName("detailStatusTitle")
+        st_title.setAlignment(Qt.AlignCenter)
+        status_container.addWidget(st_title)
 
         self.detail_status_label = QLabel()
         self.detail_status_label.setObjectName("detailStatus")
         self.detail_status_label.setAlignment(Qt.AlignCenter)
         self.detail_status_label.setMinimumWidth(160)
-
         status_container.addWidget(self.detail_status_label)
-
         header_layout.addLayout(status_container)
 
         content.addWidget(header_card)
 
-        # ============================================================
-        # CLIENT
-        # ============================================================
-
-        client_group = QGroupBox("01  •  Client")
+        # 01. Client
+        client_group = QGroupBox("01. Informations Client")
         client_layout = QGridLayout(client_group)
-
-        client_layout.setContentsMargins(18, 22, 18, 18)
-        client_layout.setHorizontalSpacing(18)
-        client_layout.setVerticalSpacing(10)
-
-        client_layout.setColumnMinimumWidth(0, 120)
+        client_layout.setContentsMargins(16, 20, 16, 16)
+        client_layout.setHorizontalSpacing(16)
 
         self.client_nom = self.create_info_label()
         self.client_tel = self.create_info_label()
@@ -162,53 +116,25 @@ class DossierDetailMixin:
         self.edit_client_tel = QLineEdit()
         self.edit_client_email = QLineEdit()
 
-        self.edit_client_nom.setPlaceholderText("Nom du client")
-        self.edit_client_tel.setPlaceholderText("Numéro de téléphone")
-        self.edit_client_email.setPlaceholderText("Adresse e-mail")
-
-        client_fields = [
+        fields_c = [
             ("Nom complet", self.client_nom, self.edit_client_nom),
             ("Téléphone", self.client_tel, self.edit_client_tel),
             ("Email", self.client_email, self.edit_client_email),
         ]
-
-        for row, (label, view, edit) in enumerate(client_fields):
-
-            field_label = QLabel(label)
-            field_label.setObjectName("fieldLabel")
-
-            client_layout.addWidget(
-                field_label,
-                row,
-                0
-            )
-
-            client_layout.addWidget(
-                view,
-                row,
-                1
-            )
-
-            client_layout.addWidget(
-                edit,
-                row,
-                1
-            )
+        for row, (lbl, view, edit) in enumerate(fields_c):
+            f_lbl = QLabel(lbl)
+            f_lbl.setObjectName("fieldLabel")
+            client_layout.addWidget(f_lbl, row, 0)
+            client_layout.addWidget(view, row, 1)
+            client_layout.addWidget(edit, row, 1)
 
         content.addWidget(client_group)
 
-        # ============================================================
-        # MATÉRIEL
-        # ============================================================
-
-        machine_group = QGroupBox("02  •  Matériel")
+        # 02. Matériel
+        machine_group = QGroupBox("02. Matériel & Spécifications")
         machine_layout = QGridLayout(machine_group)
-
-        machine_layout.setContentsMargins(18, 22, 18, 18)
-        machine_layout.setHorizontalSpacing(18)
-        machine_layout.setVerticalSpacing(10)
-
-        machine_layout.setColumnMinimumWidth(0, 120)
+        machine_layout.setContentsMargins(16, 20, 16, 16)
+        machine_layout.setHorizontalSpacing(16)
 
         self.machine_type = self.create_info_label()
         self.machine_marque = self.create_info_label()
@@ -220,58 +146,26 @@ class DossierDetailMixin:
         self.edit_machine_modele = QLineEdit()
         self.edit_machine_serie = QLineEdit()
 
-        self.edit_machine_type.setPlaceholderText("Type de matériel")
-        self.edit_machine_marque.setPlaceholderText("Marque")
-        self.edit_machine_modele.setPlaceholderText("Modèle")
-        self.edit_machine_serie.setPlaceholderText("Numéro de série")
-
-        machine_fields = [
-            ("Type", self.machine_type, self.edit_machine_type),
+        fields_m = [
+            ("Type matériel", self.machine_type, self.edit_machine_type),
             ("Marque", self.machine_marque, self.edit_machine_marque),
             ("Modèle", self.machine_modele, self.edit_machine_modele),
-            ("N° de série", self.machine_serie, self.edit_machine_serie),
+            ("N° de Série", self.machine_serie, self.edit_machine_serie),
         ]
-
-        for row, (label, view, edit) in enumerate(machine_fields):
-
-            field_label = QLabel(label)
-            field_label.setObjectName("fieldLabel")
-
-            machine_layout.addWidget(
-                field_label,
-                row,
-                0
-            )
-
-            machine_layout.addWidget(
-                view,
-                row,
-                1
-            )
-
-            machine_layout.addWidget(
-                edit,
-                row,
-                1
-            )
+        for row, (lbl, view, edit) in enumerate(fields_m):
+            f_lbl = QLabel(lbl)
+            f_lbl.setObjectName("fieldLabel")
+            machine_layout.addWidget(f_lbl, row, 0)
+            machine_layout.addWidget(view, row, 1)
+            machine_layout.addWidget(edit, row, 1)
 
         content.addWidget(machine_group)
 
-        # ============================================================
-        # DIAGNOSTIC / INTERVENTION
-        # ============================================================
-
-        problem_group = QGroupBox(
-            "03  •  Diagnostic et intervention"
-        )
-
+        # 03. Diagnostic & Intervention
+        problem_group = QGroupBox("03. Diagnostic & Rapport Technique")
         problem_layout = QGridLayout(problem_group)
-
-        problem_layout.setContentsMargins(18, 22, 18, 18)
-        problem_layout.setHorizontalSpacing(18)
-        problem_layout.setVerticalSpacing(12)
-
-        problem_layout.setColumnMinimumWidth(0, 150)
+        problem_layout.setContentsMargins(16, 20, 16, 16)
+        problem_layout.setHorizontalSpacing(16)
 
         self.probleme_view = self.create_info_label()
         self.diagnostic_view = self.create_info_label()
@@ -285,2559 +179,737 @@ class DossierDetailMixin:
         self.pieces_defectueuses_edit = QTextEdit()
         self.remarques_edit = QTextEdit()
 
-        text_edits = [
-            self.probleme_edit,
-            self.diagnostic_edit,
-            self.intervention_edit,
-            self.pieces_defectueuses_edit,
-            self.remarques_edit
+        for t in [self.probleme_edit, self.diagnostic_edit, self.intervention_edit, self.pieces_defectueuses_edit, self.remarques_edit]:
+            t.setMinimumHeight(65)
+            t.setMaximumHeight(100)
+
+        fields_p = [
+            ("Problème signalé", self.probleme_view, self.probleme_edit),
+            ("Diagnostic technique", self.diagnostic_view, self.diagnostic_edit),
+            ("Intervention effectuée", self.intervention_view, self.intervention_edit),
+            ("Pièces défectueuses", self.pieces_defectueuses_view, self.pieces_defectueuses_edit),
+            ("Remarques", self.remarques_view, self.remarques_edit),
         ]
-
-        for edit in text_edits:
-            edit.setMinimumHeight(70)
-            edit.setMaximumHeight(110)
-
-        self.probleme_edit.setPlaceholderText(
-            "Décrire le problème signalé..."
-        )
-
-        self.diagnostic_edit.setPlaceholderText(
-            "Saisir le diagnostic technique..."
-        )
-
-        self.intervention_edit.setPlaceholderText(
-            "Décrire les interventions réalisées..."
-        )
-
-        self.pieces_defectueuses_edit.setPlaceholderText(
-            "Indiquer les pièces défectueuses..."
-        )
-
-        self.remarques_edit.setPlaceholderText(
-            "Ajouter des remarques..."
-        )
-
-        edit_fields = [
-            (
-                "Problème signalé",
-                self.probleme_view,
-                self.probleme_edit
-            ),
-            (
-                "Diagnostic",
-                self.diagnostic_view,
-                self.diagnostic_edit
-            ),
-            (
-                "Intervention",
-                self.intervention_view,
-                self.intervention_edit
-            ),
-            (
-                "Pièces défectueuses",
-                self.pieces_defectueuses_view,
-                self.pieces_defectueuses_edit
-            ),
-            (
-                "Remarques",
-                self.remarques_view,
-                self.remarques_edit
-            ),
-        ]
-
-        for row, (label, view, edit) in enumerate(edit_fields):
-
-            field_label = QLabel(label)
-            field_label.setObjectName("fieldLabel")
-            field_label.setAlignment(
-                Qt.AlignTop | Qt.AlignLeft
-            )
-
-            problem_layout.addWidget(
-                field_label,
-                row,
-                0
-            )
-
-            problem_layout.addWidget(
-                view,
-                row,
-                1
-            )
-
-            problem_layout.addWidget(
-                edit,
-                row,
-                1
-            )
+        for row, (lbl, view, edit) in enumerate(fields_p):
+            f_lbl = QLabel(lbl)
+            f_lbl.setObjectName("fieldLabel")
+            f_lbl.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+            problem_layout.addWidget(f_lbl, row, 0)
+            problem_layout.addWidget(view, row, 1)
+            problem_layout.addWidget(edit, row, 1)
 
         content.addWidget(problem_group)
 
-        # ============================================================
-        # STATUT
-        # ============================================================
-
-        status_group = QGroupBox(
-            "04  •  Statut du dossier"
-        )
-
+        # 04. Statut
+        status_group = QGroupBox("04. Statut du Dossier")
         status_layout = QHBoxLayout(status_group)
-        status_layout.setContentsMargins(18, 20, 18, 20)
-        status_layout.setSpacing(12)
+        status_layout.setContentsMargins(16, 16, 16, 16)
 
-        status_label = QLabel("Nouveau statut")
-        status_label.setObjectName("fieldLabel")
-
-        status_layout.addWidget(status_label)
+        st_lbl = QLabel("Changer le statut :")
+        st_lbl.setObjectName("fieldLabel")
+        status_layout.addWidget(st_lbl)
 
         self.status_combo = QComboBox()
-
-        self.status_combo.addItems([
-            "En attente",
-            "En diagnostic",
-            "En réparation",
-            "Terminé"
-        ])
-
+        self.status_combo.addItems(["En attente", "En diagnostic", "En réparation", "Terminé"])
         self.status_combo.setMinimumWidth(220)
-
-        status_layout.addWidget(
-            self.status_combo
-        )
-
+        status_layout.addWidget(self.status_combo)
         status_layout.addStretch()
 
         content.addWidget(status_group)
 
-        # ============================================================
-        # PIÈCES UTILISÉES
-        # ============================================================
-
-        pieces_group = QGroupBox(
-            "05  •  Pièces utilisées"
-        )
-
+        # 05. Pièces utilisées
+        pieces_group = QGroupBox("05. Gestion des Pièces et Composants")
         pieces_layout = QVBoxLayout(pieces_group)
-        pieces_layout.setContentsMargins(18, 22, 18, 18)
-        pieces_layout.setSpacing(12)
-
-        # ------------------------------------------------------------
-        # ZONE AJOUT PIÈCE
-        # ------------------------------------------------------------
+        pieces_layout.setContentsMargins(16, 20, 16, 16)
 
         self.pieces_edit_controls = QWidget()
+        edit_p_layout = QVBoxLayout(self.pieces_edit_controls)
+        edit_p_layout.setContentsMargins(0, 0, 0, 8)
 
-        edit_piece_layout = QVBoxLayout(
-            self.pieces_edit_controls
-        )
-
-        edit_piece_layout.setContentsMargins(
-            0, 0, 0, 4
-        )
-        edit_piece_layout.setSpacing(10)
-
-        # Recherche
-
-        search_layout = QHBoxLayout()
-        search_layout.setSpacing(10)
-
-        search_label = QLabel("Rechercher une pièce")
-        search_label.setObjectName("fieldLabel")
-
-        search_layout.addWidget(search_label)
+        s_layout = QHBoxLayout()
+        s_lbl = QLabel("Rechercher pièce :")
+        s_lbl.setObjectName("fieldLabel")
+        s_layout.addWidget(s_lbl)
 
         self.piece_search = QLineEdit()
+        self.piece_search.setPlaceholderText("Nom, référence, catégorie...")
+        self.piece_search.textChanged.connect(self.filter_stock)
+        s_layout.addWidget(self.piece_search, 1)
+        edit_p_layout.addLayout(s_layout)
 
-        self.piece_search.setPlaceholderText(
-            "Nom, référence ou catégorie..."
-        )
-
-        self.piece_search.textChanged.connect(
-            self.filter_stock
-        )
-
-        search_layout.addWidget(
-            self.piece_search,
-            1
-        )
-
-        edit_piece_layout.addLayout(
-            search_layout
-        )
-
-        # Sélection
-
-        selection_layout = QHBoxLayout()
-        selection_layout.setSpacing(10)
-
-        piece_label = QLabel("Pièce")
-        piece_label.setObjectName("fieldLabel")
-
-        selection_layout.addWidget(
-            piece_label
-        )
+        sel_layout = QHBoxLayout()
+        p_lbl = QLabel("Pièce :")
+        p_lbl.setObjectName("fieldLabel")
+        sel_layout.addWidget(p_lbl)
 
         self.piece_combo = QComboBox()
+        self.piece_combo.currentIndexChanged.connect(self.on_piece_selected)
+        sel_layout.addWidget(self.piece_combo, 1)
 
-        self.piece_combo.setMinimumHeight(38)
-
-        self.piece_combo.currentIndexChanged.connect(
-            self.on_piece_selected
-        )
-
-        selection_layout.addWidget(
-            self.piece_combo,
-            1
-        )
-
-        quantity_label = QLabel("Quantité")
-        quantity_label.setObjectName("fieldLabel")
-
-        selection_layout.addWidget(
-            quantity_label
-        )
+        q_lbl = QLabel("Qté :")
+        q_lbl.setObjectName("fieldLabel")
+        sel_layout.addWidget(q_lbl)
 
         self.piece_quantity = QSpinBox()
-
-        self.piece_quantity.setRange(
-            1,
-            100
-        )
-
+        self.piece_quantity.setRange(1, 100)
         self.piece_quantity.setValue(1)
-        self.piece_quantity.setMinimumWidth(80)
+        sel_layout.addWidget(self.piece_quantity)
 
-        selection_layout.addWidget(
-            self.piece_quantity
-        )
+        self.add_piece_button = QPushButton("+ Ajouter")
+        self.add_piece_button.setObjectName("successButton")
+        self.add_piece_button.setCursor(Qt.PointingHandCursor)
+        self.add_piece_button.clicked.connect(self.add_piece)
+        sel_layout.addWidget(self.add_piece_button)
 
-        self.add_piece_button = QPushButton(
-            "+  Ajouter"
-        )
+        edit_p_layout.addLayout(sel_layout)
 
-        self.add_piece_button.setObjectName(
-            "successButton"
-        )
+        self.piece_info_label = QLabel("Sélectionnez une pièce pour voir son stock.")
+        self.piece_info_label.setObjectName("pieceInfo")
+        edit_p_layout.addWidget(self.piece_info_label)
 
-        self.add_piece_button.clicked.connect(
-            self.add_piece
-        )
+        pieces_layout.addWidget(self.pieces_edit_controls)
 
-        selection_layout.addWidget(
-            self.add_piece_button
-        )
-
-        edit_piece_layout.addLayout(
-            selection_layout
-        )
-
-        # Informations stock
-
-        self.piece_info_label = QLabel(
-            "Sélectionnez une pièce."
-        )
-
-        self.piece_info_label.setObjectName(
-            "pieceInfo"
-        )
-
-        edit_piece_layout.addWidget(
-            self.piece_info_label
-        )
-
-        pieces_layout.addWidget(
-            self.pieces_edit_controls
-        )
-
-        # ------------------------------------------------------------
-        # TABLEAU
-        # ------------------------------------------------------------
-
+        # Tableau des pièces
         self.pieces_table = QTableWidget()
         self.pieces_table.setColumnCount(6)
+        self.pieces_table.setHorizontalHeaderLabels(["Pièce", "Référence", "Qté", "Prix unit.", "Total", "Action"])
+        self.pieces_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.pieces_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.pieces_table.setAlternatingRowColors(True)
+        self.pieces_table.verticalHeader().setVisible(False)
+        self.pieces_table.setMinimumHeight(160)
 
-        self.pieces_table.setHorizontalHeaderLabels([
-            "Pièce",
-            "Référence",
-            "Qté",
-            "Prix unitaire",
-            "Total",
-            "Action"
-        ])
+        p_hdr = self.pieces_table.horizontalHeader()
+        p_hdr.setSectionResizeMode(0, QHeaderView.Stretch)
+        p_hdr.setSectionResizeMode(1, QHeaderView.Stretch)
+        for c in [2, 3, 4, 5]:
+            p_hdr.setSectionResizeMode(c, QHeaderView.ResizeToContents)
 
-        self.pieces_table.setEditTriggers(
-            QAbstractItemView.NoEditTriggers
-        )
+        pieces_layout.addWidget(self.pieces_table)
 
-        self.pieces_table.setSelectionBehavior(
-            QAbstractItemView.SelectRows
-        )
+        total_card = QFrame()
+        total_card.setObjectName("piecesTotalCard")
+        tot_l = QHBoxLayout(total_card)
+        tot_l.setContentsMargins(14, 8, 14, 8)
+        tot_l.addStretch()
 
-        self.pieces_table.setSelectionMode(
-            QAbstractItemView.SingleSelection
-        )
+        self.pieces_total_label = QLabel("Total pièces : 0.00 DH")
+        self.pieces_total_label.setObjectName("piecesTotalLabel")
+        tot_l.addWidget(self.pieces_total_label)
 
-        self.pieces_table.verticalHeader().setVisible(
-            False
-        )
+        pieces_layout.addWidget(total_card)
+        content.addWidget(pieces_group)
 
-        self.pieces_table.setAlternatingRowColors(
-            True
-        )
+        # =========================================================
+        # 06. REDESIGN : IA & ESTIMATION FINANCIÈRE
+        # =========================================================
+        est_group = QGroupBox("06. Estimation Financière & Intelligence Artificielle")
+        est_group.setObjectName("aiGroupBox")
+        est_main_layout = QVBoxLayout(est_group)
+        est_main_layout.setContentsMargins(20, 20, 20, 20)
+        est_main_layout.setSpacing(16)
 
-        self.pieces_table.setMinimumHeight(
-            180
-        )
-
-        pieces_header = (
-            self.pieces_table.horizontalHeader()
-        )
-
-        pieces_header.setStretchLastSection(
-            False
-        )
-
-        pieces_header.setSectionResizeMode(
-            0,
-            QHeaderView.Stretch
-        )
-
-        pieces_header.setSectionResizeMode(
-            1,
-            QHeaderView.Stretch
-        )
-
-        pieces_header.setSectionResizeMode(
-            2,
-            QHeaderView.ResizeToContents
-        )
-
-        pieces_header.setSectionResizeMode(
-            3,
-            QHeaderView.ResizeToContents
-        )
-
-        pieces_header.setSectionResizeMode(
-            4,
-            QHeaderView.ResizeToContents
-        )
-
-        pieces_header.setSectionResizeMode(
-            5,
-            QHeaderView.ResizeToContents
-        )
-
-        pieces_layout.addWidget(
-            self.pieces_table
-        )
-
-        # ------------------------------------------------------------
-        # TOTAL
-        # ------------------------------------------------------------
-
-        total_container = QFrame()
-        total_container.setObjectName(
-            "piecesTotalCard"
-        )
-
-        total_layout = QHBoxLayout(
-            total_container
-        )
-
-        total_layout.setContentsMargins(
-            15, 10, 15, 10
-        )
-
-        total_layout.addStretch()
-
-        self.pieces_total_label = QLabel(
-            "Total pièces : 0.00 DH"
-        )
-
-        self.pieces_total_label.setObjectName(
-            "piecesTotalLabel"
-        )
-
-        total_layout.addWidget(
-            self.pieces_total_label
-        )
-
-        pieces_layout.addWidget(
-            total_container
-        )
-
-        content.addWidget(
-            pieces_group
-        )
-
-        # ============================================================
-        # ESTIMATION & PRÉDICTION & COÛT RÉEL (MODIFIABLES)
-        # ============================================================
-
-        estimation_group = QGroupBox("06  •  Estimation financière et coût réel")
-        estimation_layout = QGridLayout(estimation_group)
-        estimation_layout.setContentsMargins(18, 22, 18, 18)
-        estimation_layout.setHorizontalSpacing(18)
-        estimation_layout.setVerticalSpacing(12)
-        estimation_layout.setColumnMinimumWidth(0, 150)
-
-        # 1. Délai
-        self.delai_label = self.create_info_label()
-
-        # 2. Coût Estimé (View + Edit)
-        self.cout_estime_label = self.create_info_label()
-        self.edit_cout_estime = QLineEdit()
-        self.edit_cout_estime.setPlaceholderText("Coût estimé (ex: 150.00)")
-
-        # 3. Coût Réel (View + Edit)
-        self.cout_reel_label = self.create_info_label()
-        self.edit_cout_reel = QLineEdit()
-        self.edit_cout_reel.setPlaceholderText("Coût réel payé (ex: 200.00)")
-
-        estimation_fields = [
-            ("Délai estimé", self.delai_label, None),
-            ("Coût estimé (IA/Est.)", self.cout_estime_label, self.edit_cout_estime),
-            ("Coût réel", self.cout_reel_label, self.edit_cout_reel),
-        ]
-
-        for row, (label, view_widget, edit_widget) in enumerate(estimation_fields):
-            field_label = QLabel(label)
-            field_label.setObjectName("fieldLabel")
-            estimation_layout.addWidget(field_label, row, 0)
-            estimation_layout.addWidget(view_widget, row, 1)
-
-            if edit_widget:
-                estimation_layout.addWidget(edit_widget, row, 1)
-
-        # Bouton d'estimation prédictive intégrée
-        self.btn_predict_cost = QPushButton("⚡ Estimer le coût (IA)")
-        self.btn_predict_cost.setObjectName("primaryButton")
-        self.btn_predict_cost.setToolTip("Prédire automatiquement le coût estimé via l'API ML")
+        # Bouton d'estimation IA Premium
+        self.btn_predict_cost = QPushButton("✨ Lancer l'Estimation Automatique (IA Machine Learning)")
+        self.btn_predict_cost.setObjectName("aiButton")
+        self.btn_predict_cost.setCursor(Qt.PointingHandCursor)
         self.btn_predict_cost.clicked.connect(self.predict_and_apply_cost)
+        est_main_layout.addWidget(self.btn_predict_cost)
 
-        estimation_layout.addWidget(self.btn_predict_cost, 3, 0, 1, 2)
+        # Grille de cartes d'affichage des prédictions
+        cards_layout = QHBoxLayout()
+        cards_layout.setSpacing(14)
 
-        content.addWidget(estimation_group)
+        # 1. Carte Coût Estimé
+        cost_card = QFrame()
+        cost_card.setObjectName("metricCard")
+        cc_layout = QVBoxLayout(cost_card)
+        cc_layout.setContentsMargins(16, 14, 16, 14)
 
-        # ============================================================
-        # ACTIONS
-        # ============================================================
+        lbl_c_title = QLabel("COÛT ESTIMÉ (IA)")
+        lbl_c_title.setObjectName("metricTitle")
+        cc_layout.addWidget(lbl_c_title)
 
-        actions_frame = QFrame()
-        actions_frame.setObjectName(
-            "actionsCard"
-        )
+        self.cout_estime_label = QLabel("0.00 DH")
+        self.cout_estime_label.setObjectName("metricValueBlue")
+        cc_layout.addWidget(self.cout_estime_label)
 
-        self.detail_actions = QHBoxLayout(
-            actions_frame
-        )
+        self.edit_cout_estime = QLineEdit()
+        self.edit_cout_estime.setPlaceholderText("Ex: 150.00")
+        cc_layout.addWidget(self.edit_cout_estime)
 
-        self.detail_actions.setContentsMargins(
-            15, 12, 15, 12
-        )
+        cards_layout.addWidget(cost_card)
 
-        self.detail_actions.addStretch()
+        # 2. Carte Délai Estimé
+        delay_card = QFrame()
+        delay_card.setObjectName("metricCard")
+        dc_layout = QVBoxLayout(delay_card)
+        dc_layout.setContentsMargins(16, 14, 16, 14)
 
-        self.edit_detail_button = QPushButton(
-            "✎  Modifier le dossier"
-        )
+        lbl_d_title = QLabel("DÉLAI ESTIMÉ (IA)")
+        lbl_d_title.setObjectName("metricTitle")
+        dc_layout.addWidget(lbl_d_title)
 
-        self.edit_detail_button.setObjectName(
-            "primaryButton"
-        )
+        self.delai_label = QLabel("- Jour(s)")
+        self.delai_label.setObjectName("metricValuePurple")
+        dc_layout.addWidget(self.delai_label)
 
-        self.edit_detail_button.clicked.connect(
-            self.enter_edit_mode
-        )
+        cards_layout.addWidget(delay_card)
 
-        self.detail_actions.addWidget(
-            self.edit_detail_button
-        )
+        # 3. Carte Coût Réel (Facturé)
+        real_card = QFrame()
+        real_card.setObjectName("metricCard")
+        rc_layout = QVBoxLayout(real_card)
+        rc_layout.setContentsMargins(16, 14, 16, 14)
 
-        self.cancel_edit_button = QPushButton(
-            "Annuler"
-        )
+        lbl_r_title = QLabel("COÛT RÉEL (FACTURÉ)")
+        lbl_r_title.setObjectName("metricTitle")
+        rc_layout.addWidget(lbl_r_title)
 
-        self.cancel_edit_button.setObjectName(
-            "secondaryButton"
-        )
+        self.cout_reel_label = QLabel("0.00 DH")
+        self.cout_reel_label.setObjectName("metricValueGreen")
+        rc_layout.addWidget(self.cout_reel_label)
 
-        self.cancel_edit_button.clicked.connect(
-            self.cancel_edit_mode
-        )
+        self.edit_cout_reel = QLineEdit()
+        self.edit_cout_reel.setPlaceholderText("Ex: 200.00")
+        rc_layout.addWidget(self.edit_cout_reel)
 
-        self.detail_actions.addWidget(
-            self.cancel_edit_button
-        )
+        cards_layout.addWidget(real_card)
 
-        self.save_detail_button = QPushButton(
-            "✓  Enregistrer"
-        )
+        est_main_layout.addLayout(cards_layout)
+        content.addWidget(est_group)
 
-        self.save_detail_button.setObjectName(
-            "primaryButton"
-        )
+        # Actions de validation
+        actions_card = QFrame()
+        actions_card.setObjectName("actionsCard")
+        actions_layout = QHBoxLayout(actions_card)
+        actions_layout.setContentsMargins(14, 10, 14, 10)
+        actions_layout.addStretch()
 
-        self.save_detail_button.clicked.connect(
-            self.save_dossier
-        )
+        self.edit_detail_button = QPushButton("✎ Modifier le dossier")
+        self.edit_detail_button.setObjectName("primaryButton")
+        self.edit_detail_button.setCursor(Qt.PointingHandCursor)
+        self.edit_detail_button.clicked.connect(self.enter_edit_mode)
+        actions_layout.addWidget(self.edit_detail_button)
 
-        self.detail_actions.addWidget(
-            self.save_detail_button
-        )
+        self.cancel_edit_button = QPushButton("Annuler")
+        self.cancel_edit_button.setCursor(Qt.PointingHandCursor)
+        self.cancel_edit_button.clicked.connect(self.cancel_edit_mode)
+        actions_layout.addWidget(self.cancel_edit_button)
 
-        content.addWidget(
-            actions_frame
-        )
+        self.save_detail_button = QPushButton("✓ Enregistrer")
+        self.save_detail_button.setObjectName("primaryButton")
+        self.save_detail_button.setCursor(Qt.PointingHandCursor)
+        self.save_detail_button.clicked.connect(self.save_dossier)
+        actions_layout.addWidget(self.save_detail_button)
 
-        # ============================================================
-        # FIN
-        # ============================================================
+        content.addWidget(actions_card)
 
         scroll.setWidget(container)
+        layout.addWidget(scroll, 1)
 
-        layout.addWidget(
-            scroll,
-            1
-        )
-
-        # Style général de cette page
         self._apply_detail_styles()
-
-        # Mode consultation au démarrage
         self.set_edit_mode(False)
 
     def _apply_detail_styles(self):
-
         self.detail_page.setStyleSheet("""
-            /* =====================================================
-            PAGE
-            ===================================================== */
-
-            QScrollArea {
-                background: transparent;
-                border: none;
-            }
-
-            QWidget {
-                font-family: "Segoe UI";
-                font-size: 13px;
-                color: #1F2937;
-            }
-
-            /* =====================================================
-            GROUPES / CARTES
-            ===================================================== */
-
-            QGroupBox {
-                background: #FFFFFF;
-                border: 1px solid #E5E7EB;
-                border-radius: 10px;
-                margin-top: 12px;
-                padding-top: 12px;
-                font-size: 14px;
-                font-weight: 700;
-                color: #111827;
-            }
-
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 16px;
-                padding: 0 7px;
-                background: #FFFFFF;
-                color: #111827;
-            }
-
-            #detailHeaderCard {
-                background: #FFFFFF;
-                border: 1px solid #E5E7EB;
+            #detailHeaderCard, #actionsCard {
+                background-color: #FFFFFF;
+                border: 1px solid #E2E8F0;
                 border-radius: 12px;
             }
+            #detailOverline { color: #64748B; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+            #detailNumero { color: #0F172A; font-size: 24px; font-weight: 800; }
+            #detailDate { color: #64748B; font-size: 12px; }
+            #detailStatusTitle { color: #64748B; font-size: 10px; font-weight: 700; }
+            #detailStatus { font-weight: 700; font-size: 12px; }
+            #fieldLabel { color: #475569; font-size: 12px; font-weight: 600; }
+            #pieceInfo { color: #475569; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 6px 10px; }
+            #piecesTotalCard { background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 8px; }
+            #piecesTotalLabel { color: #1E40AF; font-size: 15px; font-weight: 800; }
+            
+            /* BOUTON IA MODERNE GRADIENT */
+            QPushButton#aiButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #4F46E5, stop:1 #2563EB);
+                color: #FFFFFF;
+                font-weight: 700;
+                font-size: 13px;
+                border: none;
+                border-radius: 8px;
+                padding: 12px 20px;
+            }
+            QPushButton#aiButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #4338CA, stop:1 #1D4ED8);
+            }
 
-            #actionsCard {
-                background: #FFFFFF;
-                border: 1px solid #E5E7EB;
+            /* CARTES DE DÉTAIL FINANCIER */
+            QFrame#metricCard {
+                background-color: #FFFFFF;
+                border: 1px solid #E2E8F0;
                 border-radius: 10px;
             }
-
-            /* =====================================================
-            TITRE DOSSIER
-            ===================================================== */
-
-            #detailOverline {
-                color: #6B7280;
-                font-size: 11px;
-                font-weight: 700;
-                letter-spacing: 1px;
-            }
-
-            #detailNumero {
-                color: #111827;
-                font-size: 25px;
-                font-weight: 700;
-            }
-
-            #detailDate {
-                color: #6B7280;
-                font-size: 12px;
-            }
-
-            #detailStatusTitle {
-                color: #6B7280;
+            QLabel#metricTitle {
+                color: #64748B;
                 font-size: 10px;
                 font-weight: 700;
-                letter-spacing: 1px;
+                letter-spacing: 0.5px;
+            }
+            QLabel#metricValueBlue {
+                color: #2563EB;
+                font-size: 20px;
+                font-weight: 800;
+            }
+            QLabel#metricValuePurple {
+                color: #7C3AED;
+                font-size: 20px;
+                font-weight: 800;
+            }
+            QLabel#metricValueGreen {
+                color: #16A34A;
+                font-size: 20px;
+                font-weight: 800;
             }
 
-            #detailStatus {
-                min-height: 32px;
-                padding: 7px 18px;
-                border-radius: 16px;
-                font-size: 12px;
-                font-weight: 700;
-            }
-
-            /* =====================================================
-            LABELS
-            ===================================================== */
-
-            #fieldLabel {
-                color: #6B7280;
-                font-size: 12px;
-                font-weight: 600;
-            }
-
-            QLabel {
-                background: transparent;
-            }
-
-            /* =====================================================
-            CHAMPS DE CONSULTATION
-            ===================================================== */
-
-            QGroupBox QLabel:not(#fieldLabel) {
-                background: transparent;
-            }
-
-            /* =====================================================
-            CHAMPS DE MODIFICATION
-            ===================================================== */
-
-            QLineEdit,
-            QTextEdit,
-            QComboBox,
-            QSpinBox {
-                background: #F9FAFB;
-                border: 1px solid #D1D5DB;
-                border-radius: 7px;
-                padding: 8px 10px;
-                min-height: 20px;
-                color: #111827;
-            }
-
-            QLineEdit:focus,
-            QTextEdit:focus,
-            QComboBox:focus,
-            QSpinBox:focus {
-                border: 1px solid #2563EB;
-                background: #FFFFFF;
-            }
-
-            QTextEdit {
-                padding: 8px;
-            }
-
-            QComboBox {
-                padding-right: 25px;
-            }
-
-            QComboBox QAbstractItemView {
-                background: #FFFFFF;
-                border: 1px solid #D1D5DB;
-                selection-background-color: #EFF6FF;
-                selection-color: #1D4ED8;
-            }
-
-            QSpinBox {
-                padding-right: 5px;
-            }
-
-            /* =====================================================
-            BOUTONS
-            ===================================================== */
-
-            QPushButton {
-                min-height: 34px;
-                padding: 7px 14px;
-                border-radius: 7px;
-                font-weight: 600;
-                border: 1px solid #D1D5DB;
-                background: #FFFFFF;
-                color: #374151;
-            }
-
-            QPushButton:hover {
-                background: #F9FAFB;
-            }
-
-            QPushButton:pressed {
-                background: #F3F4F6;
-            }
-
-            #primaryButton {
-                background: #2563EB;
-                color: white;
-                border: 1px solid #2563EB;
-            }
-
-            #primaryButton:hover {
-                background: #1D4ED8;
-                border-color: #1D4ED8;
-            }
-
-            #successButton {
-                background: #16A34A;
-                color: white;
-                border: 1px solid #16A34A;
-            }
-
-            #successButton:hover {
-                background: #15803D;
-                border-color: #15803D;
-            }
-
-            #secondaryButton {
-                background: #FFFFFF;
-                color: #374151;
-                border: 1px solid #D1D5DB;
-            }
-
-            #secondaryButton:hover {
-                background: #F9FAFB;
-                border-color: #9CA3AF;
-            }
-
-            #backButton {
-                background: transparent;
-                border: none;
-                color: #4B5563;
-                font-weight: 600;
-            }
-
-            #backButton:hover {
-                background: #F3F4F6;
-                color: #111827;
-            }
-
-            /* =====================================================
-            INFORMATIONS PIÈCES
-            ===================================================== */
-
-            #pieceInfo {
-                color: #6B7280;
-                background: #F9FAFB;
-                border: 1px solid #E5E7EB;
-                border-radius: 6px;
-                padding: 7px 10px;
-            }
-
-            #piecesTotalCard {
-                background: #F8FAFC;
-                border: 1px solid #E2E8F0;
-                border-radius: 7px;
-            }
-
-            #piecesTotalLabel {
-                color: #1D4ED8;
-                font-size: 15px;
-                font-weight: 700;
-            }
-
-            /* =====================================================
-            TABLEAU
-            ===================================================== */
-
-            QTableWidget {
-                background: #FFFFFF;
-                alternate-background-color: #F9FAFB;
-                border: 1px solid #E5E7EB;
-                border-radius: 7px;
-                gridline-color: #E5E7EB;
-                selection-background-color: #EFF6FF;
-                selection-color: #1D4ED8;
-            }
-
-            QTableWidget::item {
-                padding: 8px;
-                border: none;
-            }
-
-            QTableWidget::item:selected {
-                background: #EFF6FF;
-                color: #1D4ED8;
-            }
-
-            QHeaderView::section {
-                background: #F8FAFC;
-                color: #475569;
-                border: none;
-                border-bottom: 1px solid #E2E8F0;
-                padding: 9px 8px;
-                font-size: 11px;
-                font-weight: 700;
-            }
-
-            /* =====================================================
-            SCROLLBAR
-            ===================================================== */
-
-            QScrollBar:vertical {
-                background: transparent;
-                width: 8px;
-                margin: 3px;
-            }
-
-            QScrollBar::handle:vertical {
-                background: #CBD5E1;
-                border-radius: 4px;
-                min-height: 30px;
-            }
-
-            QScrollBar::handle:vertical:hover {
-                background: #94A3B8;
-            }
-
-            QScrollBar::add-line:vertical,
-            QScrollBar::sub-line:vertical {
-                height: 0px;
-            }
-
-            QScrollBar:horizontal {
-                height: 8px;
-                background: transparent;
-            }
-
-            QScrollBar::handle:horizontal {
-                background: #CBD5E1;
-                border-radius: 4px;
-            }
-
+            /* Bouton Supprimer Pièce */
             #deletePieceButton {
-                background: #FEF2F2;
+                background-color: #FEF2F2;
                 color: #DC2626;
                 border: 1px solid #FECACA;
-                padding: 5px 10px;
-                min-height: 28px;
+                border-radius: 6px;
+                font-weight: 700;
+                font-size: 11px;
+                padding: 4px 10px;
             }
-
             #deletePieceButton:hover {
-                background: #FEE2E2;
-                border-color: #FCA5A5;
+                background-color: #FEE2E2;
                 color: #B91C1C;
             }
-
         """)
 
     def set_edit_mode(self, enabled):
-
         self.edit_mode = enabled
 
-        # CLIENT
-        self.client_nom.setVisible(not enabled)
-        self.client_tel.setVisible(not enabled)
-        self.client_email.setVisible(not enabled)
+        for view, edit in [
+            (self.client_nom, self.edit_client_nom), (self.client_tel, self.edit_client_tel), (self.client_email, self.edit_client_email),
+            (self.machine_type, self.edit_machine_type), (self.machine_marque, self.edit_machine_marque),
+            (self.machine_modele, self.edit_machine_modele), (self.machine_serie, self.edit_machine_serie),
+            (self.probleme_view, self.probleme_edit), (self.diagnostic_view, self.diagnostic_edit),
+            (self.intervention_view, self.intervention_edit), (self.pieces_defectueuses_view, self.pieces_defectueuses_edit),
+            (self.remarques_view, self.remarques_edit), (self.cout_estime_label, self.edit_cout_estime),
+            (self.cout_reel_label, self.edit_cout_reel)
+        ]:
+            view.setVisible(not enabled)
+            edit.setVisible(enabled)
 
-        self.edit_client_nom.setVisible(enabled)
-        self.edit_client_tel.setVisible(enabled)
-        self.edit_client_email.setVisible(enabled)
-
-        # MATÉRIEL
-        self.machine_type.setVisible(not enabled)
-        self.machine_marque.setVisible(not enabled)
-        self.machine_modele.setVisible(not enabled)
-        self.machine_serie.setVisible(not enabled)
-
-        self.edit_machine_type.setVisible(enabled)
-        self.edit_machine_marque.setVisible(enabled)
-        self.edit_machine_modele.setVisible(enabled)
-        self.edit_machine_serie.setVisible(enabled)
-
-        # DIAGNOSTIC
-        self.probleme_view.setVisible(not enabled)
-        self.diagnostic_view.setVisible(not enabled)
-        self.intervention_view.setVisible(not enabled)
-        self.pieces_defectueuses_view.setVisible(not enabled)
-        self.remarques_view.setVisible(not enabled)
-
-        self.probleme_edit.setVisible(enabled)
-        self.diagnostic_edit.setVisible(enabled)
-        self.intervention_edit.setVisible(enabled)
-        self.pieces_defectueuses_edit.setVisible(enabled)
-        self.remarques_edit.setVisible(enabled)
-
-        # ESTIMATION ET COÛT RÉEL
-        self.cout_estime_label.setVisible(not enabled)
-        self.edit_cout_estime.setVisible(enabled)
-
-        self.cout_reel_label.setVisible(not enabled)
-        self.edit_cout_reel.setVisible(enabled)
-
-        # STATUT
         self.status_combo.setVisible(enabled)
-
-        # PIÈCES
         self.pieces_edit_controls.setVisible(enabled)
-        
-        # Cacher la colonne Action en consultation
-        self.pieces_table.setColumnHidden(
-            5,
-            not enabled
-        )
+        self.pieces_table.setColumnHidden(5, not enabled)
 
-        # BOUTONS
         self.edit_detail_button.setVisible(not enabled)
         self.cancel_edit_button.setVisible(enabled)
         self.save_detail_button.setVisible(enabled)
 
-        # Actualiser la colonne Action
         if hasattr(self, "pieces_utilisees"):
             self.display_pieces()
 
     def enter_edit_mode(self):
-
         if not self.current_dossier:
             return
+        d = self.current_dossier
+        c = d.get("client") if isinstance(d.get("client"), dict) else {}
 
-        dossier = self.current_dossier
+        self.edit_client_nom.setText(str(c.get("nom", d.get("client_nom", "")) or ""))
+        self.edit_client_tel.setText(str(c.get("telephone", d.get("client_telephone", "")) or ""))
+        self.edit_client_email.setText(str(c.get("email", "") or ""))
 
-        client = dossier.get("client")
+        self.edit_machine_type.setText(str(d.get("type_materiel", "") or ""))
+        self.edit_machine_marque.setText(str(d.get("marque", "") or ""))
+        self.edit_machine_modele.setText(str(d.get("modele", "") or ""))
+        self.edit_machine_serie.setText(str(d.get("numero_serie", "") or ""))
 
-        if not isinstance(client, dict):
-            client = {}
+        self.probleme_edit.setPlainText(str(d.get("probleme", "") or ""))
+        self.diagnostic_edit.setPlainText(str(d.get("diagnostic", "") or ""))
+        self.intervention_edit.setPlainText(str(d.get("intervention", "") or ""))
+        self.pieces_defectueuses_edit.setPlainText(str(d.get("pieces_defectueuses", "") or ""))
+        self.remarques_edit.setPlainText(str(d.get("remarques", "") or ""))
 
-        # ========================================================
-        # CLIENT
-        # ========================================================
+        ce = d.get("cout_estime")
+        cr = d.get("cout_reel")
+        self.edit_cout_estime.setText(str(ce) if ce is not None else "")
+        self.edit_cout_reel.setText(str(cr) if cr is not None else "")
 
-        self.edit_client_nom.setText(
-            str(
-                client.get(
-                    "nom",
-                    dossier.get("client_nom", "")
-                ) or ""
-            )
-        )
-
-        self.edit_client_tel.setText(
-            str(
-                client.get(
-                    "telephone",
-                    dossier.get("client_telephone", "")
-                ) or ""
-            )
-        )
-
-        self.edit_client_email.setText(
-            str(
-                client.get("email", "")
-            ) or ""
-        )
-
-        # ========================================================
-        # MATÉRIEL
-        # ========================================================
-
-        self.edit_machine_type.setText(
-            str(
-                dossier.get(
-                    "type_materiel",
-                    ""
-                ) or ""
-            )
-        )
-
-        self.edit_machine_marque.setText(
-            str(
-                dossier.get(
-                    "marque",
-                    ""
-                ) or ""
-            )
-        )
-
-        self.edit_machine_modele.setText(
-            str(
-                dossier.get(
-                    "modele",
-                    ""
-                ) or ""
-            )
-        )
-
-        self.edit_machine_serie.setText(
-            str(
-                dossier.get(
-                    "numero_serie",
-                    ""
-                ) or ""
-            )
-        )
-
-        # ========================================================
-        # DIAGNOSTIC
-        # ========================================================
-
-        self.probleme_edit.setPlainText(
-            str(
-                dossier.get(
-                    "probleme",
-                    ""
-                ) or ""
-            )
-        )
-
-        self.diagnostic_edit.setPlainText(
-            str(
-                dossier.get(
-                    "diagnostic",
-                    ""
-                ) or ""
-            )
-        )
-
-        self.intervention_edit.setPlainText(
-            str(
-                dossier.get(
-                    "intervention",
-                    ""
-                ) or ""
-            )
-        )
-
-        self.pieces_defectueuses_edit.setPlainText(
-            str(
-                dossier.get(
-                    "pieces_defectueuses",
-                    ""
-                ) or ""
-            )
-        )
-
-        self.remarques_edit.setPlainText(
-            str(
-                dossier.get(
-                    "remarques",
-                    ""
-                ) or ""
-            )
-        )
-
-        # ========================================================
-        # ESTIMATION ET COÛT RÉEL
-        # ========================================================
-
-        c_estime = dossier.get("cout_estime")
-        self.edit_cout_estime.setText(str(c_estime) if c_estime is not None else "")
-
-        c_reel = dossier.get("cout_reel")
-        self.edit_cout_reel.setText(str(c_reel) if c_reel is not None else "")
-
-        # ========================================================
-        # STATUT
-        # ========================================================
-
-        index = self.status_combo.findText(
-            str(
-                dossier.get(
-                    "statut",
-                    ""
-                )
-            )
-        )
-
-        if index >= 0:
-            self.status_combo.setCurrentIndex(index)
+        idx = self.status_combo.findText(str(d.get("statut", "")))
+        if idx >= 0:
+            self.status_combo.setCurrentIndex(idx)
 
         self.set_edit_mode(True)
-
-        # Recharger la liste des pièces disponibles
         self.load_stock()
         self.fill_piece_combo()
-
-        # Recharger les pièces actuellement utilisées
         self.load_pieces_utilisees()
 
     def cancel_edit_mode(self):
-
-        if not self.current_dossier:
-            return
-
-        self.edit_mode = False
+        self.set_edit_mode(False)
         self.load_detail_data()
 
     def load_detail_data(self):
-
-        dossier = self.current_dossier
-
-        if not dossier:
+        d = self.current_dossier
+        if not d:
             return
 
-        numero = (
-            dossier.get(
-                "numero_dossier"
-            )
-            or f"Dossier #{dossier.get('id')}"
-        )
-
-        self.detail_numero.setText(
-            numero
-        )
-
-        self.detail_date.setText(
-            "Réception : "
-            + format_date(
-                dossier.get(
-                    "date_reception"
-                )
-            )
-        )
-
-        self.set_status_label(
-            dossier.get(
-                "statut"
-            )
-        )
-
-        # ========================================================
-        # CLIENT
-        # ========================================================
-
-        client = dossier.get(
-            "client"
-        )
-
-        if isinstance(
-            client,
-            dict
-        ):
-
-            client_nom = str(
-                client.get(
-                    "nom"
-                )
-                or "-"
-            )
-
-            client_tel = str(
-                client.get(
-                    "telephone"
-                )
-                or "-"
-            )
-
-            client_email = str(
-                client.get(
-                    "email"
-                )
-                or "-"
-            )
-
-        else:
-
-            client_nom = str(
-                dossier.get(
-                    "client_nom"
-                )
-                or "-"
-            )
-
-            client_tel = str(
-                dossier.get(
-                    "client_telephone"
-                )
-                or "-"
-            )
-
-            client_email = "-"
-
-        # Consultation
-
-        self.client_nom.setText(
-            client_nom
-        )
-
-        self.client_tel.setText(
-            client_tel
-        )
-
-        self.client_email.setText(
-            client_email
-        )
-
-        # Modification
-
-        self.edit_client_nom.setText(
-            client_nom if client_nom != "-" else ""
-        )
-
-        self.edit_client_tel.setText(
-            client_tel if client_tel != "-" else ""
-        )
-
-        self.edit_client_email.setText(
-            client_email if client_email != "-" else ""
-        )
-
-        # ========================================================
-        # MACHINE
-        # ========================================================
-
-        machine_type = str(
-            dossier.get(
-                "type_materiel"
-            )
-            or "-"
-        )
-
-        machine_marque = str(
-            dossier.get(
-                "marque"
-            )
-            or "-"
-        )
-
-        machine_modele = str(
-            dossier.get(
-                "modele"
-            )
-            or "-"
-        )
-
-        machine_serie = str(
-            dossier.get(
-                "numero_serie"
-            )
-            or "-"
-        )
-
-        # Consultation
-
-        self.machine_type.setText(
-            machine_type
-        )
-
-        self.machine_marque.setText(
-            machine_marque
-        )
-
-        self.machine_modele.setText(
-            machine_modele
-        )
-
-        self.machine_serie.setText(
-            machine_serie
-        )
-
-        # Modification
-
-        self.edit_machine_type.setText(
-            machine_type if machine_type != "-" else ""
-        )
-
-        self.edit_machine_marque.setText(
-            machine_marque if machine_marque != "-" else ""
-        )
-
-        self.edit_machine_modele.setText(
-            machine_modele if machine_modele != "-" else ""
-        )
-
-        self.edit_machine_serie.setText(
-            machine_serie if machine_serie != "-" else ""
-        )
-
-        # ========================================================
-        # INFORMATIONS DE RÉPARATION
-        # ========================================================
-
-        probleme = str(
-            dossier.get(
-                "probleme"
-            )
-            or "-"
-        )
-
-        diagnostic = str(
-            dossier.get(
-                "diagnostic"
-            )
-            or "-"
-        )
-
-        intervention = str(
-            dossier.get(
-                "intervention"
-            )
-            or "-"
-        )
-
-        pieces_defectueuses = str(
-            dossier.get(
-                "pieces_defectueuses"
-            )
-            or "-"
-        )
-
-        remarques = str(
-            dossier.get(
-                "remarques"
-            )
-            or "-"
-        )
-
-        # ========================================================
-        # CONSULTATION
-        # ========================================================
-
-        self.probleme_view.setText(
-            probleme
-        )
-
-        self.diagnostic_view.setText(
-            diagnostic
-        )
-
-        self.intervention_view.setText(
-            intervention
-        )
-
-        self.pieces_defectueuses_view.setText(
-            pieces_defectueuses
-        )
-
-        self.remarques_view.setText(
-            remarques
-        )
-
-        # ========================================================
-        # MODIFICATION
-        # ========================================================
-
-        self.probleme_edit.setText(
-            probleme if probleme != "-" else ""
-        )
-
-        self.diagnostic_edit.setText(
-            diagnostic if diagnostic != "-" else ""
-        )
-
-        self.intervention_edit.setText(
-            intervention if intervention != "-" else ""
-        )
-
-        self.pieces_defectueuses_edit.setText(
-            pieces_defectueuses
-            if pieces_defectueuses != "-"
-            else ""
-        )
-
-        self.remarques_edit.setText(
-            remarques if remarques != "-" else ""
-        )
-
-        # ========================================================
-        # STATUT
-        # ========================================================
-
-        statut = dossier.get(
-            "statut"
-        )
-
-        index = self.status_combo.findText(
-            str(statut)
-        )
-
-        if index >= 0:
-
-            self.status_combo.setCurrentIndex(
-                index
-            )
-
-        # ========================================================
-        # ESTIMATION ET COÛTS
-        # ========================================================
-
-        delai = dossier.get(
-            "delai_estime"
-        )
-
-        if delai is not None:
-
-            self.delai_label.setText(
-                f"{delai} jour(s)"
-            )
-
-        else:
-
-            self.delai_label.setText(
-                "-"
-            )
-
-        cout_estime_val = dossier.get("cout_estime")
-        cout_reel_val = dossier.get("cout_reel")
-
-        # Consultation labels
-        self.cout_estime_label.setText(format_money(cout_estime_val))
-        self.cout_reel_label.setText(format_money(cout_reel_val))
-
-        # Modification lineedits
-        self.edit_cout_estime.setText(str(cout_estime_val) if cout_estime_val is not None else "")
-        self.edit_cout_reel.setText(str(cout_reel_val) if cout_reel_val is not None else "")
-
-        # ========================================================
-        # PIÈCES UTILISÉES
-        # ========================================================
+        self.detail_numero.setText(d.get("numero_dossier") or f"Dossier #{d.get('id')}")
+        self.detail_date.setText("Réception : " + format_date(d.get("date_reception")))
+        self.set_status_label(d.get("statut"))
+
+        c = d.get("client") if isinstance(d.get("client"), dict) else {}
+        nom = str(c.get("nom") or d.get("client_nom") or "-")
+        tel = str(c.get("telephone") or d.get("client_telephone") or "-")
+        email = str(c.get("email") or "-")
+
+        self.client_nom.setText(nom)
+        self.client_tel.setText(tel)
+        self.client_email.setText(email)
+
+        self.machine_type.setText(str(d.get("type_materiel") or "-"))
+        self.machine_marque.setText(str(d.get("marque") or "-"))
+        self.machine_modele.setText(str(d.get("modele") or "-"))
+        self.machine_serie.setText(str(d.get("numero_serie") or "-"))
+
+        self.probleme_view.setText(str(d.get("probleme") or "-"))
+        self.diagnostic_view.setText(str(d.get("diagnostic") or "-"))
+        self.intervention_view.setText(str(d.get("intervention") or "-"))
+        self.pieces_defectueuses_view.setText(str(d.get("pieces_defectueuses") or "-"))
+        self.remarques_view.setText(str(d.get("remarques") or "-"))
+
+        delai = d.get("delai_estime")
+        self.delai_label.setText(f"{delai} jour(s)" if delai is not None else "-")
+
+        ce = d.get("cout_estime")
+        cr = d.get("cout_reel")
+        self.cout_estime_label.setText(format_money(ce))
+        self.cout_reel_label.setText(format_money(cr))
 
         self.load_pieces_utilisees()
-
-        # ========================================================
-        # STOCK POUR SÉLECTION
-        # ========================================================
-
         self.load_stock()
-
         self.fill_piece_combo()
-
-        # ========================================================
-        # RESTAURER LE MODE ACTUEL
-        # ========================================================
-
-        self.set_edit_mode(
-            self.edit_mode
-        )
+        self.set_edit_mode(self.edit_mode)
 
     def refresh_current_dossier(self):
-
         if not self.current_dossier:
             return
-
-        dossier_id = self.current_dossier.get(
-            "id"
-        )
-
+        d_id = self.current_dossier.get("id")
         try:
-
-            response = requests.get(
-                f"{API_URL}/reparations/{dossier_id}",
-                timeout=15
-            )
-
+            response = requests.get(f"{API_URL}/reparations/{d_id}", timeout=15)
             response.raise_for_status()
-
             self.current_dossier = response.json()
-
             self.load_detail_data()
-
         except requests.RequestException as error:
-
-            QMessageBox.warning(
-                self,
-                "Erreur",
-                f"Impossible d'actualiser le dossier.\n\n"
-                f"{error}"
-            )
+            QMessageBox.warning(self, "Erreur", f"Impossible d'actualiser le dossier :\n{error}")
 
     def back_to_list(self):
-
-        self.stack.setCurrentWidget(
-            self.list_page
-        )
-
+        self.stack.setCurrentWidget(self.list_page)
         self.load_dossiers()
 
     def save_dossier(self):
-
         if not self.current_dossier:
             return
+        d_id = self.current_dossier.get("id")
 
-        dossier_id = self.current_dossier.get("id")
-
-        if not dossier_id:
-            return
-
-        # Parsing sécurisé des coûts (estimé et réel)
-        try:
-            cout_estime_str = self.edit_cout_estime.text().replace("DH", "").strip()
-            cout_estime_val = float(cout_estime_str) if cout_estime_str else None
-        except ValueError:
-            cout_estime_val = None
-
-        try:
-            cout_reel_str = self.edit_cout_reel.text().replace("DH", "").strip()
-            cout_reel_val = float(cout_reel_str) if cout_reel_str else None
-        except ValueError:
-            cout_reel_val = None
+        ce_str = self.edit_cout_estime.text().replace("DH", "").strip()
+        cr_str = self.edit_cout_reel.text().replace("DH", "").strip()
+        ce_val = safe_float(ce_str, None) if ce_str else None
+        cr_val = safe_float(cr_str, None) if cr_str else None
 
         payload = {
-            "client_nom":
-                self.edit_client_nom.text().strip(),
-
-            "client_telephone":
-                self.edit_client_tel.text().strip(),
-
-            "client_email":
-                self.edit_client_email.text().strip(),
-
-            "type_materiel":
-                self.edit_machine_type.text().strip(),
-
-            "marque":
-                self.edit_machine_marque.text().strip(),
-
-            "modele":
-                self.edit_machine_modele.text().strip(),
-
-            "numero_serie":
-                self.edit_machine_serie.text().strip(),
-
-            "probleme":
-                self.probleme_edit.toPlainText().strip()
-                or None,
-
-            "diagnostic":
-                self.diagnostic_edit.toPlainText().strip()
-                or None,
-
-            "intervention":
-                self.intervention_edit.toPlainText().strip()
-                or None,
-
-            "pieces_defectueuses":
-                self.pieces_defectueuses_edit
-                .toPlainText()
-                .strip()
-                or None,
-
-            "remarques":
-                self.remarques_edit
-                .toPlainText()
-                .strip()
-                or None,
-
-            "statut":
-                self.status_combo.currentText(),
-
-            "cout_estime": cout_estime_val,
-            "cout_reel": cout_reel_val
+            "client_nom": self.edit_client_nom.text().strip(),
+            "client_telephone": self.edit_client_tel.text().strip(),
+            "client_email": self.edit_client_email.text().strip(),
+            "type_materiel": self.edit_machine_type.text().strip(),
+            "marque": self.edit_machine_marque.text().strip(),
+            "modele": self.edit_machine_modele.text().strip(),
+            "numero_serie": self.edit_machine_serie.text().strip(),
+            "probleme": self.probleme_edit.toPlainText().strip() or None,
+            "diagnostic": self.diagnostic_edit.toPlainText().strip() or None,
+            "intervention": self.intervention_edit.toPlainText().strip() or None,
+            "pieces_defectueuses": self.pieces_defectueuses_edit.toPlainText().strip() or None,
+            "remarques": self.remarques_edit.toPlainText().strip() or None,
+            "statut": self.status_combo.currentText(),
+            "cout_estime": ce_val,
+            "cout_reel": cr_val
         }
 
         try:
-
-            response = requests.patch(
-                f"{API_URL}/reparations/{dossier_id}",
-                json=payload,
-                timeout=15
-            )
-
+            response = requests.patch(f"{API_URL}/reparations/{d_id}", json=payload, timeout=15)
             if not response.ok:
-
-                try:
-                    detail = response.json().get(
-                        "detail",
-                        response.text
-                    )
-
-                except Exception:
-                    detail = response.text
-
-                QMessageBox.warning(
-                    self,
-                    "Erreur",
-                    "Impossible d'enregistrer les modifications.\n\n"
-                    f"{detail}"
-                )
-
+                detail = response.json().get("detail", response.text) if response.headers.get("content-type") == "application/json" else response.text
+                QMessageBox.warning(self, "Erreur", f"Échec de sauvegarde :\n{detail}")
                 return
 
-            data = response.json()
-
-            if isinstance(data, dict):
-                self.current_dossier = data
-            else:
-                self.refresh_current_dossier()
-                return
-
+            self.current_dossier = response.json() if isinstance(response.json(), dict) else self.current_dossier
             self.set_edit_mode(False)
-
             self.load_detail_data()
-
             self.load_dossiers()
-
             self.status_changed.emit()
-
-            QMessageBox.information(
-                self,
-                "Modification enregistrée",
-                "Les modifications ont été enregistrées avec succès."
-            )
-
+            QMessageBox.information(self, "Succès", "Dossier mis à jour avec succès.")
         except requests.RequestException as error:
-
-            QMessageBox.critical(
-                self,
-                "Erreur API",
-                "Impossible de communiquer avec le serveur.\n\n"
-                f"{error}"
-            )
+            QMessageBox.critical(self, "Erreur API", f"Impossible de contacter le serveur :\n{error}")
 
     def download_pdf(self):
-
         if not self.current_dossier:
             return
-
-        dossier_id = self.current_dossier.get(
-            "id"
-        )
-
-        numero = (
-            self.current_dossier.get(
-                "numero_dossier"
-            )
-            or f"dossier_{dossier_id}"
-        )
+        d_id = self.current_dossier.get("id")
+        num = self.current_dossier.get("numero_dossier") or f"dossier_{d_id}"
 
         try:
-
-            response = requests.get(
-                f"{API_URL}/reparations/"
-                f"{dossier_id}/fiche",
-                timeout=30
-            )
-
+            response = requests.get(f"{API_URL}/reparations/{d_id}/fiche", timeout=30)
             if not response.ok:
-
-                QMessageBox.warning(
-                    self,
-                    "PDF",
-                    "Impossible de générer la fiche PDF."
-                )
-
+                QMessageBox.warning(self, "Erreur PDF", "Génération du PDF impossible.")
                 return
 
-            from PySide6.QtWidgets import QFileDialog
-
-            path, _ = QFileDialog.getSaveFileName(
-                self,
-                "Enregistrer la fiche",
-                f"{numero}.pdf",
-                "Fichier PDF (*.pdf)"
-            )
-
+            path, _ = QFileDialog.getSaveFileName(self, "Enregistrer la fiche PDF", f"{num}.pdf", "Fichier PDF (*.pdf)")
             if not path:
                 return
 
-            with open(
-                path,
-                "wb"
-            ) as file:
+            with open(path, "wb") as f:
+                f.write(response.content)
 
-                file.write(
-                    response.content
-                )
-
-            QMessageBox.information(
-                self,
-                "PDF généré",
-                "La fiche PDF a été générée avec succès."
-            )
-
-        except (
-            requests.RequestException,
-            OSError
-        ) as error:
-
-            QMessageBox.critical(
-                self,
-                "Erreur",
-                f"Impossible de générer le PDF.\n\n{error}"
-            )
+            QMessageBox.information(self, "PDF Généré", f"Fiche PDF enregistrée dans :\n{path}")
+        except Exception as error:
+            QMessageBox.critical(self, "Erreur", f"Échec de l'export PDF :\n{error}")
 
     def set_status_label(self, statut):
-
-        statut = str(
-            statut or "-"
-        )
-
-        self.detail_status_label.setText(
-            statut
-        )
-
+        statut = str(statut or "-")
+        self.detail_status_label.setText(statut)
         colors = {
-            "En attente": (
-                "#FEF3C7",
-                "#92400E"
-            ),
-            "En diagnostic": (
-                "#DBEAFE",
-                "#1D4ED8"
-            ),
-            "En réparation": (
-                "#E0E7FF",
-                "#4338CA"
-            ),
-            "Terminé": (
-                "#DCFCE7",
-                "#15803D"
-            )
+            "En attente": ("#FEF3C7", "#92400E"),
+            "En diagnostic": ("#E0F2FE", "#0369A1"),
+            "En réparation": ("#F3E8FF", "#6B21A8"),
+            "Terminé": ("#DCFCE7", "#15803D")
         }
-
-        background, foreground = colors.get(
-            statut,
-            (
-                "#F3F4F6",
-                "#374151"
-            )
-        )
-
-        self.detail_status_label.setStyleSheet(
-            f"""
-            QLabel {{
-                background: {background};
-                color: {foreground};
-                border-radius: 8px;
-                padding: 9px 15px;
-                font-weight: bold;
-            }}
-            """
-        )
-
-    def change_status(self):
-
-        if not self.current_dossier:
-            return
-
-        dossier_id = self.current_dossier.get(
-            "id"
-        )
-
-        ancien = self.current_dossier.get(
-            "statut"
-        )
-
-        nouveau = self.status_combo.currentText()
-
-        if ancien == nouveau:
-
-            QMessageBox.information(
-                self,
-                "Statut",
-                "Le dossier possède déjà ce statut."
-            )
-
-            return
-
-        reply = QMessageBox.question(
-            self,
-            "Confirmation",
-            "Voulez-vous changer le statut du dossier ?\n\n"
-            f"De : {ancien}\n"
-            f"Vers : {nouveau}",
-            QMessageBox.Yes |
-            QMessageBox.No,
-            QMessageBox.No
-        )
-
-        if reply != QMessageBox.Yes:
-            return
-
-        payload = {
-            "nouveau_statut": nouveau,
-            "utilisateur_id": DEFAULT_UTILISATEUR_ID
-        }
-
-        try:
-
-            response = requests.patch(
-                f"{API_URL}/reparations/"
-                f"{dossier_id}/statut",
-                json=payload,
-                timeout=15
-            )
-
-            if not response.ok:
-
-                try:
-
-                    detail = response.json().get(
-                        "detail",
-                        response.text
-                    )
-
-                except Exception:
-
-                    detail = response.text
-
-                QMessageBox.warning(
-                    self,
-                    "Erreur",
-                    f"Impossible de changer le statut.\n\n"
-                    f"{detail}"
-                )
-
-                return
-
-            self.current_dossier = response.json()
-
-            self.load_detail_data()
-
-            self.load_dossiers()
-
-            self.status_changed.emit()
-
-            QMessageBox.information(
-                self,
-                "Statut mis à jour",
-                f"Le dossier est maintenant :\n\n{nouveau}"
-            )
-
-        except requests.RequestException as error:
-
-            QMessageBox.critical(
-                self,
-                "Erreur API",
-                f"Impossible de communiquer avec le serveur.\n\n{error}"
-            )
+        bg, fg = colors.get(statut, ("#F1F5F9", "#475569"))
+        self.detail_status_label.setStyleSheet(f"background: {bg}; color: {fg}; border-radius: 20px; padding: 6px 14px; font-weight: 700;")
 
     def fill_piece_combo(self):
-
         self.piece_combo.blockSignals(True)
-
         self.piece_combo.clear()
-
-        self.piece_combo.addItem(
-            "Sélectionner une pièce...",
-            None
-        )
+        self.piece_combo.addItem("Sélectionner une pièce...", None)
 
         for stock in self.stocks:
-
-            quantite = safe_int(
-                stock.get("quantite")
-            )
-
-            nom = (
-                stock.get("nom_piece")
-                or "Pièce"
-            )
-
-            reference = (
-                stock.get("reference")
-                or "-"
-            )
-
-            text = (
-                f"{nom} | "
-                f"Réf: {reference} | "
-                f"Stock actuel : {quantite}"
-            )
-
-            self.piece_combo.addItem(
-                text,
-                stock
-            )
+            q = safe_int(stock.get("quantite"))
+            nom = stock.get("nom_piece") or "Pièce"
+            ref = stock.get("reference") or "-"
+            self.piece_combo.addItem(f"{nom} | Réf: {ref} | Stock: {q}", stock)
 
         self.piece_combo.blockSignals(False)
-
-        # Réinitialisation de la quantité
         self.piece_quantity.setEnabled(False)
-        self.piece_quantity.setMinimum(1)
-        self.piece_quantity.setMaximum(100)
-        self.piece_quantity.setValue(1)
-
         self.add_piece_button.setEnabled(False)
+        self.piece_info_label.setText("Sélectionnez une pièce.")
+        self.filter_stock(self.piece_search.text())
 
-        self.piece_info_label.setText(
-            "Sélectionnez une pièce."
-        )
-
-        self.piece_info_label.setStyleSheet("""
-            color: #6B7280;
-            padding: 3px;
-        """)
-
-        self.filter_stock(
-            self.piece_search.text()
-        )
-
-        self.on_piece_selected()
-
-    def filter_stock(
-        self,
-        text=""
-    ):
-
-        search = (
-            text
-            .strip()
-            .lower()
-        )
-
-        for index in range(
-            self.piece_combo.count()
-        ):
-
-            stock = self.piece_combo.itemData(
-                index
-            )
-
+    def filter_stock(self, text=""):
+        search = text.strip().lower()
+        for idx in range(self.piece_combo.count()):
+            stock = self.piece_combo.itemData(idx)
             if not stock:
-
-                self.piece_combo.view().setRowHidden(
-                    index,
-                    False
-                )
-
+                self.piece_combo.view().setRowHidden(idx, False)
                 continue
-
-            searchable = " ".join([
-                str(
-                    stock.get(
-                        "nom_piece",
-                        ""
-                    )
-                ),
-                str(
-                    stock.get(
-                        "reference",
-                        ""
-                    )
-                ),
-                str(
-                    stock.get(
-                        "categorie",
-                        ""
-                    )
-                )
-            ]).lower()
-
-            hidden = (
-                search not in searchable
-            )
-
-            self.piece_combo.view().setRowHidden(
-                index,
-                hidden
-            )
+            searchable = f"{stock.get('nom_piece', '')} {stock.get('reference', '')} {stock.get('categorie', '')}".lower()
+            self.piece_combo.view().setRowHidden(idx, search not in searchable)
 
     def on_piece_selected(self):
-
         stock = self.piece_combo.currentData()
-
-        # AUCUNE PIÈCE SÉLECTIONNÉE
         if not isinstance(stock, dict):
-
-            self.piece_info_label.setText(
-                "Sélectionnez une pièce."
-            )
-
-            self.piece_info_label.setStyleSheet("""
-                color: #6B7280;
-                padding: 3px;
-            """)
-
+            self.piece_info_label.setText("Sélectionnez une pièce.")
             self.piece_quantity.setEnabled(False)
-            self.piece_quantity.setMinimum(1)
-            self.piece_quantity.setMaximum(999999)
-            self.piece_quantity.setValue(1)
-
             self.add_piece_button.setEnabled(False)
-
             return
 
-        # PIÈCE VALIDE
-        disponible = safe_int(
-            stock.get("quantite")
-        )
-
-        prix = safe_float(
-            stock.get("prix_unitaire")
-        )
+        q = safe_int(stock.get("quantite"))
+        p = safe_float(stock.get("prix_unitaire"))
 
         self.piece_quantity.setEnabled(True)
-
-        self.piece_quantity.setMinimum(1)
-        self.piece_quantity.setMaximum(999999)
-
-        if self.piece_quantity.value() < 1:
-            self.piece_quantity.setValue(1)
-
         self.add_piece_button.setEnabled(True)
-
-        self.piece_info_label.setText(
-            f"Stock actuel : {disponible}    |    "
-            f"Prix unitaire : {format_money(prix)}"
-        )
-
-        self.piece_info_label.setStyleSheet("""
-            color: #6B7280;
-            padding: 3px;
-        """)
+        self.piece_info_label.setText(f"Stock disponible : {q} | Prix unitaire : {format_money(p)}")
 
     def add_piece(self):
-
         if not self.current_dossier:
             return
-
         stock = self.piece_combo.currentData()
-
         if not isinstance(stock, dict):
-
-            QMessageBox.warning(
-                self,
-                "Pièce",
-                "Veuillez sélectionner une pièce."
-            )
-
             return
 
-        piece_id = stock.get("id")
-
-        if not piece_id:
-
-            QMessageBox.warning(
-                self,
-                "Pièce",
-                "La pièce sélectionnée est invalide."
-            )
-
-            return
-
-        quantite = self.piece_quantity.value()
-
-        if quantite < 1:
-
-            QMessageBox.warning(
-                self,
-                "Quantité invalide",
-                "La quantité doit être supérieure ou égale à 1."
-            )
-
-            return
+        p_id = stock.get("id")
+        q_val = self.piece_quantity.value()
+        d_id = self.current_dossier.get("id")
 
         try:
-
-            response_stock = requests.get(
-                f"{API_URL}/stock/",
-                timeout=15
-            )
-
-            if not response_stock.ok:
-
-                QMessageBox.warning(
-                    self,
-                    "Stock",
-                    "Impossible de vérifier la pièce."
-                )
-
-                return
-
-            stocks_actualises = response_stock.json()
-
-            if not isinstance(
-                stocks_actualises,
-                list
-            ):
-
-                QMessageBox.warning(
-                    self,
-                    "Stock",
-                    "Les données du stock reçues sont invalides."
-                )
-
-                return
-
-            stock_actuel = None
-
-            for item in stocks_actualises:
-
-                if item.get("id") == piece_id:
-
-                    stock_actuel = item
-                    break
-
-            if not stock_actuel:
-
-                QMessageBox.warning(
-                    self,
-                    "Pièce introuvable",
-                    "Cette pièce n'existe plus dans le stock."
-                )
-
-                self.load_stock()
-                self.fill_piece_combo()
-
-                return
-
-            disponible = safe_int(
-                stock_actuel.get("quantite")
-            )
-
-            prix = safe_float(
-                stock_actuel.get("prix_unitaire")
-            )
-
-            stock.update(stock_actuel)
-
-            dossier_id = self.current_dossier.get(
-                "id"
-            )
-
-            payload = {
-                "piece_id": piece_id,
-                "quantite": quantite
-            }
-
             response = requests.post(
-                f"{API_URL}/reparations/"
-                f"{dossier_id}/pieces",
-                json=payload,
+                f"{API_URL}/reparations/{d_id}/pieces",
+                json={"piece_id": p_id, "quantite": q_val},
                 timeout=15
             )
-
             if not response.ok:
-
-                try:
-
-                    error_data = response.json()
-
-                    detail = error_data.get(
-                        "detail"
-                    )
-
-                    if isinstance(detail, list):
-
-                        messages = []
-
-                        for error in detail:
-
-                            if isinstance(error, dict):
-
-                                msg = error.get(
-                                    "msg",
-                                    "Erreur de validation"
-                                )
-
-                                messages.append(
-                                    str(msg)
-                                )
-
-                            else:
-
-                                messages.append(
-                                    str(error)
-                                )
-
-                        detail = "\n".join(
-                            messages
-                        )
-
-                    elif isinstance(detail, dict):
-
-                        detail = detail.get(
-                            "message",
-                            str(detail)
-                        )
-
-                    if not detail:
-                        detail = response.text
-
-                except Exception:
-
-                    detail = response.text
-
-                QMessageBox.warning(
-                    self,
-                    "Impossible d'ajouter la pièce",
-                    f"{detail}"
-                )
-
-                self.load_stock()
-                self.fill_piece_combo()
-
+                detail = response.json().get("detail", response.text) if response.headers.get("content-type") == "application/json" else response.text
+                QMessageBox.warning(self, "Erreur Stock", f"Impossible d'ajouter la pièce :\n{detail}")
                 return
 
             self.load_stock()
             self.load_pieces_utilisees()
             self.fill_piece_combo()
-
-            QMessageBox.information(
-                self,
-                "Pièce ajoutée",
-                f"La pièce a été ajoutée à la réparation.\n\n"
-                f"Quantité utilisée : {quantite}\n"
-                f"Stock actuel avant utilisation : {disponible}"
-            )
-
+            QMessageBox.information(self, "Succès", "Pièce ajoutée au dossier avec succès.")
         except requests.RequestException as error:
-
-            QMessageBox.critical(
-                self,
-                "Erreur API",
-                "Impossible de communiquer avec le serveur.\n\n"
-                f"{error}"
-            )
+            QMessageBox.critical(self, "Erreur API", f"Impossible de contacter le serveur :\n{error}")
 
     def load_pieces_utilisees(self):
-
         if not self.current_dossier:
             return
-
-        dossier_id = self.current_dossier.get(
-            "id"
-        )
-
+        d_id = self.current_dossier.get("id")
         try:
-
-            response = requests.get(
-                f"{API_URL}/reparations/"
-                f"{dossier_id}/pieces",
-                timeout=15
-            )
-
+            response = requests.get(f"{API_URL}/reparations/{d_id}/pieces", timeout=15)
             response.raise_for_status()
-
-            data = response.json()
-
-            self.pieces_utilisees = (
-                data
-                if isinstance(
-                    data,
-                    list
-                )
-                else []
-            )
-
+            self.pieces_utilisees = response.json() if isinstance(response.json(), list) else []
             self.display_pieces()
-
         except requests.RequestException as error:
-
-            print(
-                "[DOSSIERS] Impossible de charger les pièces :",
-                error
-            )
-
+            print("[DOSSIERS] Erreur pièces utilisées :", error)
             self.pieces_utilisees = []
-
-            self.pieces_table.setRowCount(
-                0
-            )
-
-            self.pieces_total_label.setText(
-                "Total pièces : 0.00 DH"
-            )
+            self.display_pieces()
 
     def display_pieces(self):
         self.pieces_table.setRowCount(0)
+        total_gen = 0.0
 
-        total_general = 0.0
-
-        for piece_utilisee in self.pieces_utilisees:
-
-            piece_utilisee_id = piece_utilisee.get("id")
-
-            if not piece_utilisee_id:
-                print(
-                    "[DOSSIERS] ID ReparationPiece manquant :",
-                    piece_utilisee
-                )
+        for pu in self.pieces_utilisees:
+            pu_id = pu.get("id")
+            if not pu_id:
                 continue
-
-            piece_info = piece_utilisee.get("piece") or {}
-
-            nom_piece = piece_info.get(
-                "nom_piece",
-                "Pièce inconnue"
-            )
-
-            reference = piece_info.get(
-                "reference",
-                "-"
-            )
-
-            quantite = piece_utilisee.get(
-                "quantite",
-                0
-            )
-
-            prix_unitaire = piece_utilisee.get(
-                "prix_utilise",
-                0
-            )
-
-            try:
-                quantite = float(quantite)
-            except (TypeError, ValueError):
-                quantite = 0.0
-
-            try:
-                prix_unitaire = float(prix_unitaire)
-            except (TypeError, ValueError):
-                prix_unitaire = 0.0
-
-            total_piece = quantite * prix_unitaire
-
-            total_general += total_piece
+            p_info = pu.get("piece") or {}
+            nom = p_info.get("nom_piece", "Pièce")
+            ref = p_info.get("reference", "-")
+            q = safe_float(pu.get("quantite"))
+            px = safe_float(pu.get("prix_utilise"))
+            tot = q * px
+            total_gen += tot
 
             row = self.pieces_table.rowCount()
-
             self.pieces_table.insertRow(row)
 
-            # NOM
-            self.pieces_table.setItem(
-                row,
-                0,
-                QTableWidgetItem(
-                    str(nom_piece)
-                )
-            )
+            self.pieces_table.setItem(row, 0, QTableWidgetItem(str(nom)))
+            self.pieces_table.setItem(row, 1, QTableWidgetItem(str(ref)))
+            self.pieces_table.setItem(row, 2, QTableWidgetItem(str(int(q) if q.is_integer() else q)))
+            self.pieces_table.setItem(row, 3, QTableWidgetItem(f"{px:.2f} DH"))
+            self.pieces_table.setItem(row, 4, QTableWidgetItem(f"{tot:.2f} DH"))
 
-            # REFERENCE
-            self.pieces_table.setItem(
-                row,
-                1,
-                QTableWidgetItem(
-                    str(reference)
-                )
-            )
+            del_btn = QPushButton("✕ Supprimer")
+            del_btn.setCursor(Qt.PointingHandCursor)
+            del_btn.setVisible(self.edit_mode)
+            del_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #FEF2F2;
+                    color: #DC2626;
+                    border: 1px solid #FECACA;
+                    border-radius: 5px;
+                    font-weight: bold;
+                    font-size: 8px;
+                    padding: 0px 8px;
+                    min-height: 12px;
+                }
+                QPushButton:hover {
+                    background-color: #FEE2E2;
+                    color: #B91C1C;
+                }
+            """)
+            del_btn.clicked.connect(lambda checked=False, pid=pu_id: self.remove_piece_from_edit(pid))
+            self.pieces_table.setCellWidget(row, 5, del_btn)
 
-            # QUANTITE
-            self.pieces_table.setItem(
-                row,
-                2,
-                QTableWidgetItem(
-                    str(int(quantite))
-                    if quantite.is_integer()
-                    else str(quantite)
-                )
-            )
+        self.pieces_total_label.setText(f"Total pièces : {total_gen:.2f} DH")
 
-            # PRIX UNITAIRE
-            self.pieces_table.setItem(
-                row,
-                3,
-                QTableWidgetItem(
-                    f"{prix_unitaire:.2f} DH"
-                )
-            )
-
-            # TOTAL
-            self.pieces_table.setItem(
-                row,
-                4,
-                QTableWidgetItem(
-                    f"{total_piece:.2f} DH"
-                )
-            )
-
-            # BOUTON SUPPRIMER
-            delete_button = QPushButton("Supprimer")
-            delete_button.setObjectName("deletePieceButton")
-            delete_button.setVisible(self.edit_mode)
-
-            delete_button.clicked.connect(
-                lambda checked=False,
-                    piece_id=piece_utilisee_id:
-                    self.remove_piece_from_edit(piece_id)
-            )
-
-            self.pieces_table.setCellWidget(
-                row,
-                5,
-                delete_button
-            )
-
-        # TOTAL GENERAL
-        self.pieces_total_label.setText(
-            f"Total pièces : {total_general:.2f} DH"
-        )
-
-    def find_stock(
-            self,
-            piece_id
-    ):
-
-        for stock in self.stocks:
-
-            if stock.get(
-                "id"
-            ) == piece_id:
-
-                return stock
-
-        return None
-
-    def remove_piece_from_edit(self, piece_utilisee_id):
+    def remove_piece_from_edit(self, pu_id):
         if not self.current_dossier:
             return
-
-        dossier_id = self.current_dossier.get("id")
-
-        if not dossier_id:
-            QMessageBox.warning(
-                self,
-                "Erreur",
-                "Dossier de réparation introuvable."
-            )
-            return
+        d_id = self.current_dossier.get("id")
 
         reply = QMessageBox.question(
             self,
-            "Supprimer la pièce",
-            "Voulez-vous vraiment supprimer cette pièce "
-            "du dossier ?\n\n"
-            "La quantité sera automatiquement remise en stock.",
+            "Retrait de la pièce",
+            "Voulez-vous retirer cette pièce du dossier ? La quantité sera réintégrée en stock.",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No
         )
-
         if reply != QMessageBox.Yes:
             return
 
-        url = (
-            f"{API_URL}/reparations/"
-            f"{dossier_id}/pieces/"
-            f"{piece_utilisee_id}"
-        )
-
-        print(
-            "[DOSSIERS] Suppression pièce :",
-            url
-        )
-
         try:
-
-            response = requests.delete(
-                url,
-                timeout=15
-            )
-
-            if response.status_code != 200:
-                try:
-                    detail = response.json().get(
-                        "detail",
-                        response.text
-                    )
-                except Exception:
-                    detail = response.text
-
-                QMessageBox.warning(
-                    self,
-                    "Erreur",
-                    f"Impossible de supprimer la pièce.\n\n"
-                    f"{detail}"
-                )
-
-                print(
-                    "[DOSSIERS] Erreur suppression :",
-                    response.status_code,
-                    response.text
-                )
-
+            response = requests.delete(f"{API_URL}/reparations/{d_id}/pieces/{pu_id}", timeout=15)
+            if not response.ok:
+                detail = response.json().get("detail", response.text) if response.headers.get("content-type") == "application/json" else response.text
+                QMessageBox.warning(self, "Erreur", f"Échec de la suppression :\n{detail}")
                 return
-
-            print(
-                "[DOSSIERS] Pièce supprimée :",
-                piece_utilisee_id
-            )
 
             self.load_pieces_utilisees()
             self.load_stock()
-
         except requests.RequestException as error:
-
-            print(
-                "[DOSSIERS] Erreur réseau suppression pièce :",
-                error
-            )
-
-            QMessageBox.critical(
-                self,
-                "Erreur réseau",
-                "Impossible de contacter le serveur."
-            )
+            QMessageBox.critical(self, "Erreur réseau", f"Impossible de contacter le serveur :\n{error}")
 
     def predict_and_apply_cost(self):
-        """
-        Interroge l'API de prédiction IA.
-        Si l'utilisateur est en Mode Édition, on lit les valeurs depuis les champs de saisie.
-        Sinon, on lit depuis l'objet current_dossier.
-        """
         if getattr(self, "edit_mode", False):
-            materiel = self.edit_machine_type.text().strip() if hasattr(self, "edit_machine_type") else ""
-            probleme = self.probleme_edit.toPlainText().strip() if hasattr(self, "probleme_edit") else ""
+            mat = self.edit_machine_type.text().strip()
+            prob = self.probleme_edit.toPlainText().strip()
         else:
-            dossier = self.current_dossier or {}
-            materiel = str(dossier.get("type_materiel") or "").strip()
-            probleme = str(dossier.get("probleme") or "").strip()
+            d = self.current_dossier or {}
+            mat = str(d.get("type_materiel") or "").strip()
+            prob = str(d.get("probleme") or "").strip()
 
-        if not materiel or not probleme:
+        if not mat or not prob:
             QMessageBox.warning(
-                self,
-                "Données manquantes",
-                "Le type de matériel et la description du problème sont requis pour estimer le coût."
+                self, 
+                "Informations requises", 
+                "Le matériel et le problème doivent être renseignés pour faire une prédiction."
             )
             return
 
-        if hasattr(self, "predict_cost"):
-            result = self.predict_cost(materiel, probleme)
-        else:
-            result = None
-
+        # Appel au service ML
+        result = self.predict_cost(mat, prob)
         if not result or not isinstance(result, dict):
             QMessageBox.warning(
-                self,
-                "Échec de l'estimation",
-                "Impossible d'obtenir une prédiction de coût depuis le service IA."
+                self, 
+                "Échec IA", 
+                "Le service d'estimation n'a pas renvoyé de réponse valide."
             )
             return
 
-        predicted_cost = (
-            result.get("cout_estime") 
-            or result.get("predicted_cost") 
-            or result.get("prediction") 
-            or result.get("cost")
-        )
-        predicted_delay = (
-            result.get("delai_estime") 
-            or result.get("predicted_delay") 
-            or result.get("delai")
-        )
+        cost = result.get("cout_estime")
+        delay = result.get("delai_estime")
 
-        if predicted_cost is None:
-            QMessageBox.warning(
-                self,
-                "Format invalide",
-                f"La réponse de prédiction n'a pas pu être lue : {result}"
-            )
+        if cost is None:
+            QMessageBox.warning(self, "Format invalide", f"Réponse IA incomprise :\n{result}")
             return
 
-        if self.current_dossier is not None:
-            self.current_dossier["cout_estime"] = predicted_cost
-            if predicted_delay is not None:
-                self.current_dossier["delai_estime"] = predicted_delay
+        # Mise à jour des cartes
+        self.cout_estime_label.setText(format_money(cost))
+        self.edit_cout_estime.setText(str(cost))
 
-        if hasattr(self, "cout_estime_label"):
-            self.cout_estime_label.setText(format_money(predicted_cost))
+        if delay is not None:
+            self.delai_label.setText(f"{delay} jour(s)")
 
-        if hasattr(self, "edit_cout_estime"):
-            self.edit_cout_estime.setText(str(predicted_cost))
-        
-        if hasattr(self, "delai_label") and predicted_delay is not None:
-            self.delai_label.setText(f"{predicted_delay} jour(s)")
+        # Persistance en BD
+        if self.current_dossier:
+            self.current_dossier["cout_estime"] = cost
+            if delay is not None:
+                self.current_dossier["delai_estime"] = delay
 
-        msg = f"Coût estimé calculé : {format_money(predicted_cost)}"
-        if predicted_delay is not None:
-            msg += f"\nDélai estimé : {predicted_delay} jour(s)"
+            d_id = self.current_dossier.get("id")
+            if d_id:
+                try:
+                    requests.patch(
+                        f"{API_URL}/reparations/{d_id}",
+                        json={"cout_estime": cost, "delai_estime": delay},
+                        timeout=10
+                    )
+                except requests.RequestException as err:
+                    print("[DOSSIER] Avertissement: échec d'enregistrement auto:", err)
+
+        msg = f"Coût estimé (IA) : {format_money(cost)}"
+        if delay is not None:
+            msg += f"\nDélai estimé (IA) : {delay} jour(s)"
             
         QMessageBox.information(self, "Estimation IA Réussie", msg)
         

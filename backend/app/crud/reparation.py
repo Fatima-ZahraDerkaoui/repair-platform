@@ -6,7 +6,7 @@ from app.models.historique_statut import HistoriqueStatut
 from app.models.alerte_stock import AlerteStock
 from app.models.stock import Stock
 from app.models.client import Client
-
+from datetime import datetime
 from app.schemas.reparation import (
     ReparationCreate,
     ReparationUpdate
@@ -166,29 +166,17 @@ def update_reparation(
     id: int,
     data: ReparationUpdate
 ):
-
-    reparation = get_reparation(
-        db,
-        id
-    )
+    reparation = get_reparation(db, id)
 
     if not reparation:
         return None
 
-    # =================================================
-    # DONNÉES REÇUES
-    # =================================================
+    values = data.model_dump(exclude_unset=True)
 
-    values = data.model_dump(
-        exclude_unset=True
-    )
-
-    # =================================================
+    # -------------------------------------------------
     # DONNÉES CLIENT
-    # =================================================
-
+    # -------------------------------------------------
     client = reparation.client
-
     if client:
         if "client_nom" in values and values["client_nom"]:
             client.nom = values["client_nom"]
@@ -198,16 +186,14 @@ def update_reparation(
 
         if "client_email" in values:
             raw_email = values["client_email"]
-            # Si l'email est vide, "None", ou juste des espaces, on enregistre None (NULL en BDD)
             if not raw_email or str(raw_email).strip().lower() in ["none", "null", ""]:
                 client.email = None
             else:
                 client.email = str(raw_email).strip()
 
-    # =================================================
+    # -------------------------------------------------
     # DONNÉES RÉPARATION
-    # =================================================
-
+    # -------------------------------------------------
     champs_reparation = [
         "type_materiel",
         "marque",
@@ -221,32 +207,37 @@ def update_reparation(
         "remarques",
         "cout_estime",
         "cout_reel",
+        "delai_estime",  # <--- AJOUTÉ
         "date_fin"
     ]
 
     for champ in champs_reparation:
-
         if champ in values:
+            setattr(reparation, champ, values[champ])
 
-            setattr(
-                reparation,
-                champ,
-                values[champ]
-            )
-
-    # =================================================
-    # STATUT
-    # =================================================
-
+    # -------------------------------------------------
+    # GESTION DU STATUT & CALCUL DATE SORTIE / DÉLAI RÉEL
+    # -------------------------------------------------
     if "statut" in values:
-
         nouveau_statut = values["statut"]
-
         ancien_statut = reparation.statut
 
         if nouveau_statut != ancien_statut:
-
             reparation.statut = nouveau_statut
+
+            # Si le statut passe à Terminé, on enregistre la date_sortie et recalcule le délai
+            if str(nouveau_statut).strip().lower() in ["terminé", "termine"]:
+                maintenant = datetime.now()
+                reparation.date_sortie = maintenant
+                reparation.resolu = True
+
+                # Recalcul du délai réel en jours (date_sortie - date_reception)
+                date_entree = getattr(reparation, "date_reception", None) or getattr(reparation, "date_entree", None)
+                if date_entree:
+                    delai_reel = (maintenant - date_entree).days
+                    reparation.delai_estime = max(delai_reel, 1) # Minimum 1 jour
+            else:
+                reparation.resolu = False
 
             create_historique(
                 db=db,
@@ -256,16 +247,13 @@ def update_reparation(
                 utilisateur_id=None
             )
 
-    # =================================================
-    # SAUVEGARDE
-    # =================================================
-
+    # -------------------------------------------------
+    # SAUVEGARDE EN BDD
+    # -------------------------------------------------
     db.commit()
-
     db.refresh(reparation)
 
     return reparation
-
 
 # =====================================================
 # SUPPRIMER UNE RÉPARATION

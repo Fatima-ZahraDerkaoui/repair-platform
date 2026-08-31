@@ -29,108 +29,66 @@ STATUTS_AUTORISES = [
 # =========================================================
 # CHANGER STATUT
 # =========================================================
+from datetime import datetime
+from sqlalchemy.orm import Session
+from app.crud.reparation import get_reparation
+from app.crud.historique_statut import create_historique
+
+STATUTS_AUTORISES = [
+    "En attente",
+    "En diagnostic",
+    "En réparation",
+    "Terminé"
+]
 
 def changer_statut(
-
     db: Session,
-
     reparation_id: int,
-
     nouveau_statut: str,
-
     utilisateur_id: int | None = None
-
 ):
-
-    # -----------------------------------------------------
-    # Vérification
-    # -----------------------------------------------------
-
-    nouveau_statut = (
-        nouveau_statut
-        or ""
-    ).strip()
+    nouveau_statut = (nouveau_statut or "").strip()
 
     if nouveau_statut not in STATUTS_AUTORISES:
-
         raise ValueError(
-            "Statut invalide. "
-            "Valeurs autorisées : "
-            + ", ".join(
-                STATUTS_AUTORISES
-            )
+            "Statut invalide. Valeurs autorisées : " + ", ".join(STATUTS_AUTORISES)
         )
 
-    # -----------------------------------------------------
-    # Récupérer réparation
-    # -----------------------------------------------------
-
-    reparation = get_reparation(
-        db,
-        reparation_id
-    )
-
+    reparation = get_reparation(db, reparation_id)
     if not reparation:
-
         return None
 
-    ancien_statut = (
-        reparation.statut
-        or "En attente"
-    )
-
-    # -----------------------------------------------------
-    # Même statut
-    # -----------------------------------------------------
+    ancien_statut = reparation.statut or "En attente"
 
     if ancien_statut == nouveau_statut:
+        raise ValueError("Le nouveau statut est identique à l'ancien")
 
-        raise ValueError(
-            "Le nouveau statut est identique à l'ancien"
-        )
-
-    # -----------------------------------------------------
-    # Modifier
-    # -----------------------------------------------------
-
-    reparation.statut = (
-        nouveau_statut
-    )
+    reparation.statut = nouveau_statut
 
     # -----------------------------------------------------
-    # Synchroniser resolu
+    # GESTION AUTOMATIQUE DATE SORTIE & DÉLAI RÉEL
     # -----------------------------------------------------
+    if nouveau_statut == "Terminé":
+        maintenant = datetime.now()
+        reparation.date_sortie = maintenant
+        reparation.resolu = True
 
-    reparation.resolu = (
-        nouveau_statut == "Terminé"
-    )
-
-    # -----------------------------------------------------
-    # Historique
-    # -----------------------------------------------------
+        date_entree = getattr(reparation, "date_reception", None) or getattr(reparation, "date_entree", None)
+        if date_entree:
+            delai_calcul = (maintenant - date_entree).days
+            reparation.delai_estime = max(delai_calcul, 1)
+    else:
+        reparation.resolu = False
 
     create_historique(
-
         db=db,
-
         reparation_id=reparation.id,
-
         ancien_statut=ancien_statut,
-
         nouveau_statut=nouveau_statut,
-
         utilisateur_id=utilisateur_id
-
     )
-
-    # -----------------------------------------------------
-    # Commit
-    # -----------------------------------------------------
 
     db.commit()
-
-    db.refresh(
-        reparation
-    )
+    db.refresh(reparation)
 
     return reparation

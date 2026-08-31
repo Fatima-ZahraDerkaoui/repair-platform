@@ -116,6 +116,10 @@ class MainWindow(QMainWindow):
             DossiersPage
         )
 
+        from views.pages.administration_page import (
+            AdministrationPage
+        )
+
         # -----------------------------------------------------
         # DASHBOARD
         # -----------------------------------------------------
@@ -180,6 +184,18 @@ class MainWindow(QMainWindow):
             self.dossiers_page
         )
 
+        # -----------------------------------------------------
+        # ADMINISTRATION
+        # -----------------------------------------------------
+
+        self.administration_page = AdministrationPage(
+            self
+        )
+
+        self.pages.addWidget(
+            self.administration_page
+        )
+
     # =========================================================
     # NAVIGATION
     # =========================================================
@@ -200,7 +216,10 @@ class MainWindow(QMainWindow):
                 self.stock_page,
 
             "dossiers":
-                self.dossiers_page
+                self.dossiers_page,
+
+            "administration":
+                self.administration_page
         }
 
         page = mapping.get(
@@ -232,6 +251,14 @@ class MainWindow(QMainWindow):
                 ):
                     self.dossiers_page.load_dossiers()
 
+            elif page_name == "administration":
+
+                if hasattr(
+                    self.administration_page,
+                    "load_users"
+                ):
+                    self.administration_page.load_users()
+
     # =========================================================
     # FACTURE VALIDEE
     # =========================================================
@@ -246,3 +273,4 @@ class MainWindow(QMainWindow):
             "Facture validée",
             "La facture a été validée avec succès."
         )
+        

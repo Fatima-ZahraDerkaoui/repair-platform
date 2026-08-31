@@ -2,99 +2,94 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.services.ml.cout.cost_predictor import CostPredictor
-from app.services.ml.cout import cost_predictor
-from app.services.ml.delai.delay_predictor import DelayPredictor
 
 router = APIRouter(
     prefix="/prediction",
     tags=["Prediction"]
 )
 
-
-# =========================================================
-# CHARGEMENT UNIQUE DU MODÈLE
-# =========================================================
-
+# Initialisation unique du prédicteur (Coût + Délai)
 predictor = CostPredictor()
 
 
 # =========================================================
-# REQUEST
+# SCHÉMAS PYDANTIC
 # =========================================================
 
-class CostPredictionRequest(BaseModel):
+class PredictionRequest(BaseModel):
     materiel: str | None = None
     probleme: str | None = None
 
-
-# =========================================================
-# RESPONSE
-# =========================================================
 
 class CostPredictionResponse(BaseModel):
     cout_estime: float
-    confiance: str
-    historique: int
-    historique_valide: int
-    montants_zero: int
-    source: str
+    delai_estime: int
+    confiance: str = "Élevée (Basée sur 809 réparations)"
+    source: str = "Modèle Random Forest ML"
+
+
+class DelayPredictionResponse(BaseModel):
+    delai_estime_jours: int
 
 
 # =========================================================
-# PREDICTION
+# ENDPOINTS
 # =========================================================
 
-@router.post(
-    "/cout",
-    response_model=CostPredictionResponse
-)
-def predict_cost_route(
-    request: CostPredictionRequest
-):
+@router.post("/cout", response_model=CostPredictionResponse)
+def predict_cost_route(request: PredictionRequest):
+    """
+    Prédiction du coût et du délai estimé via POST (JSON)
+    """
     try:
-
-        result = predictor.predict(
+        res = predictor.predict(
             materiel=request.materiel or "",
             probleme=request.probleme or ""
         )
-
-        return CostPredictionResponse(**result)
-
+        return CostPredictionResponse(
+            cout_estime=res["cout_estime"],
+            delai_estime=res["delai_estime"]
+        )
     except Exception as error:
-
         raise HTTPException(
             status_code=500,
-            detail=f"Erreur lors de la prédiction du coût : {error}"
+            detail=f"Erreur lors de la prédiction : {error}"
         )
 
+
 @router.get("/estimation-cout")
-def estimer_cout_reparation(
-    materiel: str,
-    probleme: str
-):
+def estimer_cout_reparation(materiel: str = "", probleme: str = ""):
     """
-    Endpoint pour interroger rapidement l'estimation depuis PySide6
+    Endpoint GET direct pour la saisie rapide ou l'application PySide6
+    Exemple: /prediction/estimation-cout?materiel=PC%20PORTABLE&probleme=AFFICHEUR
     """
-    res = cost_predictor.predict(
-        materiel=materiel,
-        probleme=probleme
-    )
-    return res
-
-
-delay_predictor = DelayPredictor()
-
-class DelayPredictionRequest(BaseModel):
-    materiel: str | None = None
-    probleme: str | None = None
-
-@router.post("/delai")
-def predict_delay_route(request: DelayPredictionRequest):
     try:
-        delai_estime = delay_predictor.predict(
+        return predictor.predict(
+            materiel=materiel,
+            probleme=probleme
+        )
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur estimation rapide : {error}"
+        )
+
+
+@router.post("/delai", response_model=DelayPredictionResponse)
+def predict_delay_route(request: PredictionRequest):
+    """
+    Prédiction ciblée sur le délai de réparation
+    """
+    try:
+        res = predictor.predict(
             materiel=request.materiel or "",
             probleme=request.probleme or ""
         )
-        return {"delai_estime_jours": delai_estime}
+        return DelayPredictionResponse(
+            delai_estime_jours=res["delai_estime"]
+        )
     except Exception as error:
-        raise HTTPException(status_code=500, detail=f"Erreur prédiction délai: {error}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur prédiction délai : {error}"
+        )

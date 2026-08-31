@@ -126,6 +126,10 @@ class ReparationUpdate(BaseModel):
 
     cout_reel: Optional[float] = None
 
+    delai_estime: Optional[int] = None      
+    
+    date_sortie: Optional[datetime] = None  
+
     date_fin: Optional[datetime] = None
 
 
