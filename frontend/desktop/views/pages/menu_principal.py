@@ -5,7 +5,6 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QLabel,
     QFrame,
-    QPushButton,
     QComboBox,
     QScrollArea,
     QTableWidget,
@@ -18,8 +17,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import (
     Qt,
     QThread,
-    Signal,
-    QDate
+    Signal
 )
 
 from PySide6.QtCharts import (
@@ -86,17 +84,21 @@ class MenuPrincipal(QWidget):
     # =========================================================
 
     def init_ui(self):
+        self.setStyleSheet("background-color: #FFFFFF;")
+
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setStyleSheet("QScrollArea { background-color: #FFFFFF; }")
 
         content = QWidget()
+        content.setStyleSheet("background-color: #FFFFFF;")
         scroll.setWidget(content)
 
         main_layout = QVBoxLayout(content)
-        main_layout.setContentsMargins(30, 25, 30, 30)
-        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(32, 28, 32, 32)
+        main_layout.setSpacing(24)
 
         # -----------------------------------------------------
         # HEADER
@@ -105,18 +107,18 @@ class MenuPrincipal(QWidget):
         header_left = QVBoxLayout()
 
         titre = QLabel("Tableau de bord")
-        titre.setStyleSheet("font-size: 30px; font-weight: 700; color: #111827;")
+        titre.setStyleSheet("font-size: 26px; font-weight: 800; color: #0F172A;")
         header_left.addWidget(titre)
 
-        sous_titre = QLabel("Vue générale de l'activité de Repair Platform")
-        sous_titre.setStyleSheet("font-size: 14px; color: #6b7280;")
+        sous_titre = QLabel("Aperçu de l'activité globale de l'atelier")
+        sous_titre.setStyleSheet("font-size: 13px; color: #64748B;")
         header_left.addWidget(sous_titre)
 
         header_layout.addLayout(header_left)
         header_layout.addStretch()
 
         periode_label = QLabel("Période :")
-        periode_label.setStyleSheet("font-size: 14px; color: #374151; font-weight: 600;")
+        periode_label.setStyleSheet("font-size: 13px; color: #334155; font-weight: 600;")
         header_layout.addWidget(periode_label)
 
         self.periode_combo = QComboBox()
@@ -128,47 +130,34 @@ class MenuPrincipal(QWidget):
         self.periode_combo.setMinimumWidth(160)
         self.periode_combo.setStyleSheet("""
             QComboBox {
-                background: white; border: 1px solid #d1d5db;
-                border-radius: 8px; padding: 8px 12px; color: #111827; font-size: 13px;
+                background: #FFFFFF; border: 1px solid #CBD5E1;
+                border-radius: 6px; padding: 6px 12px; color: #0F172A; font-size: 13px;
             }
+            QComboBox:focus { border-color: #2563EB; }
         """)
         self.periode_combo.currentIndexChanged.connect(self.on_period_changed)
         header_layout.addWidget(self.periode_combo)
 
-        refresh_button = QPushButton("↻  Actualiser")
-        refresh_button.setCursor(Qt.PointingHandCursor)
-        refresh_button.setMinimumHeight(38)
-        refresh_button.setStyleSheet("""
-            QPushButton {
-                background-color: #111827; color: white; border: none;
-                border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600;
-            }
-            QPushButton:hover { background-color: #1f2937; }
-        """)
-        refresh_button.clicked.connect(self.refresh)
-        self.refresh_button = refresh_button
-        header_layout.addWidget(refresh_button)
-
         main_layout.addLayout(header_layout)
 
-        self.status_label = QLabel("Chargement des statistiques...")
-        self.status_label.setStyleSheet("color: #6b7280; font-size: 12px;")
+        self.status_label = QLabel("Mise à jour...")
+        self.status_label.setStyleSheet("color: #94A3B8; font-size: 12px;")
         main_layout.addWidget(self.status_label)
 
         # -----------------------------------------------------
-        # CARTES KPI
+        # CARTES KPI (SANS EMOJIS)
         # -----------------------------------------------------
         stats_layout = QGridLayout()
-        stats_layout.setSpacing(15)
+        stats_layout.setSpacing(16)
 
-        stats_layout.addWidget(self.create_stat_card("Réparations", "0", "🔧", "reparations"), 0, 0)
-        stats_layout.addWidget(self.create_stat_card("Factures", "0", "🧾", "factures"), 0, 1)
-        stats_layout.addWidget(self.create_stat_card("Stock", "0", "📦", "stock"), 0, 2)
-        stats_layout.addWidget(self.create_stat_card("Dossiers ouverts", "0", "📂", "dossiers_ouverts"), 0, 3)
-        stats_layout.addWidget(self.create_stat_card("Clients", "0", "👥", "clients"), 1, 0)
-        stats_layout.addWidget(self.create_stat_card("CA Réparations", "0 DH", "💰", "ca_ttc"), 1, 1)
-        stats_layout.addWidget(self.create_stat_card("Réparations terminées", "0", "✓", "reparations_terminees"), 1, 2)
-        stats_layout.addWidget(self.create_stat_card("Stock faible", "0", "⚠", "stock_faible"), 1, 3)
+        stats_layout.addWidget(self.create_stat_card("Réparations totales", "0", "reparations"), 0, 0)
+        stats_layout.addWidget(self.create_stat_card("Factures émises", "0", "factures"), 0, 1)
+        stats_layout.addWidget(self.create_stat_card("Articles en Stock", "0", "stock"), 0, 2)
+        stats_layout.addWidget(self.create_stat_card("Dossiers ouverts", "0", "dossiers_ouverts"), 0, 3)
+        stats_layout.addWidget(self.create_stat_card("Clients enregistrés", "0", "clients"), 1, 0)
+        stats_layout.addWidget(self.create_stat_card("Chiffre d'Affaires", "0 DH", "ca_ttc"), 1, 1)
+        stats_layout.addWidget(self.create_stat_card("Réparations terminées", "0", "reparations_terminees"), 1, 2)
+        stats_layout.addWidget(self.create_stat_card("Alerte stock critique", "0", "stock_faible"), 1, 3)
 
         main_layout.addLayout(stats_layout)
 
@@ -176,15 +165,15 @@ class MenuPrincipal(QWidget):
         # GRAPHIQUES SUPERIEURS
         # -----------------------------------------------------
         charts_layout = QHBoxLayout()
-        charts_layout.setSpacing(15)
+        charts_layout.setSpacing(16)
 
-        self.reparations_chart = self.create_chart_frame("Évolution des réparations")
+        self.reparations_chart = self.create_chart_frame("Évolution du volume de réparations")
         self.reparations_chart_view = QChartView()
         self.reparations_chart_view.setRenderHint(self.reparations_chart_view.renderHints())
         self.reparations_chart.layout().addWidget(self.reparations_chart_view)
         charts_layout.addWidget(self.reparations_chart, 2)
 
-        self.statuts_chart = self.create_chart_frame("Répartition des statuts")
+        self.statuts_chart = self.create_chart_frame("Répartition par statut")
         self.statuts_chart_view = QChartView()
         self.statuts_chart.layout().addWidget(self.statuts_chart_view)
         charts_layout.addWidget(self.statuts_chart, 1)
@@ -192,16 +181,15 @@ class MenuPrincipal(QWidget):
         main_layout.addLayout(charts_layout)
 
         # -----------------------------------------------------
-        # GRAPHIQUE CA RÉPARATIONS (AVEC SELECTEUR JOUR/SEMAINE/MOIS)
+        # GRAPHIQUE CA RÉPARATIONS
         # -----------------------------------------------------
-        ca_chart_frame = self.create_chart_frame("Montant & Chiffre d'Affaires Réparations")
+        ca_chart_frame = self.create_chart_frame("Revenus & Chiffre d'Affaires")
         
-        # Barre d'option pour choisir le regroupement du CA
         ca_header_layout = QHBoxLayout()
         ca_header_layout.addStretch()
         
-        ca_group_label = QLabel("Regrouper par :")
-        ca_group_label.setStyleSheet("font-size: 12px; color: #4b5563; font-weight: 600;")
+        ca_group_label = QLabel("Regroupement :")
+        ca_group_label.setStyleSheet("font-size: 12px; color: #475569; font-weight: 600;")
         ca_header_layout.addWidget(ca_group_label)
 
         self.ca_group_combo = QComboBox()
@@ -210,8 +198,8 @@ class MenuPrincipal(QWidget):
         self.ca_group_combo.addItem("Par Mois", "mois")
         self.ca_group_combo.setStyleSheet("""
             QComboBox {
-                background: #f9fafb; border: 1px solid #d1d5db;
-                border-radius: 6px; padding: 4px 8px; font-size: 12px;
+                background: #F8FAFC; border: 1px solid #CBD5E1;
+                border-radius: 6px; padding: 4px 8px; font-size: 12px; color: #0F172A;
             }
         """)
         self.ca_group_combo.currentIndexChanged.connect(self.on_ca_group_changed)
@@ -226,73 +214,79 @@ class MenuPrincipal(QWidget):
         # -----------------------------------------------------
         # TYPES DE MATERIEL
         # -----------------------------------------------------
-        materiel_chart = self.create_chart_frame("Types de matériel les plus réparés")
+        materiel_chart = self.create_chart_frame("Types de matériels pris en charge")
         self.materiel_chart_view = QChartView()
         materiel_chart.layout().addWidget(self.materiel_chart_view)
         main_layout.addWidget(materiel_chart)
 
         # -----------------------------------------------------
-        # TABLEAUX DE BORD (STOCK, ARTICLES, DOSSIERS, CLIENTS)
+        # TABLEAUX DE BORD (STOCK ET TOP PIÈCES)
         # -----------------------------------------------------
         tables_layout = QHBoxLayout()
-        tables_layout.setSpacing(15)
+        tables_layout.setSpacing(16)
 
-        stock_frame = self.create_table_frame("⚠ Alertes stock")
+        stock_frame = self.create_table_frame("Alertes de stock")
         self.stock_table = QTableWidget()
         self.stock_table.setColumnCount(4)
-        self.stock_table.setHorizontalHeaderLabels(["Pièce", "Référence", "Quantité", "Seuil"])
+        self.stock_table.setHorizontalHeaderLabels(["Désignation", "Référence", "Quantité", "Seuil min"])
         self.configure_table(self.stock_table)
         stock_frame.layout().addWidget(self.stock_table)
         tables_layout.addWidget(stock_frame)
 
-        articles_frame = self.create_table_frame("📈 Articles les plus utilisés")
+        articles_frame = self.create_table_frame("Pièces les plus consommées")
         self.articles_table = QTableWidget()
         self.articles_table.setColumnCount(4)
-        self.articles_table.setHorizontalHeaderLabels(["Désignation", "Référence", "Quantité", "Montant"])
+        self.articles_table.setHorizontalHeaderLabels(["Désignation", "Référence", "Quantité", "Montant Total"])
         self.configure_table(self.articles_table)
         articles_frame.layout().addWidget(self.articles_table)
         tables_layout.addWidget(articles_frame)
 
         main_layout.addLayout(tables_layout)
 
-        # Derniers Dossiers
-        dossiers_frame = self.create_table_frame("📋 Derniers dossiers de réparation")
+        # -----------------------------------------------------
+        # TABLEAU : DOSSIERS RÉCENTS
+        # -----------------------------------------------------
+        dossiers_frame = self.create_table_frame("Derniers dossiers de réparation")
         dossiers_search_layout = QHBoxLayout()
         self.dossiers_search = QLineEdit()
-        self.dossiers_search.setPlaceholderText("Rechercher par dossier, matériel, statut, client...")
+        self.dossiers_search.setPlaceholderText("Filtrer par dossier, matériel, statut, client...")
         self.dossiers_search.setClearButtonEnabled(True)
-        self.dossiers_search.setMinimumHeight(38)
+        self.dossiers_search.setMinimumHeight(36)
         self.dossiers_search.textChanged.connect(self.filter_dossiers_table)
         dossiers_search_layout.addWidget(self.dossiers_search)
         
         self.dossiers_count_label = QLabel("0 résultat")
+        self.dossiers_count_label.setStyleSheet("color: #64748B; font-size: 12px;")
         dossiers_search_layout.addWidget(self.dossiers_count_label)
         dossiers_frame.layout().addLayout(dossiers_search_layout)
 
         self.dossiers_table = QTableWidget()
         self.dossiers_table.setColumnCount(5)
-        self.dossiers_table.setHorizontalHeaderLabels(["Dossier", "Matériel", "Statut", "Date réception", "Urgent"])
+        self.dossiers_table.setHorizontalHeaderLabels(["N° Dossier", "Matériel", "Statut", "Date Réception", "Urgent"])
         self.configure_table(self.dossiers_table)
         dossiers_frame.layout().addWidget(self.dossiers_table)
         main_layout.addWidget(dossiers_frame)
 
-        # Derniers Clients
-        clients_frame = self.create_table_frame("👥 Derniers clients")
+        # -----------------------------------------------------
+        # TABLEAU : CLIENTS RÉCENTS
+        # -----------------------------------------------------
+        clients_frame = self.create_table_frame("Nouveaux clients enregistrés")
         clients_search_layout = QHBoxLayout()
         self.clients_search = QLineEdit()
-        self.clients_search.setPlaceholderText("Rechercher par nom, téléphone ou email...")
+        self.clients_search.setPlaceholderText("Filtrer par nom, téléphone ou email...")
         self.clients_search.setClearButtonEnabled(True)
-        self.clients_search.setMinimumHeight(38)
+        self.clients_search.setMinimumHeight(36)
         self.clients_search.textChanged.connect(self.filter_clients_table)
         clients_search_layout.addWidget(self.clients_search)
 
         self.clients_count_label = QLabel("0 résultat")
+        self.clients_count_label.setStyleSheet("color: #64748B; font-size: 12px;")
         clients_search_layout.addWidget(self.clients_count_label)
         clients_frame.layout().addLayout(clients_search_layout)
 
         self.clients_table = QTableWidget()
         self.clients_table.setColumnCount(4)
-        self.clients_table.setHorizontalHeaderLabels(["Nom", "Téléphone", "Email", "Date création"])
+        self.clients_table.setHorizontalHeaderLabels(["Nom complet", "Téléphone", "Email", "Date d'ajout"])
         self.configure_table(self.clients_table)
         clients_frame.layout().addWidget(self.clients_table)
         main_layout.addWidget(clients_frame)
@@ -302,34 +296,33 @@ class MenuPrincipal(QWidget):
         self.layout().addWidget(scroll)
 
     # =========================================================
-    # METHODES DE CONSTRUCTION DE L'INTERFACE
+    # MÉTHODES DE CONSTRUCTION
     # =========================================================
 
-    def create_stat_card(self, title, value, icon, key):
+    def create_stat_card(self, title, value, key):
         card = QFrame()
-        card.setMinimumHeight(120)
+        card.setMinimumHeight(100)
         card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         card.setStyleSheet("""
-            QFrame { background-color: white; border: 1px solid #e5e7eb; border-radius: 12px; }
-            QFrame:hover { border: 1px solid #cbd5e1; }
+            QFrame { 
+                background-color: #FFFFFF; 
+                border: 1px solid #E2E8F0; 
+                border-radius: 8px; 
+            }
+            QFrame:hover { 
+                border-color: #CBD5E1; 
+            }
         """)
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(8)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(6)
 
-        header = QHBoxLayout()
-        icon_label = QLabel(icon)
-        icon_label.setStyleSheet("font-size: 21px; border: none;")
-        header.addWidget(icon_label)
-
-        title_label = QLabel(title)
-        title_label.setStyleSheet("color: #6b7280; font-size: 13px; font-weight: 600; border: none;")
-        header.addWidget(title_label)
-        header.addStretch()
-        layout.addLayout(header)
+        title_label = QLabel(title.upper())
+        title_label.setStyleSheet("color: #64748B; font-size: 11px; font-weight: 700; border: none; letter-spacing: 0.5px;")
+        layout.addWidget(title_label)
 
         value_label = QLabel(value)
-        value_label.setStyleSheet("font-size: 27px; font-weight: 700; color: #111827; border: none;")
+        value_label.setStyleSheet("font-size: 24px; font-weight: 800; color: #0F172A; border: none;")
         layout.addWidget(value_label)
 
         self.stat_labels[key] = value_label
@@ -337,25 +330,25 @@ class MenuPrincipal(QWidget):
 
     def create_chart_frame(self, title):
         frame = QFrame()
-        frame.setMinimumHeight(330)
-        frame.setStyleSheet("QFrame { background-color: white; border: 1px solid #e5e7eb; border-radius: 12px; }")
+        frame.setMinimumHeight(320)
+        frame.setStyleSheet("QFrame { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; }")
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(18, 15, 18, 15)
+        layout.setContentsMargins(18, 16, 18, 16)
 
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-size: 16px; font-weight: 700; color: #111827; border: none;")
+        title_label.setStyleSheet("font-size: 15px; font-weight: 700; color: #0F172A; border: none;")
         layout.addWidget(title_label)
         return frame
 
     def create_table_frame(self, title):
         frame = QFrame()
-        frame.setMinimumHeight(300)
-        frame.setStyleSheet("QFrame { background-color: white; border: 1px solid #e5e7eb; border-radius: 12px; }")
+        frame.setMinimumHeight(280)
+        frame.setStyleSheet("QFrame { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; }")
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(18, 15, 18, 15)
+        layout.setContentsMargins(18, 16, 18, 16)
 
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-size: 16px; font-weight: 700; color: #111827; border: none;")
+        title_label.setStyleSheet("font-size: 15px; font-weight: 700; color: #0F172A; border: none;")
         layout.addWidget(title_label)
         return frame
 
@@ -368,9 +361,24 @@ class MenuPrincipal(QWidget):
         table.horizontalHeader().setStretchLastSection(True)
         table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         table.setStyleSheet("""
-            QTableWidget { background-color: white; border: none; font-size: 12px; color: #374151; }
-            QTableWidget::item { padding: 7px; border-bottom: 1px solid #f3f4f6; }
-            QHeaderView::section { background-color: #f9fafb; color: #6b7280; font-size: 12px; font-weight: 700; border: none; }
+            QTableWidget { 
+                background-color: #FFFFFF; 
+                border: none; 
+                font-size: 12px; 
+                color: #1E293B; 
+            }
+            QTableWidget::item { 
+                padding: 8px; 
+                border-bottom: 1px solid #F1F5F9; 
+            }
+            QHeaderView::section { 
+                background-color: #F8FAFC; 
+                color: #64748B; 
+                font-size: 11px; 
+                font-weight: 700; 
+                border: none; 
+                padding: 6px;
+            }
         """)
 
     # =========================================================
@@ -382,11 +390,9 @@ class MenuPrincipal(QWidget):
             periode = self.periode_combo.currentData()
 
         self.status_label.setText("Actualisation des données...")
-        self.refresh_button.setEnabled(False)
         self.periode_combo.setEnabled(False)
 
         if self.worker is not None and self.worker.isRunning():
-            self.refresh_button.setEnabled(True)
             self.periode_combo.setEnabled(True)
             return
 
@@ -404,17 +410,13 @@ class MenuPrincipal(QWidget):
             self.update_factures_chart(self.dashboard_data)
 
     def dashboard_finished(self):
-        self.refresh_button.setEnabled(True)
         self.periode_combo.setEnabled(True)
 
     def load_data(self):
         self.load_statistics()
 
-    def refresh(self):
-        self.load_statistics(self.periode_combo.currentData())
-
     # =========================================================
-    # MISE À JOUR GLOBAL DU DASHBOARD
+    # MISE À JOUR DU DASHBOARD
     # =========================================================
 
     def update_dashboard(self, data):
@@ -428,53 +430,35 @@ class MenuPrincipal(QWidget):
         self.update_articles_table(data)
         self.update_dossiers_table(data)
         self.update_clients_table(data)
-        self.status_label.setText("Données actualisées.")
-
-    # =========================================================
-    # CARTES DE METRIQUES
-    # =========================================================
+        self.status_label.setText("Données synchronisées.")
 
     def update_cards(self, data):
         kpis = data.get("kpis", {})
         if not isinstance(kpis, dict):
             kpis = {}
 
-        reparations = kpis.get("reparations", 0)
-        factures = kpis.get("factures", 0)
-        stock = kpis.get("quantite_stock", kpis.get("stock", 0))
-        dossiers_ouverts = kpis.get("dossiers_ouverts", 0)
-        clients = kpis.get("clients", 0)
-        stock_faible = kpis.get("stock_faible", 0)
-
-        ca_reparations = kpis.get("ca_reparations", kpis.get("ca_ttc", kpis.get("montant_factures_ttc", 0.0)))
-        reparations_terminees = kpis.get("reparations_terminees", 0)
-
-        self.stat_labels["reparations"].setText(self.format_number(reparations))
-        self.stat_labels["factures"].setText(self.format_number(factures))
-        self.stat_labels["stock"].setText(self.format_number(stock))
-        self.stat_labels["dossiers_ouverts"].setText(self.format_number(dossiers_ouverts))
-        self.stat_labels["clients"].setText(self.format_number(clients))
-        self.stat_labels["ca_ttc"].setText(f"{self.format_money(ca_reparations)} DH")
-        self.stat_labels["reparations_terminees"].setText(self.format_number(reparations_terminees))
-        self.stat_labels["stock_faible"].setText(self.format_number(stock_faible))
-
-    # =========================================================
-    # GRAPHIQUE CA RÉPARATIONS (CORRIGÉ ET AGRÉGÉ)
-    # =========================================================
+        self.stat_labels["reparations"].setText(self.format_number(kpis.get("reparations", 0)))
+        self.stat_labels["factures"].setText(self.format_number(kpis.get("factures", 0)))
+        self.stat_labels["stock"].setText(self.format_number(kpis.get("quantite_stock", kpis.get("stock", 0))))
+        self.stat_labels["dossiers_ouverts"].setText(self.format_number(kpis.get("dossiers_ouverts", 0)))
+        self.stat_labels["clients"].setText(self.format_number(kpis.get("clients", 0)))
+        
+        ca = kpis.get("ca_reparations", kpis.get("ca_ttc", kpis.get("montant_factures_ttc", 0.0)))
+        self.stat_labels["ca_ttc"].setText(f"{self.format_money(ca)} DH")
+        self.stat_labels["reparations_terminees"].setText(self.format_number(kpis.get("reparations_terminees", 0)))
+        self.stat_labels["stock_faible"].setText(self.format_number(kpis.get("stock_faible", 0)))
 
     def update_factures_chart(self, data):
         bar_series = QBarSeries()
-        bar_set = QBarSet("Coût réel réparations (DH)")
+        bar_set = QBarSet("Montant (DH)")
 
         reparations_data = data.get("reparations", {})
         if not isinstance(reparations_data, dict):
             reparations_data = {}
 
-        # 1. Extraction des éléments jours
         items = reparations_data.get("par_jour", [])
-        group_mode = self.ca_group_combo.currentData()  # "jour", "semaine", "mois"
+        group_mode = self.ca_group_combo.currentData()
 
-        # 2. Agrégation dynamique
         aggregated = defaultdict(float)
 
         for item in items:
@@ -485,24 +469,19 @@ class MenuPrincipal(QWidget):
             if not date_str:
                 continue
 
-            # Extraire le montant du coût réel de la réparation
             montant = item.get("cout_reel", item.get("cout_estime", item.get("montant", 0)))
             try:
                 montant_val = float(montant or 0)
             except (TypeError, ValueError):
                 montant_val = 0.0
 
-            # Calcul de la clé de regroupement
             try:
                 dt = datetime.strptime(date_str[:10], "%Y-%m-%d")
                 if group_mode == "semaine":
-                    # Format: "Année-WSemaine" (ex: 2026-W12)
                     key = dt.strftime("%Y-W%U")
                 elif group_mode == "mois":
-                    # Format: "Mois Année" (ex: 03/2026)
                     key = dt.strftime("%m/%Y")
                 else:
-                    # Par jour: "JJ/MM"
                     key = dt.strftime("%d/%m")
             except Exception:
                 key = self.short_date(date_str)
@@ -521,7 +500,7 @@ class MenuPrincipal(QWidget):
 
         chart = QChart()
         chart.addSeries(bar_series)
-        chart.legend().setVisible(True)
+        chart.legend().setVisible(False)
         chart.setAnimationOptions(QChart.SeriesAnimations)
 
         axis_x = QBarCategoryAxis()
@@ -539,10 +518,6 @@ class MenuPrincipal(QWidget):
         bar_series.attachAxis(axis_y)
 
         self.factures_chart_view.setChart(chart)
-
-    # =========================================================
-    # AUTRES GRAPHIQUES
-    # =========================================================
 
     def update_reparations_chart(self, data):
         series = QLineSeries()
@@ -565,7 +540,7 @@ class MenuPrincipal(QWidget):
 
         chart = QChart()
         chart.addSeries(series)
-        chart.legend().setVisible(True)
+        chart.legend().setVisible(False)
         chart.setAnimationOptions(QChart.SeriesAnimations)
 
         axis_x = QBarCategoryAxis()
@@ -608,7 +583,7 @@ class MenuPrincipal(QWidget):
 
     def update_materiel_chart(self, data):
         bar_series = QBarSeries()
-        bar_set = QBarSet("Nombre de réparations")
+        bar_set = QBarSet("Nombre")
         categories = []
 
         reparations_data = data.get("reparations", {})
@@ -647,10 +622,6 @@ class MenuPrincipal(QWidget):
         bar_series.attachAxis(axis_y)
 
         self.materiel_chart_view.setChart(chart)
-
-    # =========================================================
-    # TABLES
-    # =========================================================
 
     def update_stock_table(self, data):
         stock_data = data.get("stock", {})
@@ -758,8 +729,7 @@ class MenuPrincipal(QWidget):
         self.clients_count_label.setText(f"{count} résultat" if count <= 1 else f"{count} résultats")
 
     def statistics_error(self, message):
-        self.status_label.setText("Impossible de charger les statistiques.")
-        self.refresh_button.setEnabled(True)
+        self.status_label.setText("Erreur de chargement des données.")
         self.periode_combo.setEnabled(True)
 
     @staticmethod

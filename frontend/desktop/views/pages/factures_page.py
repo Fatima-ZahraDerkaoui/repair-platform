@@ -338,7 +338,7 @@ class FacturesPage(QWidget):
         qr_label.setPixmap(pixmap)
         container.addWidget(qr_label, alignment=Qt.AlignCenter)
 
-        self.scan_status_label = QLabel("⏳ En attente du transfert mobile...")
+        self.scan_status_label = QLabel(" En attente du transfert mobile...")
         self.scan_status_label.setStyleSheet("font-size: 14px; font-weight: 600; color: #2563EB;")
         container.addWidget(self.scan_status_label, alignment=Qt.AlignCenter)
 

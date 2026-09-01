@@ -3,11 +3,9 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QPushButton,
     QLabel,
-    QFrame,
-    QSizePolicy
+    QFrame
 )
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QFont
 
 
 class Sidebar(QWidget):
@@ -22,43 +20,43 @@ class Sidebar(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        # Style global du menu latéral (Fond sombre profond pour faire ressortir le blanc)
+        # Arrière-plan BLANC PUR avec bordure droite épurée
         self.setStyleSheet("""
             Sidebar {
-                background-color: #0B0F19;
-                border-right: 1px solid #1E293B;
+                background-color: #FFFFFF;
+                border-right: 1px solid #E2E8F0;
             }
             QLabel#logoTitle {
-                color: #1E293B;
-                font-size: 19px;
-                font-weight: 900;
-                letter-spacing: 1px;
+                color: #0F172A;
+                font-size: 17px;
+                font-weight: 800;
+                letter-spacing: 0.5px;
             }
             QLabel#logoSubtitle {
-                color: #38BDF8;
-                font-size: 12px;
-                font-weight: 800;
+                color: #2563EB;
+                font-size: 11px;
+                font-weight: 700;
                 letter-spacing: 1.5px;
                 margin-top: 2px;
             }
             QFrame#separator {
-                background-color: #1E293B;
+                background-color: #E2E8F0;
                 max-height: 1px;
                 border: none;
             }
             QPushButton {
                 background-color: transparent;
-                color: #94A3B8;
+                color: #475569;
                 border: none;
-                border-radius: 8px;
+                border-radius: 6px;
                 text-align: left;
                 padding-left: 16px;
                 font-size: 13px;
                 font-weight: 600;
             }
             QPushButton:hover {
-                background-color: #1E293B;
-                color: #FFFFFF;
+                background-color: #F8FAFC;
+                color: #0F172A;
             }
             QPushButton[active="true"] {
                 background-color: #2563EB;
@@ -66,11 +64,13 @@ class Sidebar(QWidget):
                 font-weight: 700;
             }
             QPushButton#btnQuit {
-                background-color: #1E293B;
-                color: #F8FAFC;
-                border: 1px solid #334155;
-                border-radius: 8px;
+                background-color: #FEF2F2;
+                color: #DC2626;
+                border: 1px solid #FECACA;
+                border-radius: 6px;
                 font-weight: 600;
+                text-align: center;
+                padding-left: 0px;
             }
             QPushButton#btnQuit:hover {
                 background-color: #DC2626;
@@ -108,15 +108,15 @@ class Sidebar(QWidget):
         layout.addSpacing(12)
 
         # -----------------------------------------------------
-        # NAVIGATION
+        # NAVIGATION (SANS EMOJIS)
         # -----------------------------------------------------
         items = [
-            ("🏠   Tableau de bord", "dashboard"),
-            ("🔧   Nouvelle réparation", "nouvelle_reparation"),
-            ("📁   Dossiers", "dossiers"),
-            ("🧾   Factures", "factures"),
-            ("📦   Stock & Pièces", "stock"),
-            ("⚙   Administration", "administration"),
+            ("Tableau de bord", "dashboard"),
+            ("Nouvelle réparation", "nouvelle_reparation"),
+            ("Dossiers", "dossiers"),
+            ("Factures", "factures"),
+            ("Stock & Pièces", "stock"),
+            ("Administration", "administration"),
         ]
 
         for text, page in items:
@@ -127,9 +127,9 @@ class Sidebar(QWidget):
         # -----------------------------------------------------
         # BOUTON QUITTER / DÉCONNEXION
         # -----------------------------------------------------
-        btn_quitter = QPushButton("🚪   Déconnexion / Quitter")
+        btn_quitter = QPushButton("Déconnexion")
         btn_quitter.setObjectName("btnQuit")
-        btn_quitter.setMinimumHeight(42)
+        btn_quitter.setMinimumHeight(40)
         btn_quitter.setCursor(Qt.PointingHandCursor)
         btn_quitter.clicked.connect(self.quit_requested.emit)
         layout.addWidget(btn_quitter)
@@ -139,7 +139,7 @@ class Sidebar(QWidget):
 
     def add_nav_button(self, layout, text, page_name):
         btn = QPushButton(text)
-        btn.setMinimumHeight(44)
+        btn.setMinimumHeight(42)
         btn.setCursor(Qt.PointingHandCursor)
         btn.setProperty("active", False)
         btn.clicked.connect(lambda: self.on_button_clicked(page_name))
@@ -158,3 +158,4 @@ class Sidebar(QWidget):
             btn.setProperty("active", is_active)
             btn.style().unpolish(btn)
             btn.style().polish(btn)
+            
