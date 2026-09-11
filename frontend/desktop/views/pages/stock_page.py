@@ -739,25 +739,33 @@ class StockPage(QWidget):
             response.raise_for_status()
             alerts = response.json()
 
-            # Dictionnaire pour retrouver rapidement la quantité en stock par ID de pièce
-            stock_dict = {s.get("id"): int(s.get("quantite", 0) or 0) for s in self.stocks}
+            # Dictionnaire pour retrouver rapidement la quantité actuelle et le seuil min par ID de pièce
+            stock_info = {
+                s.get("id"): {
+                    "quantite": int(s.get("quantite", 0) or 0),
+                    "seuil_min": int(s.get("seuil_min", 0) or 0)
+                } 
+                for s in self.stocks
+            }
 
             active_alerts = []
             for alert in alerts:
                 piece_id = alert.get("piece_id")
+                alerte_id = alert.get("id")
                 q_dem = int(alert.get("quantite_demandee", 0) or 0)
                 
-                # Récupère le stock actuel réél
-                q_disp_actuelle = stock_dict.get(piece_id, int(alert.get("quantite_disponible", 0) or 0))
+                info = stock_info.get(piece_id, {})
+                q_disp_actuelle = info.get("quantite", int(alert.get("quantite_disponible", 0) or 0))
+                seuil_min = info.get("seuil_min", 5)
 
-                # SI LE STOCK A AUGMENTÉ (disponible >= demandé), L'ALERTE EST SUPPRIMÉE DE L'AFFICHAGE
-                if q_disp_actuelle < q_dem:
-                    # On met à jour la quantité disponible affichée
+                # CONDITION : Si le stock a augmenté et dépasse la demande / le seuil
+                if q_disp_actuelle >= q_dem and q_disp_actuelle > seuil_min:
+                    # Le stock est suffisant -> On supprime l'alerte du serveur
+                    self.resolve_alert_on_server(alerte_id)
+                else:
+                    # Le stock est toujours insuffisant -> L'alerte reste affichée
                     alert["quantite_disponible"] = q_disp_actuelle
                     active_alerts.append(alert)
-                else:
-                    # En arrière-plan : informe le serveur que l'alerte est résolue / lue
-                    self.resolve_alert_on_server(alert.get("id"))
 
             self.display_alerts(active_alerts)
             self.unread_card.value_label.setText(str(len(active_alerts)))
@@ -770,7 +778,7 @@ class StockPage(QWidget):
             self.no_alert_label.setVisible(True)
             self.alerts_count_label.setText("Erreur")
             self.unread_card.value_label.setText("0")
-
+            
     def resolve_alert_on_server(self, alerte_id):
         """Supprime ou marque comme lue l'alerte sur l'API quand le stock a été réapprovisionné."""
         if not alerte_id:

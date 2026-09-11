@@ -535,7 +535,7 @@ class MenuPrincipal(QWidget):
             nombre = item.get("nombre", item.get("count", 0))
             value = float(nombre or 0)
             series.append(index, value)
-            max_value = max(max_value, value)
+            max_value = max(max_value, int(value))
             categories.append(self.short_date(date))
 
         chart = QChart()
@@ -547,9 +547,21 @@ class MenuPrincipal(QWidget):
         if categories:
             axis_x.append(categories)
 
+        # -----------------------------------------------------
+        # CONFIGURATION DE L'AXE Y (ENTIERS UNIQUEMENT)
+        # -----------------------------------------------------
         axis_y = QValueAxis()
         axis_y.setMin(0)
-        axis_y.setMax(max(5, int(max_value) + 1))
+        
+        # Définition du maximum (minimum 4 pour un rendu propre)
+        y_max = max(4, max_value + 1)
+        axis_y.setMax(y_max)
+        
+        # S'assure que le nombre d'graduations correspond à des pas entiers
+        axis_y.setTickCount(y_max + 1)
+        
+        # Force le format d'affichage sans virgule/décimale
+        axis_y.setLabelFormat("%d")
 
         chart.addAxis(axis_x, Qt.AlignBottom)
         chart.addAxis(axis_y, Qt.AlignLeft)
@@ -557,7 +569,7 @@ class MenuPrincipal(QWidget):
         series.attachAxis(axis_y)
 
         self.reparations_chart_view.setChart(chart)
-
+        
     def update_statuts_chart(self, data):
         series = QPieSeries()
         reparations_data = data.get("reparations", {})
