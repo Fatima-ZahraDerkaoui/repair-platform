@@ -216,7 +216,7 @@
 <div class="container">
 
     <!-- CHARGEMENT & ERREUR -->
-    <div id="loading" class="loading">⌛ Chargement du dossier...</div>
+    <div id="loading" class="loading"> Chargement du dossier...</div>
     <div id="error" class="error hidden"></div>
 
     <!-- CONTENU PRINCIPAL -->
@@ -224,7 +224,7 @@
 
         <!-- URGENT ALERTE -->
         <div id="urgentBanner" class="banner-urgent hidden">
-            <span>⚠️ PRIORTÉ URGENTE POUR CE DOSSIER</span>
+            <span> PRIORTÉ URGENTE POUR CE DOSSIER</span>
         </div>
 
         <!-- EN-TÊTE -->
@@ -241,7 +241,7 @@
 
         <!-- CLIENT -->
         <div class="card">
-            <h2>👤 Client</h2>
+            <h2> Client</h2>
             <div class="info">
                 <div class="label">Nom complet</div>
                 <div class="value" id="clientNom"></div>
@@ -260,7 +260,7 @@
 
         <!-- MATÉRIEL -->
         <div class="card">
-            <h2>💻 Matériel</h2>
+            <h2> Matériel</h2>
             <div class="grid-2">
                 <div class="info">
                     <div class="label">Type</div>
@@ -285,7 +285,7 @@
 
         <!-- PANNE & DEMANDE -->
         <div class="card">
-            <h2>🛠️ Diagnostic & Demande</h2>
+            <h2> Diagnostic & Demande</h2>
             <div class="info">
                 <div class="label">Problème signalé</div>
                 <div class="value" id="probleme"></div>
@@ -302,7 +302,7 @@
 
         <!-- MISE À JOUR TECHNICIEN -->
         <div class="card">
-            <h2>✏️ Mettre à jour la fiche</h2>
+            <h2> Mettre à jour la fiche</h2>
 
             <div class="label">Statut</div>
             <select id="nouveauStatut">
@@ -379,12 +379,12 @@
             
             const telEl = document.getElementById("clientTelephone");
             telEl.innerHTML = rep.client.telephone 
-                ? `<a href="tel:${rep.client.telephone}" class="value-action">📞 ${rep.client.telephone}</a>`
+                ? `<a href="tel:${rep.client.telephone}" class="value-action"> ${rep.client.telephone}</a>`
                 : "-";
 
             const emailEl = document.getElementById("clientEmail");
             emailEl.innerHTML = rep.client.email 
-                ? `<a href="mailto:${rep.client.email}" class="value-action">✉️ Mail</a>`
+                ? `<a href="mailto:${rep.client.email}" class="value-action"> Mail</a>`
                 : "-";
         }
 
@@ -434,7 +434,7 @@
             const data = await response.json();
             afficherReparation(data);
 
-            message.textContent = "✓ Modifications enregistrées !";
+            message.textContent = " Modifications enregistrées !";
             message.style.background = "#dcfce7";
             message.style.color = "#166534";
         } catch (error) {

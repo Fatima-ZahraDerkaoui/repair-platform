@@ -1,101 +1,54 @@
-import os
-import pickle
-import re
 import pandas as pd
-from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score, classification_report
+import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import Pipeline
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import mean_absolute_error, r2_score
 
+# 1. Chargement et exclusion des montants à 0 DH (Piste 1)
+df = pd.read_excel('data/data_nettoyee.xlsx')
+df_payant = df[df['Montant (DH)'] > 0].copy()
 
-def nettoyer_texte(txt) -> str:
-    if pd.isna(txt) or not txt:
-        return ""
-    txt = str(txt).upper().strip()
-    txt = re.sub(r"[^A-Z0-9\s]", " ", txt)
-    return " ".join(txt.split())
+# Feature Engineering temporel
+df_payant['Date Entrée'] = pd.to_datetime(df_payant['Date Entrée'])
+df_payant['Mois'] = df_payant['Date Entrée'].dt.month
+df_payant['JourSemaine'] = df_payant['Date Entrée'].dt.dayofweek
 
+features = [
+    'Matériel', 'Categorie_Materiel', 'Problème', 'Spec_Composant', 
+    'Gamme_Piece', 'Quantite', 'Type_Intervention', 'Réparé', 'Mois', 'JourSemaine'
+]
 
-def categoriser_prix(montant):
-    """Définition des tranches de prix métiers."""
-    if montant <= 200:
-        return "1. Économique (< 200 DH)"
-    elif montant <= 500:
-        return "2. Moyen (200 - 500 DH)"
-    else:
-        return "3. Élevé (> 500 DH)"
+X = df_payant[features]
+y = df_payant['Montant (DH)']
 
+cat_cols = ['Matériel', 'Categorie_Materiel', 'Problème', 'Spec_Composant', 'Gamme_Piece', 'Type_Intervention', 'Réparé']
+num_cols = ['Quantite', 'Mois', 'JourSemaine']
 
-def entrainer_classification():
-    # 1. Chargement
-    data_path = os.path.join("data", "REPARATION_v1.xlsx")
-    if not os.path.exists(data_path):
-        data_path = os.path.join("data", "REPARATION.xlsx")
+preprocessor = ColumnTransformer([
+    ('cat', OneHotEncoder(handle_unknown='ignore'), cat_cols),
+    ('num', StandardScaler(), num_cols)
+])
 
-    df = pd.read_excel(data_path)
-    df.columns = [str(col).strip() for col in df.columns]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    def parse_montant(val):
-        if pd.isna(val):
-            return 0.0
-        val_str = str(val).replace("\xa0", "").replace(" ", "").replace(",", ".").replace("DH", "")
-        try:
-            return float(val_str)
-        except ValueError:
-            return 0.0
+# 2. Utilisation d'un Gradient Boosting finement réglé (Piste 3)
+model_ultime = Pipeline([
+    ('preprocessor', preprocessor),
+    ('regressor', GradientBoostingRegressor(
+        n_estimators=400, 
+        learning_rate=0.02, 
+        max_depth=4, 
+        subsample=0.8,
+        random_state=42
+    ))
+])
 
-    df["Montant_Clean"] = df["Montant"].apply(parse_montant)
-    df_clean = df[(df["Réparé"].astype(str).str.upper().str.contains("OUI")) & (df["Montant_Clean"] > 0)].copy()
+model_ultime.fit(X_train, y_train)
+y_pred = model_ultime.predict(X_test)
 
-    df_clean["Feature_Text"] = (
-        df_clean["Matériel"].apply(nettoyer_texte) + " " + df_clean["Problème"].apply(nettoyer_texte)
-    )
-    df_clean["Classe_Prix"] = df_clean["Montant_Clean"].apply(categoriser_prix)
-
-    X = df_clean[["Feature_Text"]]
-    y = df_clean["Classe_Prix"]
-
-    # 2. Train / Test Split
-    X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.20, random_state=42, stratify=y)
-
-    # 3. Pipeline Classification
-    preprocessor = ColumnTransformer(
-        transformers=[
-            (
-                "text",
-                TfidfVectorizer(preprocessor=nettoyer_texte, ngram_range=(1, 2), min_df=1),
-                "Feature_Text",
-            )
-        ]
-    )
-
-    clf_pipeline = Pipeline(
-        [
-            ("preprocessor", preprocessor),
-            ("classifier", RandomForestClassifier(n_estimators=150, random_state=42)),
-        ]
-    )
-
-    clf_pipeline.fit(X_tr, y_tr)
-    preds = clf_pipeline.predict(X_te)
-
-    # 4. Évaluation
-    acc = accuracy_score(y_te, preds)
-    print("==================================================")
-    print(f"🎯 ACCURACY MODÈLE CLASSIFICATION : {acc * 100:.2f} %")
-    print("==================================================")
-    print(classification_report(y_te, preds))
-
-    # 5. Sauvegarde
-    path_clf = os.path.join("app", "services", "ml", "cout", "cost_classifier_model.pkl")
-    os.makedirs(os.path.dirname(path_clf), exist_ok=True)
-    with open(path_clf, "wb") as f:
-        pickle.dump(clf_pipeline, f)
-
-    print(f"✅ Modèle de classification enregistré : {path_clf}")
-
-
-if __name__ == "__main__":
-    entrainer_classification()
+print("--- RÉSULTAT AVEC LES PISTES AVANCÉES ---")
+print(f"MAE : {mean_absolute_error(y_test, y_pred):.2f} DH")
+print(f"Score R² : {r2_score(y_test, y_pred):.4f}")

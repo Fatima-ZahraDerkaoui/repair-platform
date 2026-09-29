@@ -52,11 +52,11 @@
 <body>
 
 <div class="container">
-    <h1>📱 Scanner une facture</h1>
+    <h1> Scanner une facture</h1>
     <div class="description">Prenez la photo puis ajustez le rectangle bleu exactement autour de la facture.</div>
 
     <label class="file-label" id="label-photo" for="fileInput">
-        📷 Prendre / Choisir une photo
+         Prendre une photo
     </label>
     <input id="fileInput" type="file" accept="image/*" capture="environment">
 
@@ -66,10 +66,10 @@
     </div>
 
     <!-- Bouton pour valider le rectangle -->
-    <button id="btn-crop-confirm">📐 Valider le cadrage</button>
+    <button id="btn-crop-confirm"> Valider le cadrage</button>
 
     <!-- Bouton final pour envoyer -->
-    <button id="uploadButton" style="display: none;">🚀 Envoyer la facture recadrée</button>
+    <button id="uploadButton" style="display: none;"> Envoyer la facture recadrée</button>
 
     <div id="message"></div>
 </div>
@@ -131,7 +131,7 @@
             
             btnCropConfirm.style.display = "none";
             uploadButton.style.display = "block";
-            message.textContent = "✓ Image recadrée avec succès !";
+            message.textContent = "Image recadrée avec succès !";
             message.className = "success";
         }, 'image/jpeg', 0.92);
     });
@@ -141,7 +141,7 @@
         if (!croppedBlob) return;
 
         uploadButton.disabled = true;
-        message.textContent = "⏳ Envoi de la facture cadrée vers le PC...";
+        message.textContent = "Envoi de la facture cadrée vers le PC...";
         message.className = "loading";
 
         const formData = new FormData();
@@ -157,12 +157,12 @@
 
             if (!response.ok) throw new Error(data.detail || "Erreur d'envoi.");
 
-            message.textContent = "✅ Facture envoyée ! Analyse OCR en cours...";
+            message.textContent = " Facture envoyée ! Analyse OCR en cours...";
             message.className = "success";
             uploadButton.style.display = "none";
 
         } catch (error) {
-            message.textContent = "❌ " + error.message;
+            message.textContent = "Error " + error.message;
             message.className = "error";
             uploadButton.disabled = false;
         }

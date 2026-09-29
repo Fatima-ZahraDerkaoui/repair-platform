@@ -17,9 +17,13 @@ predictor = CostPredictor()
 # =========================================================
 
 class PredictionRequest(BaseModel):
-    materiel: str | None = None
-    probleme: str | None = None
-
+    materiel: str = ""
+    categorie: str = ""
+    probleme: str = ""
+    spec: str = ""
+    gamme: str = ""
+    type_intervention: str = ""
+    quantite: int = 1
 
 class CostPredictionResponse(BaseModel):
     cout_estime: float

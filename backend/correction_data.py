@@ -12,7 +12,6 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, a
 # ==========================================
 # 1. CHARGEMENT ET CORRECTION DES PRIX ABERRANTS
 # ==========================================
-# Chargement du fichier de base nettoyé
 df = pd.read_excel('data/data_nettoyee.xlsx')
 
 # Fonction de correction des prix irréalistes (ex: Afficheur à 100 DH, etc.)
@@ -36,9 +35,9 @@ def corriger_prix_realiste(row):
 # Application de la correction sur la colonne des prix
 df['Montant_Corrige'] = df.apply(corriger_prix_realiste, axis=1)
 
-# Sauvegarde optionnelle du nouveau fichier Excel corrigé
-df.to_excel('data/data_final.xlsx', index=False)
-print("✅ Fichier 'data_final.xlsx' généré avec des prix réalistes corrigés !\n")
+# Sauvegarde du nouveau fichier Excel corrigé
+df.to_excel('data_2.xlsx', index=False)
+print("✅ Fichier 'data_2.xlsx' généré avec des prix réalistes corrigés !\n")
 
 # ==========================================
 # 2. FEATURE ENGINEERING & PRÉPARATION
@@ -51,7 +50,7 @@ cat_cols = ['Matériel', 'Categorie_Materiel', 'Problème', 'Spec_Composant', 'G
 num_cols_base = ['Quantite', 'Mois', 'JourSemaine']
 
 # ==========================================
-# 3. ENTRAÎNEMENT DU MODÈLE DE COÛT (Sur prix corrigés -> R² ~ 0.41)
+# 3. ENTRAÎNEMENT DU MODÈLE DE COÛT (Sur prix corrigés)
 # ==========================================
 df_payant = df[df['Montant_Corrige'] > 0].copy()
 
@@ -116,12 +115,6 @@ delay_pipeline = Pipeline([
 ])
 
 delay_pipeline.fit(X_tr_d, y_tr_d)
-y_pred_d = delay_pipeline.predict(X_te_d)
-
-print("--- MODÈLE DE PRÉDICTION DU DÉLAI (Classification) ---")
-print(f"Précision globale (Accuracy) : {accuracy_score(y_te_d, y_pred_d)*100:.2f}%")
-print("\nRapport de classification :")
-print(classification_report(y_te_d, y_pred_d))
 
 # ==========================================
 # 5. SAUVEGARDE DES MODÈLES DANS LE BACKEND
@@ -135,6 +128,6 @@ os.makedirs(os.path.dirname(path_delay), exist_ok=True)
 joblib.dump(cost_pipeline, path_cost)
 joblib.dump(delay_pipeline, path_delay)
 
-print(f"\n✅ Modèles mis à jour et sauvegardés avec succès dans :")
+print(f"✅ Modèles mis à jour et sauvegardés avec succès dans :")
 print(f"   - {path_cost}")
 print(f"   - {path_delay}")
