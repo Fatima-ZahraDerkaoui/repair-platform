@@ -11,10 +11,8 @@ from sklearn.metrics import mean_absolute_error, r2_score, accuracy_score, class
 # ==========================================
 # 1. CHARGEMENT
 # ==========================================
-df = pd.read_excel('data/data_final.xlsx')
+df = pd.read_excel('data/dataSet.xlsx')
 
-# Correction des prix aberrants (utile seulement pour de VRAIES données sales).
-# Avec le dataset généré, elle ne change presque rien.
 APPLIQUER_CORRECTION = False
 
 def corriger_prix_realiste(row):
@@ -47,7 +45,7 @@ df['JourSemaine'] = df['Date Entrée'].dt.dayofweek
 cat_cols = ['Matériel', 'Categorie_Materiel', 'Problème', 'Spec_Composant',
             'Gamme_Piece', 'Type_Intervention']
 num_cols = ['Quantite', 'Mois', 'JourSemaine']
-features = cat_cols + num_cols   # 'Réparé' retiré : inconnu au moment du devis
+features = cat_cols + num_cols
 
 def make_preprocessor():
     return ColumnTransformer([
@@ -56,7 +54,7 @@ def make_preprocessor():
     ])
 
 # ==========================================
-# 3. MODÈLE DE COÛT (réparations réussies et payantes uniquement)
+# 3. MODÈLE DE COÛT
 # ==========================================
 df_payant = df[(df['Montant_Corrige'] > 0) & (df['Réparé'] == 'OUI')].copy()
 
@@ -77,9 +75,7 @@ print(f"MAE : {mean_absolute_error(y_te, pred):.2f} DH")
 print(f"R²  : {r2_score(y_te, pred):.4f}\n")
 
 # ==========================================
-# 4. MODÈLE DE DÉLAI
-#    a) Classification : délai immédiat (0 jour) ou non   -> Accuracy
-#    b) Régression     : nombre de jours estimé
+# 4. MODÈLES DE DÉLAI
 # ==========================================
 df['Delai_Binaire'] = (df['Delai_Jours'] > 0).astype(int)
 
@@ -94,9 +90,8 @@ delay_pipeline = Pipeline([
 delay_pipeline.fit(X_tr, y_tr)
 y_pred = delay_pipeline.predict(X_te)
 
-print("--- MODÈLE DE DÉLAI (Classification : 0 jour vs > 0 jour) ---")
+print("--- MODÈLE DE DÉLAI (Classification) ---")
 print(f"Accuracy : {accuracy_score(y_te, y_pred)*100:.2f}%")
-print(classification_report(y_te, y_pred, target_names=['Immédiat (0j)', 'Avec délai (>0j)']))
 
 # b) Régression (durée en jours)
 X_tr, X_te, y_tr, y_te = train_test_split(
@@ -114,19 +109,17 @@ print(f"MAE : {mean_absolute_error(y_te, pred):.2f} jours")
 print(f"R²  : {r2_score(y_te, pred):.4f}\n")
 
 # ==========================================
-# 5. SAUVEGARDE
+# 5. SAUVEGARDE PROPRE
 # ==========================================
-path_cost = os.path.join("backend", "app", "services", "ml", "cout", "cost_model.pkl")
-path_delay = os.path.join("backend", "app", "services", "ml", "delai", "delay_model.pkl")
-os.makedirs(os.path.dirname(path_cost), exist_ok=True)
-path_delay_days = os.path.join("backend", "app", "services", "ml", "delai", "delay_days_model.pkl")
-os.makedirs(os.path.dirname(path_delay), exist_ok=True)
-joblib.dump(cost_pipeline, path_cost)
-joblib.dump(delay_pipeline, path_delay)               # classifieur (comme avant)
-joblib.dump(delay_days_pipeline, path_delay_days)     # régresseur (jours)
+path_cost = os.path.join("app", "services", "ml", "cout", "cost_model.pkl")
+path_delay = os.path.join("app", "services", "ml", "delai", "delay_model.pkl")
+path_delay_days = os.path.join("app", "services", "ml", "delai", "delay_days_model.pkl")
 
-print("✅ Modèles sauvegardés :")
-print(f"   - {path_cost}")
-print(f"   - {path_delay}  (classification)")
-print(f"   - {path_delay_days}  (jours)")
-print("\nFeatures attendues à la prédiction :", features)
+os.makedirs(os.path.dirname(path_cost), exist_ok=True)
+os.makedirs(os.path.dirname(path_delay), exist_ok=True)
+
+joblib.dump(cost_pipeline, path_cost)
+joblib.dump(delay_pipeline, path_delay)
+joblib.dump(delay_days_pipeline, path_delay_days)
+
+print("Modèles sauvegardés avec succès !")

@@ -3,76 +3,30 @@ import joblib
 import pandas as pd
 from datetime import datetime
 
-
 class CostPredictor:
-
     def __init__(self):
-
         base_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        cost_model_path = os.path.join(base_dir, "cost_model.pkl")
+        delay_days_path = os.path.abspath(os.path.join(base_dir, "..", "delai", "delay_days_model.pkl"))
 
-        # ==============================
-        # CHARGEMENT MODÈLE COÛT
-        # ==============================
-
-        cost_model_path = os.path.join(
-            base_dir,
-            "cost_model.pkl"
-        )
-
+        # Chargement du modèle de coût
         self.cost_model = None
-
         if os.path.exists(cost_model_path):
             try:
                 self.cost_model = joblib.load(cost_model_path)
                 print("[ML] Modèle de coût chargé avec succès.")
-
             except Exception as e:
-                print(
-                    f"[ERREUR] Impossible de charger "
-                    f"cost_model.pkl : {e}"
-                )
+                print(f"[ERREUR] Impossible de charger cost_model.pkl : {e}")
 
-        else:
-            print(
-                f"[ERREUR] Modèle introuvable : "
-                f"{cost_model_path}"
-            )
-
-        # ==============================
-        # CHARGEMENT MODÈLE DÉLAI
-        # ==============================
-
-        delay_model_path = os.path.abspath(
-            os.path.join(
-                base_dir,
-                "..",
-                "delai",
-                "delay_model.pkl"
-            )
-        )
-
-        self.delay_model = None
-
-        if os.path.exists(delay_model_path):
+        # Chargement du modèle de délai en jours
+        self.delay_days_model = None
+        if os.path.exists(delay_days_path):
             try:
-                self.delay_model = joblib.load(delay_model_path)
-                print("[ML] Modèle de délai chargé avec succès.")
-
+                self.delay_days_model = joblib.load(delay_days_path)
+                print("[ML] Modèle de délai (jours) chargé avec succès.")
             except Exception as e:
-                print(
-                    f"[ERREUR] Impossible de charger "
-                    f"delay_model.pkl : {e}"
-                )
-
-        else:
-            print(
-                f"[ERREUR] Modèle délai introuvable : "
-                f"{delay_model_path}"
-            )
-
-    # =====================================================
-    # PRÉDICTION
-    # =====================================================
+                print(f"[ERREUR] Impossible de charger delay_days_model.pkl : {e}")
 
     def predict(
         self,
@@ -85,158 +39,66 @@ class CostPredictor:
         quantite: int = 1
     ) -> dict:
 
-        # ==============================
-        # VALEURS DE SÉCURITÉ
-        # ==============================
-
-        materiel = str(materiel).strip() or "Inconnu"
-        probleme = str(probleme).strip() or "Inconnu"
-
-        categorie = (
-            str(categorie).strip()
-            or materiel
-        )
-
-        spec = (
-            str(spec).strip()
-            or "N/A"
-        )
-
-        gamme = (
-            str(gamme).strip()
-            or "N/A"
-        )
-
-        type_inter = (
-            str(type_inter).strip()
-            or "N/A"
-        )
+        # Récupération et nettoyage des valeurs saisies dans le formulaire
+        materiel_str = str(materiel).strip().upper() or "PC PORTABLE"
+        probleme_str = str(probleme).strip().upper() or "AUTRE"
+        
+        # Mapping intelligent basé sur ce que l'utilisateur a rempli dans ton formulaire :
+        # Si la catégorie est vide, on l'associe au matériel
+        cat_materiel = str(categorie).strip().upper() or materiel_str
+        
+        # Si l'utilisateur a renseigné des pièces suspectes (transmises via 'spec'), on les utilise
+        spec_composant = str(spec).strip().upper() or "ORIGINAL"
+        
+        # Gamme par défaut si non précisée
+        gamme_piece = str(gamme).strip().upper() or "COMPATIBLE / ADAPTABLE"
+        
+        # Type d'intervention choisi dans le menu déroulant du formulaire (ex: "Changement Pièce")
+        type_intervention = str(type_inter).strip().upper() or "REMPLACEMENT MATÉRIEL"
 
         try:
             quantite = max(int(quantite), 1)
         except Exception:
             quantite = 1
 
-        # ==============================
-        # FEATURES TEMPORELLES
-        # ==============================
-
         now = datetime.now()
-
-        mois = now.month
-        jour_semaine = now.weekday()
-
-        # ==============================
-        # DATAFRAME
-        # ==============================
-
+        
+        # DataFrame d'inférence avec les colonnes exactes du dataset d'entraînement
         input_df = pd.DataFrame([{
-
-            "Matériel": materiel,
-
-            "Categorie_Materiel": categorie,
-
-            "Problème": probleme,
-
-            "Spec_Composant": spec,
-
-            "Gamme_Piece": gamme,
-
+            "Matériel": materiel_str,
+            "Categorie_Materiel": cat_materiel,
+            "Problème": probleme_str,
+            "Spec_Composant": spec_composant,
+            "Gamme_Piece": gamme_piece,
             "Quantite": quantite,
-
-            "Type_Intervention": type_inter,
-
+            "Type_Intervention": type_intervention,
             "Réparé": "OUI",
-
-            "Mois": mois,
-
-            "JourSemaine": jour_semaine
-
+            "Mois": now.month,
+            "JourSemaine": now.weekday()
         }])
 
-        # ==============================
-        # DEBUG
-        # ==============================
+        print("🔍 [ML DEBUG] Données envoyées au modèle :", input_df.to_dict(orient="records"))
 
-        print("\n================ ML INPUT ================")
-        print(input_df.to_string(index=False))
-        print("===========================================\n")
-
-        # ==============================
-        # PRÉDICTION COÛT
-        # ==============================
-
-        if self.cost_model is None:
-
-            cout_estime = 150.0
-
-        else:
-
+        # Prédiction Coût
+        cout_estime = 150.0
+        if self.cost_model is not None:
             try:
-
-                cout_pred = self.cost_model.predict(
-                    input_df
-                )[0]
-
-                cout_estime = max(
-                    float(cout_pred),
-                    0.0
-                )
-
-                cout_estime = round(
-                    cout_estime,
-                    2
-                )
-
+                cout_pred = self.cost_model.predict(input_df)[0]
+                cout_estime = round(max(float(cout_pred), 0.0), 2)
             except Exception as e:
+                print(f"[ML ERROR] Prédiction coût : {e}")
 
-                print(
-                    f"[ML ERROR] Prédiction coût : {e}"
-                )
-
-                cout_estime = 150.0
-
-        # ==============================
-        # PRÉDICTION DÉLAI
-        # ==============================
-
-        if self.delay_model is None:
-
-            delai_pred = 0
-
-        else:
-
+        # Prédiction Délai (Jours)
+        delai_jours = 2
+        if self.delay_days_model is not None:
             try:
-
-                delai_pred = int(
-                    self.delay_model.predict(
-                        input_df
-                    )[0]
-                )
-
+                delai_pred = self.delay_days_model.predict(input_df)[0]
+                delai_jours = int(round(max(float(delai_pred), 1.0)))
             except Exception as e:
-
-                print(
-                    f"[ML ERROR] Prédiction délai : {e}"
-                )
-
-                delai_pred = 0
-
-        # ==============================
-        # CONVERSION DÉLAI
-        # ==============================
-
-        delai_jours = 2 if delai_pred == 1 else 0
-
-        # ==============================
-        # RESULTAT
-        # ==============================
+                print(f"[ML ERROR] Prédiction délai : {e}")
 
         return {
-
             "cout_estime": cout_estime,
-
             "delai_estime": delai_jours
-
         }
     
